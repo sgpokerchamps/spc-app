@@ -866,21 +866,27 @@ function deleteT(id) {
   } catch(e){}
 }
 /* ==== POTY SYSTEM ==== */
-const POTY_YEAR=2026;
-const POTY_KEY='spc_poty_'+POTY_YEAR;
 const POTY_RATE=10; // S$10 = 1 point
-const POTY_INITIAL_DATA={"HOO BAI MING HENRY":2850,"CHANG HUAN PIAO":2350,"BRENDAN LEE JIA HAO":2300,"CALVIN TAN SEET PIN":2250,"TANG KHEANG WOOI":1950,"LIM YAN MING":1450,"MUTHUKUMARAN GOVINDASAMY":1440,"OLIVEIRO MARC CHRISTOPHER":1160,"TAN KENG YONG":1070,"YAR GIN WEE":970,"SIM CHEN HON KELVIN":895,"REMNANT MARK RICHARD":810,"DICKSON CHEW":800,"FABIAN YEO FANG YI":790,"TER GUO QIAN":770,"PANG SENG JUN DIXON":760,"CHIU KIM WAH":700,"LIEW KOK KONG":610,"LIM MIN SOON":610,"ADAM CHRISTOPHER SEVER":600,"DANILO PERISIC":570,"TAN QUAN WEI EDWIN":510,"KOH YONG CHONG":490,"LEE KONG FAI EUGENE":490,"KHOR JUNXIONG":480,"SAMSON YU JINDA":460,"WOON BAO SHENG":390,"YEOW LIAN QUAN, IVAN":390,"POH LENG WEE":380,"LIAO CHONGWEI":380,"TAN HAI SHIEN":380,"RAHUL VIJAY CHINCHALKAR":370,"SHI HUIQI CORINE":320,"SIARHEI CHUDAPAL":310,"YIEU HANN JONG":310,"MAR KWOK MENG JASON":280,"TAN JIA YOU":260,"LAU HENG SENG":240,"WARRICK WEE SHENG XIONG":240,"KENNETH ANTHONY":220,"TAN CHUNG HOWE SEAN":220,"JOSEPH KWAY KIM LENG":220,"LEE CHIN WEE":200,"JOHN LOW SOON HOCK":180,"TEO QIANCHENG IVAN":180,"CHUA WAN JIN JOEY":170,"ONG CHOON HAU":170,"SOIN JIAN XIANG DAVID":170,"SHAH PRATIK NIKHILBHAI":150,"LOPEZ TAN SEN LOONG":150,"MISHRA SIDDHARTH SANKAR":150,"LIM SOO GHEE":140,"YEO ENG HONG":140,"SIM WEI SHENG":140,"ONG JIA HAN":110,"LOH JIN JUN ZACHARIAH":110,"VIJAYARENGAN S/O VISVALINGAM":110,"NG SAING LENG":100,"LAI CHUN WEI":100,"LEE JUN XU":100,"THENG CHEE SIANG":100,"MARVIN SULLIVAN ROUGIER":100,"TEOW YAN RONG ALARICE":100,"FOO YONG CHEONG":100,"WAH QI LE":95,"RUBEN ENBASEGARAM":90,"PAUL TAN KE DA":90,"LUA ZUN HONG ELSTON":90,"VLADIMIR SITNIKOV":90,"TAN CHEE RAY, WALTSON":90,"HARESH S/O SHANMUGAM NATHAN":90,"ITSUKI CHIBA":90};
-function loadPOTY(){try{const d=JSON.parse(localStorage.getItem(POTY_KEY));if(d&&d.players)return d;return null;}catch(e){return null;}}
-function initPOTY(){
-  const existing=loadPOTY();
+const POTY_INITIAL_2026={"HOO BAI MING HENRY":2850,"CHANG HUAN PIAO":2350,"BRENDAN LEE JIA HAO":2300,"CALVIN TAN SEET PIN":2250,"TANG KHEANG WOOI":1950,"LIM YAN MING":1450,"MUTHUKUMARAN GOVINDASAMY":1440,"OLIVEIRO MARC CHRISTOPHER":1160,"TAN KENG YONG":1070,"YAR GIN WEE":970,"SIM CHEN HON KELVIN":895,"REMNANT MARK RICHARD":810,"DICKSON CHEW":800,"FABIAN YEO FANG YI":790,"TER GUO QIAN":770,"PANG SENG JUN DIXON":760,"CHIU KIM WAH":700,"LIEW KOK KONG":610,"LIM MIN SOON":610,"ADAM CHRISTOPHER SEVER":600,"DANILO PERISIC":570,"TAN QUAN WEI EDWIN":510,"KOH YONG CHONG":490,"LEE KONG FAI EUGENE":490,"KHOR JUNXIONG":480,"SAMSON YU JINDA":460,"WOON BAO SHENG":390,"YEOW LIAN QUAN, IVAN":390,"POH LENG WEE":380,"LIAO CHONGWEI":380,"TAN HAI SHIEN":380,"RAHUL VIJAY CHINCHALKAR":370,"SHI HUIQI CORINE":320,"SIARHEI CHUDAPAL":310,"YIEU HANN JONG":310,"MAR KWOK MENG JASON":280,"TAN JIA YOU":260,"LAU HENG SENG":240,"WARRICK WEE SHENG XIONG":240,"KENNETH ANTHONY":220,"TAN CHUNG HOWE SEAN":220,"JOSEPH KWAY KIM LENG":220,"LEE CHIN WEE":200,"JOHN LOW SOON HOCK":180,"TEO QIANCHENG IVAN":180,"CHUA WAN JIN JOEY":170,"ONG CHOON HAU":170,"SOIN JIAN XIANG DAVID":170,"SHAH PRATIK NIKHILBHAI":150,"LOPEZ TAN SEN LOONG":150,"MISHRA SIDDHARTH SANKAR":150,"LIM SOO GHEE":140,"YEO ENG HONG":140,"SIM WEI SHENG":140,"ONG JIA HAN":110,"LOH JIN JUN ZACHARIAH":110,"VIJAYARENGAN S/O VISVALINGAM":110,"NG SAING LENG":100,"LAI CHUN WEI":100,"LEE JUN XU":100,"THENG CHEE SIANG":100,"MARVIN SULLIVAN ROUGIER":100,"TEOW YAN RONG ALARICE":100,"FOO YONG CHEONG":100,"WAH QI LE":95,"RUBEN ENBASEGARAM":90,"PAUL TAN KE DA":90,"LUA ZUN HONG ELSTON":90,"VLADIMIR SITNIKOV":90,"TAN CHEE RAY, WALTSON":90,"HARESH S/O SHANMUGAM NATHAN":90,"ITSUKI CHIBA":90};
+function potyKey(yr){return 'spc_poty_'+yr;}
+function loadPOTYForYear(yr){try{const d=JSON.parse(localStorage.getItem(potyKey(yr)));if(d&&d.players)return d;return null;}catch(e){return null;}}
+function initPOTY(yr){
+  const existing=loadPOTYForYear(yr);
   if(existing)return existing;
   const players={};
-  Object.entries(POTY_INITIAL_DATA).forEach(([name,pts])=>{players[name]={points:pts,events:['SPC XX & XXI (pre-loaded)']};});
-  const d={year:POTY_YEAR,players,committed:[],aliases:{}};
-  localStorage.setItem(POTY_KEY,JSON.stringify(d));
+  if(yr===2026){Object.entries(POTY_INITIAL_2026).forEach(([name,pts])=>{players[name]={points:pts,events:['SPC XX & XXI (pre-loaded)']};});}
+  const d={year:yr,players,committed:[],aliases:{}};
+  localStorage.setItem(potyKey(yr),JSON.stringify(d));
   return d;
 }
-function savePOTY(d){try{localStorage.setItem(POTY_KEY,JSON.stringify(d));}catch(e){}}
+function savePOTY(d){try{localStorage.setItem(potyKey(d.year),JSON.stringify(d));}catch(e){}}
+function getPotyYears(){
+  const years=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('spc_poty_')){const y=parseInt(k.replace('spc_poty_',''));if(!isNaN(y))years.push(y);}}
+  const cur=new Date().getFullYear();
+  if(years.indexOf(cur)<0)years.push(cur);
+  return years.sort((a,b)=>b-a);
+}
 function getPotyPoints(tournament){
   // Calculate POTY points from a tournament's payouts and extra bags
   const results=[];
@@ -2352,18 +2358,30 @@ function BlindEditView({tournament, onUpdate, onSetChips}) {
 
 /* ==== POTY VIEW ==== */
 function POTYView({tournament}) {
-  const [poty, setPoty] = useState(()=>initPOTY());
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [poty, setPoty] = useState(()=>initPOTY(currentYear));
   const [showCommit, setShowCommit] = useState(false);
   const [pendingPoints, setPendingPoints] = useState([]);
   const [linkingIdx, setLinkingIdx] = useState(-1);
   const [linkTarget, setLinkTarget] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
 
+  const isCurrentYear = selectedYear === currentYear;
   const isCommitted = poty.committed.indexOf(tournament.id)>=0;
   const activePlayers = tournament.players.filter(p=>p.status==='active').length;
-  const hasUndo = poty.lastCommit && poty.lastCommit.snapshot;
+  const hasUndo = poty.undoHistory && poty.undoHistory.length > 0;
   const sorted = Object.entries(poty.players).map(([name,d])=>({name,points:d.points,events:d.events||[]})).sort((a,b)=>b.points-a.points);
   const filtered = searchFilter ? sorted.filter(p=>p.name.toLowerCase().includes(searchFilter.toLowerCase())) : sorted;
+  const availableYears = getPotyYears();
+
+  function switchYear(yr){
+    setSelectedYear(yr);
+    setPoty(initPOTY(yr));
+    setShowCommit(false);
+    setPendingPoints([]);
+    setSearchFilter('');
+  }
 
   function startCommit(){
     if(activePlayers>0){
@@ -2404,16 +2422,16 @@ function POTYView({tournament}) {
     const totalPts = pendingPoints.reduce((s,p)=>s+p.points,0);
     const evName = tournament.name||tournament.eventType||'Event';
     if(!confirm('Commit '+totalPts.toLocaleString()+' POTY points from "'+evName+'" across '+pendingPoints.length+' players?\n\nThis will update the leaderboard.'))return;
-    // Save snapshot for undo
     const newPoty = JSON.parse(JSON.stringify(poty));
-    newPoty.lastCommit = {
+    if(!newPoty.undoHistory) newPoty.undoHistory = [];
+    newPoty.undoHistory.push({
       snapshot: JSON.parse(JSON.stringify(poty.players)),
       committedBefore: [...poty.committed],
       tournamentId: tournament.id,
       tournamentName: evName,
       date: new Date().toISOString(),
       pointsAdded: pendingPoints.map(p=>({name:p.potyName,points:p.points}))
-    };
+    });
     const evLabel = evName+' ('+new Date().toLocaleDateString('en-SG')+')';
     pendingPoints.forEach(p=>{
       if(!newPoty.players[p.potyName]){newPoty.players[p.potyName]={points:0,events:[]};}
@@ -2430,35 +2448,28 @@ function POTYView({tournament}) {
 
   function undoLastCommit(){
     if(!hasUndo)return;
-    const lc = poty.lastCommit;
+    const lc = poty.undoHistory[poty.undoHistory.length - 1];
     const summary = lc.pointsAdded.map(p=>p.name+': -'+p.points).join('\n');
-    if(!confirm('Undo last commit from "'+lc.tournamentName+'"?\n\nThis will remove:\n'+summary))return;
+    if(!confirm('Undo commit from "'+lc.tournamentName+'"?\n\nThis will remove:\n'+summary))return;
     const newPoty = JSON.parse(JSON.stringify(poty));
     newPoty.players = lc.snapshot;
     newPoty.committed = lc.committedBefore;
-    delete newPoty.lastCommit;
+    newPoty.undoHistory.pop();
     setPoty(newPoty);
     savePOTY(newPoty);
-    alert('Last commit undone. Leaderboard restored to previous state.');
+    alert('Commit undone. Leaderboard restored to previous state.' + (newPoty.undoHistory.length > 0 ? ' ('+newPoty.undoHistory.length+' more undo'+(newPoty.undoHistory.length!==1?'s':'')+' available)' : ''));
   }
 
   function exportCSV(){
     let csv='Rank,Player,Points\n';
     sorted.forEach((p,i)=>{csv+=(i+1)+',"'+p.name+'",'+p.points+'\n';});
     if(window.electronAPI&&window.electronAPI.showSaveDialog){
-      window.electronAPI.showSaveDialog({defaultPath:'POTY_'+POTY_YEAR+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{
+      window.electronAPI.showSaveDialog({defaultPath:'POTY_'+selectedYear+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{
         if(!r.canceled&&r.filePath) window.electronAPI.writeFile(r.filePath,csv);
       });
     } else {
-      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+POTY_YEAR+'_Standings.csv';a.click();
+      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+selectedYear+'_Standings.csv';a.click();
     }
-  }
-
-  function resetPOTY(){
-    if(!confirm('Reset ALL POTY data back to initial standings? This cannot be undone.'))return;
-    if(!confirm('Are you really sure? All committed events will be lost.'))return;
-    localStorage.removeItem(POTY_KEY);
-    setPoty(initPOTY());
   }
 
   const potyNames = Object.keys(poty.players).sort();
@@ -2466,27 +2477,33 @@ function POTYView({tournament}) {
   return(
     <div style={{flex:1,overflowY:'auto',padding:'18px 22px'}}>
       <div className="view-title" style={{display:'flex',alignItems:'center',gap:12}}>
-        <span>Player of the Year {POTY_YEAR}</span>
+        <span>Player of the Year</span>
+        <select value={selectedYear} onChange={e=>switchYear(parseInt(e.target.value))}
+          style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#c8973a',padding:'4px 8px',borderRadius:4,fontSize:16,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",cursor:'pointer'}}>
+          {availableYears.map(y=><option key={y} value={y}>{y}</option>)}
+        </select>
         <span style={{fontSize:12,color:'#7aaa82',fontWeight:400}}>{sorted.length} players</span>
+        {!isCurrentYear && <span style={{fontSize:11,color:'#c87a3a',fontWeight:400}}>(archived)</span>}
       </div>
 
-      {activePlayers>0 && (
+      {isCurrentYear && activePlayers>0 && (
         <div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>
           ⚠ Tournament still has {activePlayers} active player{activePlayers!==1?'s':''}. Commit after the event is finished for accurate points.
         </div>
       )}
 
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        {!isCommitted ? (
-          <button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>
-        ) : (
-          <span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>
+        {isCurrentYear && (
+          !isCommitted ? (
+            <button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>
+          ) : (
+            <span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>
+          )
         )}
-        {hasUndo && (
+        {isCurrentYear && hasUndo && (
           <button className="sf-btn" style={{width:'auto',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={undoLastCommit}>↩ Undo last commit</button>
         )}
         <button className="sf-btn" style={{width:'auto'}} onClick={exportCSV}>↓ Export CSV</button>
-        <button className="sf-btn" style={{width:'auto',borderColor:'#3a2020',color:'#8a4040'}} onClick={resetPOTY}>↺ Reset</button>
       </div>
 
       <input type="text" placeholder="Search players..." value={searchFilter} onChange={e=>setSearchFilter(e.target.value)}
