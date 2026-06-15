@@ -690,12 +690,15 @@ function parseQR(raw) {
   const spcMatch = trimmed.match(/^(SPC-\d{5})(\/([A-Z]{2}))?$/i);
   if(spcMatch) {
     const memberId = spcMatch[1].toUpperCase();
-    const country = spcMatch[3] ? spcMatch[3].toUpperCase() : null;
+    const qrCountry = spcMatch[3] ? spcMatch[3].toUpperCase() : null;
     try {
       const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-      const name = cache[memberId];
+      const entry = cache[memberId];
+      if(!entry) { alert('Member ID ' + memberId + ' not found in local cache. Try syncing members first.'); return null; }
+      // Support both old format (string) and new format ({name, country})
+      const name = typeof entry === 'string' ? entry : entry.name;
+      const country = qrCountry || (typeof entry === 'object' ? entry.country : null);
       if(name) return {name, country};
-      alert('Member ID ' + memberId + ' not found in local cache. Try syncing members first.');
       return null;
     } catch(e) { return null; }
   }
@@ -704,10 +707,22 @@ function parseQR(raw) {
   const parts=trimmed.split(';');
   if(parts.length>=4) {
     const name=parts[3]?parts[3].trim():'';
-    return name?{name,country:null}:null;
+    if(!name) return null;
+    return {name, country: memberCountryLookup(name)};
   }
-  // Plain typed name — use as-is
-  return trimmed?{name:trimmed,country:null}:null;
+  // Plain typed name — look up country from member cache
+  return trimmed?{name:trimmed, country: memberCountryLookup(trimmed)}:null;
+}
+function memberCountryLookup(name) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
+    const match = Object.values(cache).find(e => {
+      const n = typeof e === 'string' ? e : e.name;
+      return n && n.toLowerCase() === name.toLowerCase();
+    });
+    if(match && typeof match === 'object') return match.country || null;
+    return null;
+  } catch(e) { return null; }
 }
 function advanceLevelFn(t) {
   const ni=t.currentLevelIdx+1;
@@ -1952,7 +1967,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       const data = await res.json();
       if(data.members) {
         const cache = {};
-        data.members.forEach(m => { cache[m.member_id] = m.name; });
+        data.members.forEach(m => { cache[m.member_id] = {name: m.name, country: m.country || null}; });
         localStorage.setItem('spc_members_cache', JSON.stringify(cache));
         localStorage.setItem('spc_members_synced_at', data.syncedAt);
         setSyncStatus(`${data.members.length} members · synced ${new Date(data.syncedAt).toLocaleString()}`);
@@ -2077,7 +2092,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
     if(/^spc-/i.test(q)) { setSuggestions([]); setSelIdx(-1); return; }
     try {
       const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-      const names = Object.values(cache);
+      const names = Object.values(cache).map(e => typeof e === 'string' ? e : e.name).filter(Boolean);
       const matches = names.filter(n => n.toLowerCase().includes(q)).slice(0, 6);
       setSuggestions(matches);
       setSelIdx(-1);
