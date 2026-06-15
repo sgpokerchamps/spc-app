@@ -1188,6 +1188,40 @@ function App() {
         if(action.assignments&&action.closingTable){
           closeTableConfirm(action.assignments, action.closingTable);
         }
+      } else if(action.type==='break-table'){
+        if(action.tableNum){
+          // Auto-assign break from floor UI
+          const tNumN=Number(action.tableNum);
+          const spt=tournament.seatsPerTable||9;
+          const active=tournament.players.filter(p=>p.status==='active');
+          const displaced=active.filter(p=>p.tableNum===tNumN);
+          if(displaced.length===0){closeTableConfirm([],tNumN);return;}
+          const lk=tournament.seatLocks||{};
+          const st=tournament.startTable||1;
+          const mt=tournament.maxTables||15;
+          const otherTables=Array.from({length:mt},(_,i)=>st+i).filter(t=>t!==tNumN);
+          const avail=[];
+          const tCounts={};
+          otherTables.forEach(t=>{tCounts[t]=active.filter(p=>p.tableNum===t).length;});
+          otherTables.forEach(t=>{
+            for(let s=1;s<=spt;s++){
+              const lockType=(lk[t+'-'+s])||'none';
+              if(lockType==='move'||lockType==='all')continue;
+              if(!active.find(p=>p.tableNum===t&&p.seatNum===s))avail.push({tableNum:t,seatNum:s});
+            }
+          });
+          if(avail.length<displaced.length)return;
+          const assignments=[];
+          const tc={...tCounts};
+          displaced.forEach(p=>{
+            const rem=avail.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));
+            rem.sort((a,b)=>(tc[a.tableNum]||0)-(tc[b.tableNum]||0)||a.tableNum-b.tableNum||a.seatNum-b.seatNum);
+            const seat=rem[0];
+            assignments.push({playerId:p.id,tableNum:seat.tableNum,seatNum:seat.seatNum});
+            tc[seat.tableNum]=(tc[seat.tableNum]||0)+1;
+          });
+          closeTableConfirm(assignments,tNumN);
+        }
       } else if(action.type==='set-seat-lock'){
         if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
       }
@@ -3147,6 +3181,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
 function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onUpdateChipCount,onExportSeating}) {
   const [selectedPlayer,setSelectedPlayer] = useState(null);
   const [closeMode,setCloseMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
+  const [breakMode,setBreakMode] = useState(null); // {stage:'pick'|'preview'|'done', closingTable, assignments[], displaced[]}
   const [chipMode,setChipMode] = useState(false);
   const [searchQ,setSearchQ] = useState('');
   const searchMatch=searchQ.trim().length>0?activePlayers.filter(p=>p.name.toLowerCase().includes(searchQ.toLowerCase())):[];
@@ -3243,6 +3278,78 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
     return seats;
   }
 
+  // --- Break table logic (auto-assign) ---
+  function startBreakTable(){
+    if(maxTables<=1){alert('Cannot break — only one table remaining.');return;}
+    setBreakMode({stage:'pick'});
+  }
+
+  function selectTableToBreak(tNum){
+    const tNumN=Number(tNum);
+    const displaced=(tables[tNumN]||[]).map(p=>({id:p.id,name:p.name,tableNum:p.tableNum,seatNum:p.seatNum}));
+    if(displaced.length===0){
+      // Empty table — just close it directly
+      if(confirm('Table '+tNumN+' is empty. Close it?')){
+        onCloseConfirm([],tNumN);
+        setBreakMode(null);
+      }
+      return;
+    }
+    // Count available seats across other tables (respecting locks)
+    const spt=tournament.seatsPerTable||9;
+    const lk=tournament.seatLocks||{};
+    const otherTables=allTableNums.filter(t=>t!==tNumN);
+    const availableSeats=[];
+    // Build table counts for balancing (shortest tables first)
+    const tableCounts={};
+    otherTables.forEach(t=>{tableCounts[t]=(tables[t]||[]).length;});
+    otherTables.forEach(t=>{
+      for(let s=1;s<=spt;s++){
+        const lockKey=t+'-'+s;
+        const lockType=lk[lockKey]||'none';
+        if(lockType==='move'||lockType==='all')continue;
+        const occupied=activePlayers.find(p=>p.tableNum===t&&p.seatNum===s);
+        if(!occupied)availableSeats.push({tableNum:t,seatNum:s});
+      }
+    });
+    if(availableSeats.length<displaced.length){
+      alert('Cannot break Table '+tNumN+' — only '+availableSeats.length+' seat'+(availableSeats.length!==1?'s':'')+' available but '+displaced.length+' player'+(displaced.length!==1?'s':'')+' need reseating.');
+      return;
+    }
+    // Auto-assign: prioritize shortest tables for balance
+    availableSeats.sort((a,b)=>{
+      const countA=tableCounts[a.tableNum]||0;
+      const countB=tableCounts[b.tableNum]||0;
+      if(countA!==countB)return countA-countB;
+      if(a.tableNum!==b.tableNum)return a.tableNum-b.tableNum;
+      return a.seatNum-b.seatNum;
+    });
+    const assignments=[];
+    const tempCounts={...tableCounts};
+    displaced.forEach((p,i)=>{
+      // Re-sort remaining seats by current count (dynamic balance)
+      const remaining=availableSeats.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));
+      remaining.sort((a,b)=>{
+        const countA=tempCounts[a.tableNum]||0;
+        const countB=tempCounts[b.tableNum]||0;
+        if(countA!==countB)return countA-countB;
+        if(a.tableNum!==b.tableNum)return a.tableNum-b.tableNum;
+        return a.seatNum-b.seatNum;
+      });
+      const seat=remaining[0];
+      assignments.push({playerId:p.id,name:p.name,fromTable:p.tableNum,fromSeat:p.seatNum,tableNum:seat.tableNum,seatNum:seat.seatNum});
+      tempCounts[seat.tableNum]=(tempCounts[seat.tableNum]||0)+1;
+    });
+    setBreakMode({stage:'preview',closingTable:tNumN,assignments,displaced});
+  }
+
+  function confirmBreak(){
+    if(!breakMode||breakMode.stage!=='preview')return;
+    const assList=breakMode.assignments.map(a=>({playerId:a.playerId,tableNum:a.tableNum,seatNum:a.seatNum}));
+    onCloseConfirm(assList,breakMode.closingTable);
+    setBreakMode({...breakMode,stage:'done'});
+  }
+
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div className="view-head">
@@ -3276,10 +3383,12 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
               </div>
             )}
           </div>
-          {!closeMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
-          {!closeMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#c87a40',color:'#c87a40'}} onClick={startBreakTable}>✂ Break table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
           {closeMode&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setCloseMode(null)}>Cancel</button>}
           {closeMode&&!closeMode.choosingTable&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={confirmClose}>✓ Confirm close</button>}
+          {breakMode&&breakMode.stage==='pick'&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setBreakMode(null)}>Cancel</button>}
         </div>
       </div>
 
@@ -3327,6 +3436,68 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
               })}
             </>
           )}
+        </div>
+      )}
+
+      {/* Break table picker */}
+      {breakMode&&breakMode.stage==='pick'&&(
+        <div style={{background:'#0f0c04',border:'1px solid #c87a40',borderRadius:8,margin:'8px 16px',padding:16}}>
+          <div style={{fontSize:12,color:'#c87a40',fontWeight:700,marginBottom:12}}>✂ Select table to break:</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {allTableNums.map(tNum=>(
+              <button key={tNum} style={{padding:'8px 16px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:13,cursor:'pointer'}}
+                onClick={()=>selectTableToBreak(tNum)}>
+                Table {tNum} · {(tables[tNum]||[]).length} players
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Break table preview modal */}
+      {breakMode&&(breakMode.stage==='preview'||breakMode.stage==='done')&&(
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}>
+          <div style={{background:'#0d1a12',border:'1px solid '+(breakMode.stage==='done'?'#3dba6f':'#c87a40'),borderRadius:12,padding:24,maxWidth:600,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
+            <div style={{fontSize:18,fontWeight:700,color:breakMode.stage==='done'?'#3dba6f':'#c87a40',marginBottom:4}}>
+              {breakMode.stage==='done'?'✓ Table '+breakMode.closingTable+' Broken':'✂ Break Table '+breakMode.closingTable+'?'}
+            </div>
+            <div style={{fontSize:12,color:'#7aaa82',marginBottom:16}}>
+              {breakMode.assignments.length} player{breakMode.assignments.length!==1?'s':''} {breakMode.stage==='done'?'reassigned':'to be reassigned'}
+            </div>
+
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:16}}>
+              <thead>
+                <tr>
+                  <th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>Player</th>
+                  <th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#c85a5a',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>From</th>
+                  <th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}></th>
+                  <th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>To</th>
+                </tr>
+              </thead>
+              <tbody>
+                {breakMode.assignments.map((a,i)=>(
+                  <tr key={i} style={{borderBottom:'1px solid #0a1412'}}>
+                    <td style={{padding:'8px 10px',color:'#e8d8a0',fontWeight:500}}>{a.name}</td>
+                    <td style={{padding:'8px 10px',textAlign:'center',color:'#c85a5a',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:600}}>T{a.fromTable} S{a.fromSeat}</td>
+                    <td style={{padding:'8px 10px',textAlign:'center',color:'#527a5c',fontSize:14}}>→</td>
+                    <td style={{padding:'8px 10px',textAlign:'center',color:'#3dba6f',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:700}}>T{a.tableNum} S{a.seatNum}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+              {breakMode.stage==='preview'&&(
+                <>
+                  <button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:6,cursor:'pointer',fontSize:13}}>Cancel</button>
+                  <button onClick={confirmBreak} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>✓ Confirm break</button>
+                </>
+              )}
+              {breakMode.stage==='done'&&(
+                <button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>Done</button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
