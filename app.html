@@ -679,18 +679,22 @@ function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
 }
 
 // QR parser — boarding pass string is semicolon-delimited; name is at index 3
+function countryFlag(cc){if(!cc)return'';try{return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));}catch(e){return'';}}
+function pf(p){const f=countryFlag(p&&p.country);return f?' '+f:'';}
+
 function parseQR(raw) {
   if(!raw||!raw.trim()) return null;
   const trimmed = raw.trim();
 
   // Check if this is an SPC Community Card QR (Member ID format: SPC-XXXXX or SPC-XXXXX/CC)
-  const spcMatch = trimmed.match(/^(SPC-\d{5})(\/[A-Z]{2})?$/i);
+  const spcMatch = trimmed.match(/^(SPC-\d{5})(\/([A-Z]{2}))?$/i);
   if(spcMatch) {
     const memberId = spcMatch[1].toUpperCase();
+    const country = spcMatch[3] ? spcMatch[3].toUpperCase() : null;
     try {
       const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
       const name = cache[memberId];
-      if(name) return name;
+      if(name) return {name, country};
       alert('Member ID ' + memberId + ' not found in local cache. Try syncing members first.');
       return null;
     } catch(e) { return null; }
@@ -700,10 +704,10 @@ function parseQR(raw) {
   const parts=trimmed.split(';');
   if(parts.length>=4) {
     const name=parts[3]?parts[3].trim():'';
-    return name||null;
+    return name?{name,country:null}:null;
   }
   // Plain typed name — use as-is
-  return trimmed||null;
+  return trimmed?{name:trimmed,country:null}:null;
 }
 function advanceLevelFn(t) {
   const ni=t.currentLevelIdx+1;
@@ -813,10 +817,10 @@ td{padding:6px 10px;border-bottom:1px solid #eee}.r{text-align:right}
 <div class="stat"><div class="stat-label">Extra bags</div><div class="stat-val">${extraBags} (−S$${extraDed.toLocaleString()})</div></div>
 <div class="stat"><div class="stat-label">Payout pool</div><div class="stat-val">S$${payoutPool.toLocaleString()}</div></div>
 </div>
-${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
+${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name} ${countryFlag(w.country)}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
 <h2>Final Standings</h2><table><tr><th>#</th><th>Player</th><th>Status</th><th class="r">Payout (S$)</th></tr>
-${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
-${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
+${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name} ${countryFlag(p.country)}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
+${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name} ${countryFlag(p.country)}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
 </table></body></html>`;
     const reportName=(t.name||'tournament').replace(/[^a-z0-9]/gi,'_')+'_Report.html';
     if(window.electronAPI&&window.electronAPI.showSaveDialog){
@@ -1037,7 +1041,7 @@ function App() {
       });
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);
       const _activePlayers=tournament.players.filter(p=>p.status==='active');
-      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name}));
+      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null}));
       const _evCfg=EVENT_CONFIGS[tournament.eventType]||null;
       const _curLevel=cur&&!cur.isBreak?cur.level:null;
       const _reentryUntil=_evCfg?(_evCfg.reentryUntilLevel||0):0;
@@ -1051,7 +1055,7 @@ function App() {
       const _st=tournament.startTable||1;
       const _mt=tournament.maxTables||15;
       for(let i=0;i<_mt;i++) _tableMap[_st+i]={num:_st+i,count:0,capacity:tournament.seatsPerTable||9,players:[]};
-      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum});}});
+      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null});}});
       window.electronAPI.sendTournamentState({
         active:_activePlayers.length,
         players:tournament.players.length,
@@ -1212,10 +1216,11 @@ function App() {
     if(isDay2&&_inheritedPlayers.length>0){
       const counts={};
       _inheritedPlayers.forEach(p=>{counts[p.name]=(counts[p.name]||0)+1;});
+      const _ipCountries={};_inheritedPlayers.forEach(p=>{if(p.country)_ipCountries[p.name]=p.country;});
       Object.keys(counts).forEach(name=>{
         if(counts[name]>1){
           const bags=counts[name]-1;
-          _extraBagWinners.push({name,bags,totalQualifications:counts[name]});
+          _extraBagWinners.push({name,bags,totalQualifications:counts[name],country:_ipCountries[name]||null});
           _totalExtraBags+=bags;
         }
       });
@@ -1345,12 +1350,13 @@ Starting setup — you can adjust settings before launching.`);
   function nextLevel(){setTournament(advanceLevelFn);}
   function adjustTime(s){setTournament(t=>({...t,timeRemainingSeconds:Math.max(0,t.timeRemainingSeconds+s)}));}
 
-  function addPlayer(name, forceAuto=false){
+  function addPlayer(name, forceAuto=false, country=null){
     setTournament(t=>{
       const mode=t.seatingMode||'auto';
       let players=[...t.players];
       const seat=(mode==='auto'||forceAuto)?findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}):{tableNum:null,seatNum:null};
       const p={id:uid(),name,status:'active',bustPosition:null,...seat,registeredAt:Date.now()};
+      if(country) p.country=country;
       players=[...players,p];
       const totalE=(players.length+(t.inheritedEntries||0));
       let prizePool;
@@ -2009,8 +2015,10 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
     setLastScanned('');
     setSuggestions([]);
     setSelIdx(-1);
-    const name = parseQR(raw);
-    if(!name) return;
+    const result = parseQR(raw);
+    if(!result) return;
+    const name = result.name;
+    const country = result.country || null;
 
     // Check for duplicate (same name, currently active)
     const isDup = !!tournament.players.find(p=>p.name===name&&p.status==='active');
@@ -2027,12 +2035,12 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       }
     }
 
-    onRegister(name);
+    onRegister(name, false, country);
     SoundEngine.register();
 
     // Find the seat that was just assigned (last registered player)
     // We look it up after state update — store it for the log
-    const logEntry = {name, isDup, isReentry, ts: Date.now(), tableNum: null, seatNum: null};
+    const logEntry = {name, country, isDup, isReentry, ts: Date.now(), tableNum: null, seatNum: null};
     addToLog(logEntry);
   }
 
@@ -2178,7 +2186,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
           {unassigned.map(p=>(
             <div key={p.id} style={{padding:'8px 14px',borderBottom:'1px solid #1a2e22'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-                <span className="uq-name">{p.name}</span>
+                <span className="uq-name">{p.name}{pf(p)}</span>
                 {assigningId===p.id?(
                   <button style={{fontSize:11,background:'none',border:'1px solid #3a2020',borderRadius:4,color:'#8a4040',cursor:'pointer',padding:'3px 8px'}} onClick={()=>setAssigningId(null)}>Cancel</button>
                 ):(
@@ -2223,7 +2231,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
             return(
               <div key={i} className={`reg-log-row ${r.isDup?'dup':''}`}>
                 <span className="reg-log-num">{displayLog.length-i}</span>
-                <span className="reg-log-name">{r.name}</span>
+                <span className="reg-log-name">{r.name}{r.country?' '+countryFlag(r.country):''}</span>
                 {r.isDup&&<span className="reg-log-badge dup">DUP</span>}
                 {r.isReentry&&!r.isDup&&<span className="reg-log-badge reentry">RE-ENTRY</span>}
                 {seatStr
@@ -2840,7 +2848,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
                 <td style={{fontWeight:500}}>
                   {editId===p.id
                     ?<input className="qa-input" style={{padding:'3px 8px',fontSize:12,width:140}} value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){onRename(p.id,editName);setEditId(null);}}} autoFocus/>
-                    :<span onDoubleClick={()=>{setEditId(p.id);setEditName(p.name);}} title="Double-click to rename">{p.name}</span>
+                    :<span onDoubleClick={()=>{setEditId(p.id);setEditName(p.name);}} title="Double-click to rename">{p.name}{pf(p)}</span>
                   }
                 </td>
                 <td>{p.tableNum?`Table ${p.tableNum}`:'—'}</td>
@@ -2982,7 +2990,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
         <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
           {selectedPlayer&&(
             <div style={{fontSize:12,color:'#c8973a',padding:'5px 12px',background:'#1a1004',border:'1px solid #2a1c06',borderRadius:5}}>
-              Moving: <strong>{selectedPlayer.name}</strong>
+              Moving: <strong>{selectedPlayer.name}{pf(selectedPlayer)}</strong>
               <button style={{marginLeft:8,background:'none',border:'none',color:'#8a4040',cursor:'pointer',fontSize:12}} onClick={()=>setSelectedPlayer(null)}>✕</button>
             </div>
           )}
@@ -2998,7 +3006,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
                 {searchMatch.map(p=>(
                   <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',borderRadius:4,cursor:'default',fontSize:12}}
                     onMouseEnter={e=>e.currentTarget.style.background='#112016'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <span style={{color:'#e4f0e8',fontWeight:500}}>{p.name}</span>
+                    <span style={{color:'#e4f0e8',fontWeight:500}}>{p.name}{pf(p)}</span>
                     <span style={{color:'#3dba6f',fontWeight:600,fontSize:13}}>T{p.tableNum} S{p.seatNum}</span>
                   </div>
                 ))}
@@ -3038,7 +3046,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
                 const availSeats=a.tableNum?getAvailableSeats(a.tableNum):[];
                 return(
                   <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8,padding:'8px 10px',background:'#0b1610',borderRadius:6}}>
-                    <span style={{flex:1,fontSize:13,color:'#e8d8a0',fontWeight:500}}>{p.name}</span>
+                    <span style={{flex:1,fontSize:13,color:'#e8d8a0',fontWeight:500}}>{p.name}{pf(p)}</span>
                     <select style={{padding:'5px 8px',background:'#060e09',border:'1px solid #2a1c06',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none'}}
                       value={a.tableNum||''} onChange={e=>setAssignment(p.id,'tableNum',e.target.value)}>
                       <option value=''>— Table —</option>
@@ -3086,7 +3094,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
                       <tr key={p.id} style={{borderBottom:'1px solid #0e1a12'}}>
                         <td style={{padding:'7px 12px',color:'#3a5a42'}}>{p.tableNum||'—'}</td>
                         <td style={{padding:'7px 8px',color:'#3a5a42'}}>{p.seatNum||'—'}</td>
-                        <td style={{padding:'7px 8px',color:hasCount?'#7aaa82':'#b2d4ba',fontWeight:500}}>{p.name}</td>
+                        <td style={{padding:'7px 8px',color:hasCount?'#7aaa82':'#b2d4ba',fontWeight:500}}>{p.name}{pf(p)}</td>
                         <td style={{padding:'4px 12px',textAlign:'right'}}>
                           <input type="number" defaultValue={p.chipCount||''} placeholder="—"
                             onBlur={e=>onUpdateChipCount(p.id,e.target.value)}
@@ -3120,7 +3128,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
                   if(p){return(
                     <div key={seat} className="seat-row" style={{cursor:'pointer',background:isSel?'#1a1004':'',borderLeft:isSel?'2px solid #c8973a':'2px solid transparent'}} onClick={()=>handleSeatClick(p)}>
                       <span className="seat-n">{seat}</span>
-                      <span className="seat-name" style={{color:isSel?'#c8973a':'',flex:1}}>{p.name}</span>
+                      <span className="seat-name" style={{color:isSel?'#c8973a':'',flex:1}}>{p.name}{pf(p)}</span>
                       {lockBtn}
                       {!selectedPlayer&&!closeMode&&onRemove&&<button style={{background:'none',border:'none',color:'#3a2020',cursor:'pointer',fontSize:11,padding:'0 3px'}} onClick={e=>{e.stopPropagation();if(confirm(`Remove ${p.name}?`))onRemove(p.id);}}>✕</button>}
                     </div>
@@ -3143,7 +3151,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
         {unseated.length>0&&(
           <div style={{marginTop:16,padding:'12px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:7}}>
             <div style={{fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#c8973a',marginBottom:7}}>Unseated ({unseated.length})</div>
-            {unseated.map(p=><div key={p.id} style={{fontSize:12,color:'#b2d4ba',padding:'2px 0'}}>{p.name}</div>)}
+            {unseated.map(p=><div key={p.id} style={{fontSize:12,color:'#b2d4ba',padding:'2px 0'}}>{p.name}{pf(p)}</div>)}
           </div>
         )}
       </div>}
@@ -3426,7 +3434,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                 <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:10}}>
                   {tournament.extraBagWinners.map((w,i)=>(
                     <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',background:'#1a1004',border:'1px solid #2a1c06',borderRadius:5,fontSize:12}}>
-                      <span style={{color:'#e8d8a0',fontWeight:600,flex:1}}>{w.name}</span>
+                      <span style={{color:'#e8d8a0',fontWeight:600,flex:1}}>{w.name}{w.country?' '+countryFlag(w.country):''}</span>
                       <span style={{color:'#527a5c',fontSize:10}}>({w.totalQualifications||'-'} flights)</span>
                       <button style={{background:'none',border:'1px solid #2a1c06',borderRadius:3,color:'#8a4040',cursor:'pointer',fontSize:13,padding:'1px 6px',lineHeight:'18px'}}
                         onClick={()=>adjustBag(i,-1)} title="Remove 1 bag">−</button>
