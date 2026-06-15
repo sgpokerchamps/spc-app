@@ -2380,6 +2380,15 @@ function Sidebar({tournament,subview,setSubview,onDisplay,onSave,onExportSave,on
         <button className="sf-btn" style={{borderColor:'#1a3a22',color:'#3dba6f'}} onClick={onFloor}>📱 Floor staff URL</button>
         <button className="sf-btn" onClick={onExportSave} title="Download full backup as .spc">↓ Export backup</button>
         <button className="sf-btn" onClick={onExportTemplate} title="Download printable tournament report">↓ Tournament report</button>
+        <button className="sf-btn" style={{borderColor:'#1a3a22',color:'#7aaa82'}} onClick={()=>{
+          const btn=event.target;btn.disabled=true;btn.textContent='Checking...';
+          if(window.electronAPI&&window.electronAPI.checkForUpdates){
+            window.electronAPI.checkForUpdates().then(r=>{
+              if(r.success){if(confirm('Updated: '+r.files.join(', ')+'. Restart now?')){window.electronAPI.restartApp();}else{btn.textContent='🔄 Check for updates';btn.disabled=false;}}
+              else{alert('Update failed: '+(r.error||'Unknown error'));btn.textContent='🔄 Check for updates';btn.disabled=false;}
+            }).catch(e=>{alert('Update error: '+e.message);btn.textContent='🔄 Check for updates';btn.disabled=false;});
+          }else{btn.textContent='🔄 Check for updates';btn.disabled=false;}
+        }}>🔄 Check for updates</button>
         <button className="sf-btn" onClick={onHome}>← Back to home</button>
         <button className="sf-btn" style={{borderColor:'#3a2020',color:'#8a4040',marginTop:4}} onClick={onReset}
           onMouseEnter={e=>{e.target.style.borderColor='#e05a5a';e.target.style.color='#e05a5a';}}
