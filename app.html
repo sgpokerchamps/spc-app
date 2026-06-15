@@ -680,7 +680,8 @@ function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
 
 // QR parser — boarding pass string is semicolon-delimited; name is at index 3
 function countryFlag(cc){if(!cc)return'';try{return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));}catch(e){return'';}}
-function pf(p){const f=countryFlag(p&&p.country);return f?' '+f:'';}
+const _isWin=typeof navigator!=='undefined'&&navigator.userAgent.indexOf('Windows')>=0;
+function pf(p){if(!p||!p.country)return'';if(_isWin)return React.createElement('span',{style:{fontSize:9,background:'#1a2e22',color:'#7aaa82',padding:'1px 4px',borderRadius:3,marginLeft:4,fontWeight:600,letterSpacing:1,verticalAlign:'middle'}},p.country.toUpperCase());return' '+countryFlag(p.country);}
 
 function parseQR(raw) {
   if(!raw||!raw.trim()) return null;
@@ -1095,6 +1096,7 @@ function App() {
         seatingMode:tournament.seatingMode||'auto',
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
+        members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
       });
     }
   },[tournament]);
