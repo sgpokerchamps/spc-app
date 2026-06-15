@@ -900,6 +900,16 @@ function deleteT(id) {
     localStorage.setItem('spc_index',JSON.stringify(getIndex().filter(x=>x.id!==id)));
   } catch(e){}
 }
+/* ==== POTY SYSTEM ==== */
+const POTY_RATE=10;
+const POTY_INITIAL_2026={"HOO BAI MING HENRY":2850,"CHANG HUAN PIAO":2350,"BRENDAN LEE JIA HAO":2300,"CALVIN TAN SEET PIN":2250,"TANG KHEANG WOOI":1950,"LIM YAN MING":1450,"MUTHUKUMARAN GOVINDASAMY":1440,"OLIVEIRO MARC CHRISTOPHER":1160,"TAN KENG YONG":1070,"YAR GIN WEE":970,"SIM CHEN HON KELVIN":895,"REMNANT MARK RICHARD":810,"DICKSON CHEW":800,"FABIAN YEO FANG YI":790,"TER GUO QIAN":770,"PANG SENG JUN DIXON":760,"CHIU KIM WAH":700,"LIEW KOK KONG":610,"LIM MIN SOON":610,"ADAM CHRISTOPHER SEVER":600,"DANILO PERISIC":570,"TAN QUAN WEI EDWIN":510,"KOH YONG CHONG":490,"LEE KONG FAI EUGENE":490,"KHOR JUNXIONG":480,"SAMSON YU JINDA":460,"WOON BAO SHENG":390,"YEOW LIAN QUAN, IVAN":390,"POH LENG WEE":380,"LIAO CHONGWEI":380,"TAN HAI SHIEN":380,"RAHUL VIJAY CHINCHALKAR":370,"SHI HUIQI CORINE":320,"SIARHEI CHUDAPAL":310,"YIEU HANN JONG":310,"MAR KWOK MENG JASON":280,"TAN JIA YOU":260,"LAU HENG SENG":240,"WARRICK WEE SHENG XIONG":240,"KENNETH ANTHONY":220,"TAN CHUNG HOWE SEAN":220,"JOSEPH KWAY KIM LENG":220,"LEE CHIN WEE":200,"JOHN LOW SOON HOCK":180,"TEO QIANCHENG IVAN":180,"CHUA WAN JIN JOEY":170,"ONG CHOON HAU":170,"SOIN JIAN XIANG DAVID":170,"SHAH PRATIK NIKHILBHAI":150,"LOPEZ TAN SEN LOONG":150,"MISHRA SIDDHARTH SANKAR":150,"LIM SOO GHEE":140,"YEO ENG HONG":140,"SIM WEI SHENG":140,"ONG JIA HAN":110,"LOH JIN JUN ZACHARIAH":110,"VIJAYARENGAN S/O VISVALINGAM":110,"NG SAING LENG":100,"LAI CHUN WEI":100,"LEE JUN XU":100,"THENG CHEE SIANG":100,"MARVIN SULLIVAN ROUGIER":100,"TEOW YAN RONG ALARICE":100,"FOO YONG CHEONG":100,"WAH QI LE":95,"RUBEN ENBASEGARAM":90,"PAUL TAN KE DA":90,"LUA ZUN HONG ELSTON":90,"VLADIMIR SITNIKOV":90,"TAN CHEE RAY, WALTSON":90,"HARESH S/O SHANMUGAM NATHAN":90,"ITSUKI CHIBA":90};
+function potyKey(yr){return 'spc_poty_'+yr;}
+function loadPOTYForYear(yr){try{const d=JSON.parse(localStorage.getItem(potyKey(yr)));if(d&&d.players)return d;return null;}catch(e){return null;}}
+function initPOTY(yr){const existing=loadPOTYForYear(yr);if(existing)return existing;const players={};if(yr===2026){Object.entries(POTY_INITIAL_2026).forEach(([name,pts])=>{players[name]={points:pts,events:['SPC XX & XXI (pre-loaded)']};});}const d={year:yr,players,committed:[],aliases:{}};localStorage.setItem(potyKey(yr),JSON.stringify(d));return d;}
+function savePOTY(d){try{localStorage.setItem(potyKey(d.year),JSON.stringify(d));}catch(e){}}
+function getPotyYears(){const years=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('spc_poty_')){const y=parseInt(k.replace('spc_poty_',''));if(!isNaN(y))years.push(y);}}const cur=new Date().getFullYear();if(years.indexOf(cur)<0)years.push(cur);return years.sort((a,b)=>b-a);}
+function getPotyPoints(tournament){const results=[];const entries=tournament.players.length+(tournament.inheritedEntries||0);let payouts=tournament.payoutTable||[];const pp=tournament.prizePool||0;const extraBags=tournament.extraBagCount||0;const extraDed=extraBags*1500;const payoutPool=pp-extraDed;if(payouts.length===0&&entries>0&&payoutPool>0){payouts=generatePayoutRows(entries,payoutPool,tournament.eventType==='mysteryBounty');}payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:p.amount||Math.round(payoutPool*(p.pct||0)/100)}));const payoutMap={};payouts.forEach(p=>{payoutMap[p.position]=p;});const busted=tournament.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));busted.forEach(p=>{const po=payoutMap[p.bustPosition];if(po&&po.amount>0){results.push({name:p.name,payoutAmount:po.amount,extraBagAmount:0,totalPrize:po.amount,points:Math.floor(po.amount/POTY_RATE)});}});if(tournament.extraBagWinners&&tournament.extraBagWinners.length>0){tournament.extraBagWinners.forEach(w=>{const amt=w.bags*1500;const existing=results.find(r=>r.name===w.name);if(existing){existing.extraBagAmount=amt;existing.totalPrize+=amt;existing.points=Math.floor(existing.totalPrize/POTY_RATE);}else{results.push({name:w.name,payoutAmount:0,extraBagAmount:amt,totalPrize:amt,points:Math.floor(amt/POTY_RATE)});}});}return results.filter(r=>r.points>0);}
+
 function writeLive(t, cur, nxt, active, tables) {
   try {
     const _payouts=(()=>{
@@ -1156,6 +1166,10 @@ function App() {
       } else if(action.type==='close-table-confirm'){
         if(action.assignments&&action.closingTable){
           closeTableConfirm(action.assignments, action.closingTable);
+        }
+      } else if(action.type==='break-table'){
+        if(action.tableNum){
+          const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const st=tournament.startTable||1;const mt=tournament.maxTables||15;const otherTables=Array.from({length:mt},(_,i)=>st+i).filter(t=>t!==tNumN);const avail=[];const tCounts={};otherTables.forEach(t=>{tCounts[t]=active.filter(p=>p.tableNum===t).length;});otherTables.forEach(t=>{for(let s=1;s<=spt;s++){const lockType=(lk[t+'-'+s])||'none';if(lockType==='move'||lockType==='all')continue;if(!active.find(p=>p.tableNum===t&&p.seatNum===s))avail.push({tableNum:t,seatNum:s});}});if(avail.length<displaced.length)return;const assignments=[];const tc={...tCounts};displaced.forEach(p=>{const rem=avail.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));rem.sort((a,b)=>(tc[a.tableNum]||0)-(tc[b.tableNum]||0)||a.tableNum-b.tableNum||a.seatNum-b.seatNum);const seat=rem[0];assignments.push({playerId:p.id,tableNum:seat.tableNum,seatNum:seat.seatNum});tc[seat.tableNum]=(tc[seat.tableNum]||0)+1;});closeTableConfirm(assignments,tNumN);
         }
       } else if(action.type==='set-seat-lock'){
         if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
@@ -1660,6 +1674,7 @@ Starting setup — you can adjust settings before launching.`);
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
             {subview==='payouts'&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
+            {subview==='poty'&&<POTYView tournament={tournament}/>}
           </div>
         </div>);
       })()}
@@ -2356,9 +2371,60 @@ function BlindEditView({tournament, onUpdate, onSetChips}) {
   );
 }
 
+function POTYView({tournament}) {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [poty, setPoty] = useState(()=>initPOTY(currentYear));
+  const [showCommit, setShowCommit] = useState(false);
+  const [pendingPoints, setPendingPoints] = useState([]);
+  const [linkingIdx, setLinkingIdx] = useState(-1);
+  const [linkTarget, setLinkTarget] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
+  const isCurrentYear = selectedYear === currentYear;
+  const isCommitted = poty.committed.indexOf(tournament.id)>=0;
+  const activePlayers = tournament.players.filter(p=>p.status==='active').length;
+  const hasUndo = poty.undoHistory && poty.undoHistory.length > 0;
+  const sorted = Object.entries(poty.players).map(([name,d])=>({name,points:d.points,events:d.events||[]})).sort((a,b)=>b.points-a.points);
+  const filtered = searchFilter ? sorted.filter(p=>p.name.toLowerCase().includes(searchFilter.toLowerCase())) : sorted;
+  const availableYears = getPotyYears();
+  function switchYear(yr){setSelectedYear(yr);setPoty(initPOTY(yr));setShowCommit(false);setPendingPoints([]);setSearchFilter('');}
+  function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}const resolved=pts.map(p=>{const alias=poty.aliases[p.name];return{...p,potyName:alias||(poty.players[p.name]?p.name:null)};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
+  function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
+  function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
+  function confirmCommit(){const unlinked=pendingPoints.filter(p=>!p.potyName);if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);const evName=tournament.name||tournament.eventType||'Event';if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players?'))return;const newPoty=JSON.parse(JSON.stringify(poty));if(!newPoty.undoHistory)newPoty.undoHistory=[];newPoty.undoHistory.push({snapshot:JSON.parse(JSON.stringify(poty.players)),committedBefore:[...poty.committed],tournamentId:tournament.id,tournamentName:evName,date:new Date().toISOString(),pointsAdded:pendingPoints.map(p=>({name:p.potyName,points:p.points}))});const evLabel=evName+' ('+new Date().toLocaleDateString('en-SG')+')';pendingPoints.forEach(p=>{if(!newPoty.players[p.potyName])newPoty.players[p.potyName]={points:0,events:[]};newPoty.players[p.potyName].points+=p.points;newPoty.players[p.potyName].events.push(evLabel+': +'+p.points);});newPoty.committed.push(tournament.id);setPoty(newPoty);savePOTY(newPoty);setShowCommit(false);setPendingPoints([]);alert('Committed! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');}
+  function undoLastCommit(){if(!hasUndo)return;const lc=poty.undoHistory[poty.undoHistory.length-1];if(!confirm('Undo commit from "'+lc.tournamentName+'"?'))return;const newPoty=JSON.parse(JSON.stringify(poty));newPoty.players=lc.snapshot;newPoty.committed=lc.committedBefore;newPoty.undoHistory.pop();setPoty(newPoty);savePOTY(newPoty);alert('Undone.'+(newPoty.undoHistory.length>0?' ('+newPoty.undoHistory.length+' more available)':''));}
+  function exportCSV(){let csv='Rank,Player,Points\n';sorted.forEach((p,i)=>{csv+=(i+1)+',"'+p.name+'",'+p.points+'\n';});if(window.electronAPI&&window.electronAPI.showSaveDialog){window.electronAPI.showSaveDialog({defaultPath:'POTY_'+selectedYear+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{if(!r.canceled&&r.filePath)window.electronAPI.writeFile(r.filePath,csv);});}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+selectedYear+'_Standings.csv';a.click();}}
+  const potyNames=Object.keys(poty.players).sort();
+  return(<div style={{flex:1,overflowY:'auto',padding:'18px 22px'}}>
+    <div className="view-title" style={{display:'flex',alignItems:'center',gap:12}}><span>Player of the Year</span>
+      <select value={selectedYear} onChange={e=>switchYear(parseInt(e.target.value))} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#c8973a',padding:'4px 8px',borderRadius:4,fontSize:16,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",cursor:'pointer'}}>{availableYears.map(y=><option key={y} value={y}>{y}</option>)}</select>
+      <span style={{fontSize:12,color:'#7aaa82',fontWeight:400}}>{sorted.length} players</span>
+      {!isCurrentYear&&<span style={{fontSize:11,color:'#c87a3a',fontWeight:400}}>(archived)</span>}
+    </div>
+    {isCurrentYear&&activePlayers>0&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>⚠ Tournament has {activePlayers} active players. Commit after event finishes.</div>}
+    <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+      {isCurrentYear&&(!isCommitted?<button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>:<span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>)}
+      {isCurrentYear&&hasUndo&&<button className="sf-btn" style={{width:'auto',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={undoLastCommit}>↩ Undo last commit</button>}
+      <button className="sf-btn" style={{width:'auto'}} onClick={exportCSV}>↓ Export CSV</button>
+    </div>
+    <input type="text" placeholder="Search players..." value={searchFilter} onChange={e=>setSearchFilter(e.target.value)} style={{width:'100%',maxWidth:300,padding:'8px 12px',background:'#0a1a10',border:'1px solid #1a3a22',borderRadius:6,color:'#b2d4ba',fontSize:13,marginBottom:14,fontFamily:'inherit'}}/>
+    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><thead><tr><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'left',fontWeight:600,width:50}}>Rank</th><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'left',fontWeight:600}}>Player</th><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'right',fontWeight:600,width:80}}>Points</th></tr></thead><tbody>
+      {filtered.map((p,i)=>{const rank=sorted.indexOf(p)+1;const rowColor=rank===1?'#f0c040':rank===2?'#c8d0d8':rank===3?'#c87a3a':'#b2d4ba';return(<tr key={p.name} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'9px 14px',color:rank<=3?rowColor:'#527a5c',fontWeight:rank<=3?700:400}}>{rank}</td><td style={{padding:'9px 14px',color:rowColor,fontWeight:rank<=5?600:400}}>{p.name}</td><td style={{padding:'9px 14px',color:rowColor,textAlign:'right',fontFamily:"'Rajdhani',sans-serif",fontSize:rank<=3?18:14,fontWeight:700}}>{p.points.toLocaleString()}</td></tr>);})}
+    </tbody></table>
+    {showCommit&&<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}><div style={{background:'#0d1a12',border:'1px solid #1a3a22',borderRadius:12,padding:24,maxWidth:700,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
+      <div style={{fontSize:18,fontWeight:700,color:'#c8973a',marginBottom:4}}>Commit POTY Points</div>
+      <div style={{fontSize:12,color:'#7aaa82',marginBottom:16}}>{pendingPoints.length} players with points</div>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:16}}><thead><tr><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>Name</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Payout</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Extra Bag</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Points</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>POTY Name</th></tr></thead><tbody>
+        {pendingPoints.map((p,i)=>(<tr key={i} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'6px 10px',color:'#b2d4ba'}}>{p.name}</td><td style={{padding:'6px 10px',color:'#b2d4ba',textAlign:'right'}}>{p.payoutAmount>0?'S$'+p.payoutAmount.toLocaleString():'—'}</td><td style={{padding:'6px 10px',color:'#c8973a',textAlign:'right'}}>{p.extraBagAmount>0?'S$'+p.extraBagAmount.toLocaleString():'—'}</td><td style={{padding:'6px 10px',color:'#f0c040',textAlign:'right',fontWeight:700}}>{p.points}</td><td style={{padding:'6px 10px'}}>{p.potyName?<span style={{color:'#3dba6f',fontSize:12}}>✓ {p.potyName===p.name?'(new)':p.potyName}</span>:linkingIdx===i?<div style={{display:'flex',flexDirection:'column',gap:4}}><select value={linkTarget} onChange={e=>setLinkTarget(e.target.value)} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#b2d4ba',padding:'4px 8px',borderRadius:4,fontSize:12}}><option value="">— Select —</option>{potyNames.map(n=><option key={n} value={n}>{n}</option>)}</select><div style={{display:'flex',gap:4}}><button onClick={()=>{if(linkTarget)resolveLink(i,linkTarget);}} style={{fontSize:11,padding:'3px 8px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:4,cursor:'pointer'}}>Link</button><button onClick={()=>createNew(i)} style={{fontSize:11,padding:'3px 8px',background:'#1a2a1a',border:'1px solid #7aaa82',color:'#7aaa82',borderRadius:4,cursor:'pointer'}}>New</button><button onClick={()=>{setLinkingIdx(-1);setLinkTarget('');}} style={{fontSize:11,padding:'3px 8px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:4,cursor:'pointer'}}>Cancel</button></div></div>:<button onClick={()=>setLinkingIdx(i)} style={{fontSize:11,padding:'3px 8px',background:'none',border:'1px solid #c8973a',color:'#c8973a',borderRadius:4,cursor:'pointer'}}>Link name</button>}</td></tr>))}
+      </tbody></table>
+      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><button onClick={()=>{setShowCommit(false);setPendingPoints([]);}} style={{padding:'8px 18px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:6,cursor:'pointer',fontSize:13}}>Cancel</button><button onClick={confirmCommit} disabled={pendingPoints.some(p=>!p.potyName)} style={{padding:'8px 18px',background:pendingPoints.some(p=>!p.potyName)?'#1a1a1a':'#1a3a22',border:'1px solid '+(pendingPoints.some(p=>!p.potyName)?'#333':'#3dba6f'),color:pendingPoints.some(p=>!p.potyName)?'#555':'#3dba6f',borderRadius:6,cursor:pendingPoints.some(p=>!p.potyName)?'not-allowed':'pointer',fontSize:13,fontWeight:700}}>Commit {pendingPoints.reduce((s,p)=>s+p.points,0).toLocaleString()} points</button></div>
+    </div></div>}
+  </div>);
+}
+
 function Sidebar({tournament,subview,setSubview,onDisplay,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
   const _cfg=EVENT_CONFIGS[tournament.eventType]||null;
-  const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'}];
+  const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'},{key:'poty',label:'POTY',icon:'🏆'}];
   const status=tournament.status;
   return(
     <div className="sidebar">
@@ -2907,7 +2973,8 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
 
 function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onUpdateChipCount,onExportSeating}) {
   const [selectedPlayer,setSelectedPlayer] = useState(null);
-  const [closeMode,setCloseMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
+  const [closeMode,setCloseMode] = useState(null);
+  const [breakMode,setBreakMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
   const [chipMode,setChipMode] = useState(false);
   const [searchQ,setSearchQ] = useState('');
   const searchMatch=searchQ.trim().length>0?activePlayers.filter(p=>p.name.toLowerCase().includes(searchQ.toLowerCase())):[];
@@ -3004,6 +3071,10 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
     return seats;
   }
 
+  function startBreakTable(){if(maxTables<=1){alert('Only one table.');return;}setBreakMode({stage:'pick'});}
+  function selectTableToBreak(tNum){const tNumN=Number(tNum);const displaced=(tables[tNumN]||[]).map(p=>({id:p.id,name:p.name,tableNum:p.tableNum,seatNum:p.seatNum,country:p.country||null}));if(displaced.length===0){if(confirm('Table '+tNumN+' is empty. Close it?')){onCloseConfirm([],tNumN);setBreakMode(null);}return;}const spt=tournament.seatsPerTable||9;const lk=tournament.seatLocks||{};const otherTables=allTableNums.filter(t=>t!==tNumN);const availableSeats=[];const tableCounts={};otherTables.forEach(t=>{tableCounts[t]=(tables[t]||[]).length;});otherTables.forEach(t=>{for(let s=1;s<=spt;s++){const lockKey=t+'-'+s;const lockType=lk[lockKey]||'none';if(lockType==='move'||lockType==='all')continue;const occupied=activePlayers.find(p=>p.tableNum===t&&p.seatNum===s);if(!occupied)availableSeats.push({tableNum:t,seatNum:s});}});if(availableSeats.length<displaced.length){alert('Cannot break Table '+tNumN+' — only '+availableSeats.length+' seats available, '+displaced.length+' needed.');return;}const assignments=[];const tempCounts={...tableCounts};displaced.forEach(p=>{const remaining=availableSeats.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));remaining.sort((a,b)=>(tempCounts[a.tableNum]||0)-(tempCounts[b.tableNum]||0)||a.tableNum-b.tableNum||a.seatNum-b.seatNum);const seat=remaining[0];assignments.push({playerId:p.id,name:p.name,country:p.country,fromTable:p.tableNum,fromSeat:p.seatNum,tableNum:seat.tableNum,seatNum:seat.seatNum});tempCounts[seat.tableNum]=(tempCounts[seat.tableNum]||0)+1;});setBreakMode({stage:'preview',closingTable:tNumN,assignments,displaced});}
+  function confirmBreak(){if(!breakMode||breakMode.stage!=='preview')return;const assList=breakMode.assignments.map(a=>({playerId:a.playerId,tableNum:a.tableNum,seatNum:a.seatNum}));onCloseConfirm(assList,breakMode.closingTable);setBreakMode({...breakMode,stage:'done'});}
+
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div className="view-head">
@@ -3037,10 +3108,12 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
               </div>
             )}
           </div>
-          {!closeMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
-          {!closeMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#c87a40',color:'#c87a40'}} onClick={startBreakTable}>✂ Break table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
           {closeMode&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setCloseMode(null)}>Cancel</button>}
           {closeMode&&!closeMode.choosingTable&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={confirmClose}>✓ Confirm close</button>}
+          {breakMode&&breakMode.stage==='pick'&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setBreakMode(null)}>Cancel</button>}
         </div>
       </div>
 
@@ -3090,6 +3163,17 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
           )}
         </div>
       )}
+
+      {breakMode&&breakMode.stage==='pick'&&(<div style={{background:'#0f0c04',border:'1px solid #c87a40',borderRadius:8,margin:'8px 16px',padding:16}}><div style={{fontSize:12,color:'#c87a40',fontWeight:700,marginBottom:12}}>✂ Select table to break:</div><div style={{display:'flex',flexWrap:'wrap',gap:8}}>{allTableNums.map(tNum=>(<button key={tNum} style={{padding:'8px 16px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:13,cursor:'pointer'}} onClick={()=>selectTableToBreak(tNum)}>Table {tNum} · {(tables[tNum]||[]).length} players</button>))}</div></div>)}
+
+      {breakMode&&(breakMode.stage==='preview'||breakMode.stage==='done')&&(<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}><div style={{background:'#0d1a12',border:'1px solid '+(breakMode.stage==='done'?'#3dba6f':'#c87a40'),borderRadius:12,padding:24,maxWidth:600,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
+        <div style={{fontSize:18,fontWeight:700,color:breakMode.stage==='done'?'#3dba6f':'#c87a40',marginBottom:4}}>{breakMode.stage==='done'?'✓ Table '+breakMode.closingTable+' Broken':'✂ Break Table '+breakMode.closingTable+'?'}</div>
+        <div style={{fontSize:12,color:'#7aaa82',marginBottom:16}}>{breakMode.assignments.length} player{breakMode.assignments.length!==1?'s':''} {breakMode.stage==='done'?'reassigned':'to be reassigned'}</div>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:16}}><thead><tr><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>Player</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#c85a5a',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>From</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}></th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>To</th></tr></thead><tbody>
+          {breakMode.assignments.map((a,i)=>(<tr key={i} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'8px 10px',color:'#e8d8a0',fontWeight:500}}>{a.name}{a.country?' '+countryFlag(a.country):''}</td><td style={{padding:'8px 10px',textAlign:'center',color:'#c85a5a',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:600}}>T{a.fromTable} S{a.fromSeat}</td><td style={{padding:'8px 10px',textAlign:'center',color:'#527a5c',fontSize:14}}>→</td><td style={{padding:'8px 10px',textAlign:'center',color:'#3dba6f',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:700}}>T{a.tableNum} S{a.seatNum}</td></tr>))}
+        </tbody></table>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>{breakMode.stage==='preview'&&<><button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:6,cursor:'pointer',fontSize:13}}>Cancel</button><button onClick={confirmBreak} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>✓ Confirm break</button></>}{breakMode.stage==='done'&&<button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>Done</button>}</div>
+      </div></div>)}
 
       {/* Chip count entry panel */}
       {chipMode&&(
