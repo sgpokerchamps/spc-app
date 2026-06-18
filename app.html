@@ -1142,13 +1142,7 @@ function App() {
           }
         }
       } else if(action.type==='undo-bust'){
-        // restore the most recently busted player
-        setTournament(t=>{
-          const busted=[...t.players].filter(p=>p.status==='busted').sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
-          if(busted.length===0)return t;
-          const restore=busted[0].id;
-          return {...t, players:t.players.map(p=>p.id===restore?{...p,status:'active',bustedAt:undefined,finishPos:undefined}:p)};
-        });
+        undoBust();
       } else if(action.type==='clock-toggle'){
         toggleClock();
       } else if(action.type==='clock-action'){
@@ -1428,7 +1422,7 @@ Starting setup — you can adjust settings before launching.`);
     setTournament(t=>{
       const active=t.players.filter(p=>p.status==='active');
       const position=active.length;
-      return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,tableNum:null,seatNum:null}:p),
+      return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p),
         activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'bust',detail:`${player?player.name:'?'} busted ${fmt.ordinal(position)} (T${player?player.tableNum:''} S${player?player.seatNum:''})`}]};
     });
   }
@@ -1436,13 +1430,24 @@ Starting setup — you can adjust settings before launching.`);
   function bustManyPlayers(ids){
     setTournament(t=>{
       let players=[...t.players];
-      // Bust sequentially so each position is tracked correctly
       ids.forEach(id=>{
         const active=players.filter(p=>p.status==='active');
         const position=active.length;
-        players=players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,tableNum:null,seatNum:null}:p);
+        players=players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p);
       });
       return{...t,players};
+    });
+  }
+  function undoBust(){
+    setTournament(t=>{
+      const busted=[...t.players].filter(p=>p.status==='busted').sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
+      if(busted.length===0){alert('No busted players to undo.');return t;}
+      const p=busted[0];
+      let tableNum=p.prevTableNum||null,seatNum=p.prevSeatNum||null;
+      if(tableNum&&seatNum){const taken=t.players.find(x=>x.status==='active'&&x.tableNum===tableNum&&x.seatNum===seatNum);if(taken){tableNum=null;seatNum=null;}}
+      if(!tableNum||!seatNum){const seat=findSeat(t.players.filter(x=>x.id!==p.id),t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});tableNum=seat.tableNum;seatNum=seat.seatNum;}
+      return{...t,players:t.players.map(x=>x.id===p.id?{...x,status:'active',bustPosition:undefined,bustedAt:undefined,tableNum,seatNum,prevTableNum:undefined,prevSeatNum:undefined}:x),
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'undo-bust',detail:`${p.name} undo bust → T${tableNum||'?'} S${seatNum||'?'}`}]};
     });
   }
   function removePlayer(id){
@@ -1674,7 +1679,7 @@ Starting setup — you can adjust settings before launching.`);
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
-            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
+            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
@@ -2787,7 +2792,7 @@ function RegistrationBoard({players, onRegister}) {
 }
 
 
-function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onRename,onRemove,modal,setModal}) {
+function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onRename,onRemove,modal,setModal}) {
   const [search,setSearch]=useState('');
   const [newName,setNewName]=useState('');
   const [bulkText,setBulkText]=useState('');
@@ -2879,6 +2884,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
         <button className="btn-sec" style={{fontSize:12,padding:'5px 12px'}} onClick={exportToCSV} title="Download player list as CSV">↓ Export CSV</button>
         <div className="btn-row">
           <button className="btn-sec" onClick={()=>setShowBusted(b=>!b)}>{showBusted?'Hide':'Show'} busted</button>
+          {bustedPlayers.length>0&&<button className="btn-sec" style={{borderColor:'#c87a3a',color:'#c87a3a'}} onClick={onUndoBust}>↩ Undo bust</button>}
           <button className="btn-sec" onClick={()=>setModal({type:'bulk'})}>Bulk add</button>
         </div>
       </div>
