@@ -2754,14 +2754,14 @@ function RegistrationBoard({players, onRegister}) {
   const [open, setOpen] = React.useState(true);
   const activeNums = new Set(players.filter(p=>p.status==='active').map(p=>p.name));
   const bustedNums = new Set(players.filter(p=>p.status==='busted').map(p=>p.name));
-  const total = 700;
+  const total = 400;
   const activeCount = activeNums.size;
   const bustedCount = bustedNums.size;
   const available = total - activeCount - bustedCount;
   return(
     <div className="reg-board-wrap">
       <div className="reg-board-header" onClick={()=>setOpen(o=>!o)}>
-        <span className="reg-board-title">Player board 001–700</span>
+        <span className="reg-board-title">Player board 001–400</span>
         <span className="reg-board-stats">
           <span style={{color:'#3dba6f'}}>{activeCount} active</span>
           {bustedCount>0&&<span style={{color:'#e05a5a',marginLeft:8}}>{bustedCount} busted</span>}
@@ -2890,12 +2890,10 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
       </div>
       <RegistrationBoard players={tournament.players} onRegister={name=>onAdd(name)}/>
       <div className="quick-add">
-        <input className="qa-input" placeholder="Player name..." value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')handleAdd();}} style={{width:210}}/>
-        <button className="btn-primary" onClick={handleAdd}>+ Add</button>
-        <div style={{display:'flex',alignItems:'center',gap:7,marginLeft:16,paddingLeft:16,borderLeft:'1px solid #152018'}}>
+        <div style={{display:'flex',alignItems:'center',gap:7}}>
           <input
             className="qa-input"
-            type="number" min="1" max="700"
+            type="number" min="1" max="400"
             placeholder="e.g. 50"
             value={bulkCount}
             onChange={e=>setBulkCount(e.target.value)}
@@ -2907,10 +2905,10 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:5,marginLeft:10,paddingLeft:16,borderLeft:'1px solid #152018'}}>
-          <input className="qa-input" type="number" min="1" max="700" placeholder="from" value={rangeFrom}
+          <input className="qa-input" type="number" min="1" max="400" placeholder="from" value={rangeFrom}
             onChange={e=>setRangeFrom(e.target.value)} style={{width:60,textAlign:'center'}}/>
           <span style={{color:'#3a5a42',fontSize:12}}>–</span>
-          <input className="qa-input" type="number" min="1" max="700" placeholder="to" value={rangeTo}
+          <input className="qa-input" type="number" min="1" max="400" placeholder="to" value={rangeTo}
             onChange={e=>setRangeTo(e.target.value)}
             onKeyDown={e=>{if(e.key==='Enter')handleRangeRegister();}}
             style={{width:60,textAlign:'center'}}/>
@@ -2921,7 +2919,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
         <div style={{display:'flex',alignItems:'center',gap:7,marginLeft:10,paddingLeft:16,borderLeft:'1px solid #152018'}}>
           <input
             className="qa-input"
-            type="number" min="1" max="700"
+            type="number" min="1" max="400"
             placeholder="e.g. 10"
             value={bulkBustCount}
             onChange={e=>setBulkBustCount(e.target.value)}
