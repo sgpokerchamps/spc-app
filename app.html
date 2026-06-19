@@ -1357,12 +1357,6 @@ Starting setup — you can adjust settings before launching.`);
     if(tournament&&tournament.id===id){setTournament(null);setView('home');}
   }
 
-  function openDisplayWindow() {
-    if(!tournament) return;
-    const url=window.location.href.split('#')[0]+'#display='+tournament.id;
-    window.open(url,'spc_display_'+tournament.id,'width=1920,height=1080,menubar=no,toolbar=no,scrollbars=no');
-  }
-
   function saveTournamentNow() {
     if(!tournament) return;
     saveT(tournament); setSavedIndex(getIndex()); alert('Saved!');
@@ -1396,7 +1390,7 @@ Starting setup — you can adjust settings before launching.`);
         prizePool=Math.max(calcPrize,t.guarantee||0);
       }
       const bountyPool=t.bountyAmount>0?Math.round(totalE*t.bountyAmount):0;
-      return{...t,players,prizePool,bountyPool};
+      return{...t,players,prizePool,bountyPool,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'register',detail:`${name} registered${seat.tableNum?` → T${seat.tableNum} S${seat.seatNum}`:' (unseated)'}`}]};
     });
   }
   function addPlayers(names){
@@ -1461,14 +1455,19 @@ Starting setup — you can adjust settings before launching.`);
       }else{
         seat=findSeat(t.players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});
       }
-      return{...t,players:t.players.map(p=>p.id===id?{...p,...seat}:p)};
+      const p=t.players.find(x=>x.id===id);
+      return{...t,players:t.players.map(p=>p.id===id?{...p,...seat}:p),
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'move',detail:`${p?p.name:'?'} assigned → T${seat.tableNum||'?'} S${seat.seatNum||'?'}`}]};
     });
   }
   function movePlayerSeat(id,tableNum,seatNum){
     setTournament(t=>{
       const lk=(t.seatLocks||{})[tableNum+'-'+seatNum];
       if(lk==='move'||lk==='all') return t;
-      return{...t,players:t.players.map(p=>p.id===id?{...p,tableNum,seatNum}:p)};
+      const p=t.players.find(x=>x.id===id);
+      const from=p?`T${p.tableNum||'?'} S${p.seatNum||'?'}`:'?';
+      return{...t,players:t.players.map(p=>p.id===id?{...p,tableNum,seatNum}:p),
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'move',detail:`${p?p.name:'?'} moved ${from} → T${tableNum} S${seatNum}`}]};
     });
   }
   function setSeatingMode(mode){
@@ -1581,7 +1580,8 @@ Starting setup — you can adjust settings before launching.`);
   function openTable(){
     setTournament(t=>{
       const newMax=Math.min(15,t.maxTables+1);
-      return{...t,maxTables:newMax};
+      const newTableNum=(t.startTable||1)+newMax-1;
+      return{...t,maxTables:newMax,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
     });
     SoundEngine.register();
   }
@@ -1672,7 +1672,7 @@ Starting setup — you can adjust settings before launching.`);
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
           <Sidebar tournament={tournament} subview={subview} setSubview={setSubview}
-            onDisplay={openDisplayWindow} onSave={saveTournamentNow}
+            onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
             onHome={()=>{clearInterval(timerRef.current);saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
@@ -2432,7 +2432,7 @@ function POTYView({tournament}) {
   </div>);
 }
 
-function Sidebar({tournament,subview,setSubview,onDisplay,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
+function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
   const _cfg=EVENT_CONFIGS[tournament.eventType]||null;
   const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'},{key:'poty',label:'POTY',icon:'🏆'}];
   const status=tournament.status;
@@ -2451,7 +2451,6 @@ function Sidebar({tournament,subview,setSubview,onDisplay,onSave,onExportSave,on
         ))}
       </div>
       <div className="sidebar-footer">
-        <button className="sf-btn display" onClick={onDisplay}>📺 Open display window</button>
         <button className="sf-btn" onClick={onSave}>💾 Save tournament</button>
         <button className="sf-btn" style={{borderColor:'#1a3a22',color:'#3dba6f'}} onClick={onFloor}>📱 Floor staff URL</button>
         <button className="sf-btn" onClick={onExportSave} title="Download full backup as .spc">↓ Export backup</button>
