@@ -2598,8 +2598,10 @@ function POTYView({tournament}) {
       <select value={selectedYear} onChange={e=>switchYear(parseInt(e.target.value))} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#c8973a',padding:'4px 8px',borderRadius:4,fontSize:16,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",cursor:'pointer'}}>{availableYears.map(y=><option key={y} value={y}>{y}</option>)}</select>
       <span style={{fontSize:12,color:'#7aaa82',fontWeight:400}}>{sorted.length} players</span>
       {!isCurrentYear&&<span style={{fontSize:11,color:'#c87a3a',fontWeight:400}}>(archived)</span>}
-      <button onClick={()=>syncFromCloud(selectedYear)} disabled={isSyncing} style={{marginLeft:'auto',padding:'5px 12px',background:'transparent',border:'1px solid #1a5c3a',color:isSyncing?'#527a5c':'#4caf82',fontSize:11,fontWeight:600,borderRadius:5,cursor:isSyncing?'wait':'pointer',fontFamily:'inherit'}}>{isSyncing?'⟳ Syncing…':'🔄 Sync POTY'}</button>
-      {syncStatus&&<span style={{fontSize:10,color:'#527a5c',fontWeight:400,width:'100%'}}>{syncStatus}</span>}
+      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10}}>
+        {syncStatus&&<span style={{fontSize:13,color:syncStatus.startsWith('⚠')?'#c87a3a':'#7aaa82',fontWeight:500}}>{syncStatus}</span>}
+        <button onClick={()=>syncFromCloud(selectedYear)} disabled={isSyncing} style={{padding:'5px 12px',background:'transparent',border:'1px solid #1a5c3a',color:isSyncing?'#527a5c':'#4caf82',fontSize:11,fontWeight:600,borderRadius:5,cursor:isSyncing?'wait':'pointer',fontFamily:'inherit'}}>{isSyncing?'⟳ Syncing…':'🔄 Sync POTY'}</button>
+      </div>
     </div>
     {isCurrentYear&&activePlayers>0&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>⚠ Tournament has {activePlayers} active players. Commit after event finishes.</div>}
     <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
