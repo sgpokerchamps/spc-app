@@ -2390,6 +2390,39 @@ function POTYView({tournament}) {
   const [linkingIdx, setLinkingIdx] = useState(-1);
   const [linkTarget, setLinkTarget] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
+  const [syncStatus, setSyncStatus] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  async function syncFromCloud(yr){
+    setIsSyncing(true); setSyncStatus('Syncing…');
+    try {
+      const res = await fetch('https://spc-members.onrender.com/api/poty/'+yr, {headers:{'X-Staff-Pw':'Cowcow808'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      // Convert cloud format → local POTY shape
+      const players = {};
+      (data.standings||[]).forEach(s => {
+        players[s.player_name] = {points:s.points, events:Array.isArray(s.events_played)?s.events_played:[]};
+      });
+      const committed = (data.commits||[]).map(c=>c.tournament_id);
+      const undoHistory = (data.commits||[]).slice().reverse().map(c=>({
+        tournamentId:c.tournament_id, tournamentName:c.tournament_name, date:c.committed_at,
+        pointsAdded:c.points_added, commitId:c.id,
+      }));
+      const newPoty = {year:yr, players, committed, aliases:(poty.aliases||{}), undoHistory};
+      setPoty(newPoty);
+      savePOTY(newPoty);
+      setSyncStatus('Synced '+new Date().toLocaleTimeString());
+    } catch(e) {
+      setSyncStatus('⚠ Sync failed: '+e.message+' (showing local cache)');
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
+  // Auto-sync on mount and when year changes
+  useEffect(()=>{ syncFromCloud(selectedYear); },[selectedYear]);
+
   const isCurrentYear = selectedYear === currentYear;
   const isCommitted = poty.committed.indexOf(tournament.id)>=0;
   const activePlayers = tournament.players.filter(p=>p.status==='active').length;
@@ -2397,14 +2430,57 @@ function POTYView({tournament}) {
   const sorted = Object.entries(poty.players).map(([name,d])=>({name,points:d.points,events:d.events||[]})).sort((a,b)=>b.points-a.points);
   const filtered = searchFilter ? sorted.filter(p=>p.name.toLowerCase().includes(searchFilter.toLowerCase())) : sorted;
   const availableYears = getPotyYears();
-  function switchYear(yr){setSelectedYear(yr);setPoty(initPOTY(yr));setShowCommit(false);setPendingPoints([]);setSearchFilter('');}
+  function switchYear(yr){
+    setSelectedYear(yr);
+    setShowCommit(false);
+    setPendingPoints([]);
+    setSearchFilter('');
+    // syncFromCloud will be triggered by the useEffect on selectedYear change
+  }
   function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}const resolved=pts.map(p=>{const alias=poty.aliases[p.name];return{...p,potyName:alias||(poty.players[p.name]?p.name:null)};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
   function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
   function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
-  function confirmCommit(){const unlinked=pendingPoints.filter(p=>!p.potyName);if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);const evName=tournament.name||tournament.eventType||'Event';if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players?'))return;const newPoty=JSON.parse(JSON.stringify(poty));if(!newPoty.undoHistory)newPoty.undoHistory=[];newPoty.undoHistory.push({snapshot:JSON.parse(JSON.stringify(poty.players)),committedBefore:[...poty.committed],tournamentId:tournament.id,tournamentName:evName,date:new Date().toISOString(),pointsAdded:pendingPoints.map(p=>({name:p.potyName,points:p.points}))});const evLabel=evName+' ('+new Date().toLocaleDateString('en-SG')+')';pendingPoints.forEach(p=>{if(!newPoty.players[p.potyName])newPoty.players[p.potyName]={points:0,events:[]};newPoty.players[p.potyName].points+=p.points;newPoty.players[p.potyName].events.push(evLabel+': +'+p.points);});newPoty.committed.push(tournament.id);setPoty(newPoty);savePOTY(newPoty);
-    // Push tournament data to Supabase for permanent storage
-    pushTournamentToCloud(tournament, pendingPoints, poty);
-    setShowCommit(false);setPendingPoints([]);alert('Committed! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');}
+  async function confirmCommit(){
+    const unlinked=pendingPoints.filter(p=>!p.potyName);
+    if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}
+    const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);
+    const evName=tournament.name||tournament.eventType||'Event';
+    if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players to the CLOUD POTY?'))return;
+    setIsSyncing(true); setSyncStatus('Committing to cloud…');
+    try {
+      const res = await fetch('https://spc-members.onrender.com/api/poty/commit', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        body:JSON.stringify({
+          year:selectedYear,
+          tournament_id:tournament.id,
+          tournament_name:evName,
+          device:(window.electronAPI&&window.electronAPI.platform)||'browser',
+          points:pendingPoints.map(p=>({name:p.potyName,points:p.points})),
+        }),
+      });
+      const data = await res.json();
+      if(!res.ok){
+        if(data.already_committed){
+          alert('This tournament has already been committed to POTY '+selectedYear+'.');
+        } else {
+          alert('Commit failed: '+(data.error||res.statusText));
+        }
+        setSyncStatus('⚠ Commit failed'); setIsSyncing(false); return;
+      }
+      // Push tournament data to Supabase too (for Tournament History)
+      pushTournamentToCloud(tournament, pendingPoints, poty);
+      // Resync from cloud to get fresh standings
+      await syncFromCloud(selectedYear);
+      setShowCommit(false); setPendingPoints([]);
+      alert('Committed to cloud! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');
+    } catch(e) {
+      alert('Commit failed: '+e.message+'\n\nPOTY was NOT updated. Check internet connection and try again.');
+      setSyncStatus('⚠ Commit failed: '+e.message);
+      setIsSyncing(false);
+    }
+  }
+
 
   async function pushTournamentToCloud(t, points, potyData){
     try {
@@ -2496,14 +2572,34 @@ function POTYView({tournament}) {
       console.warn('Cloud push error:',err.message);
     }
   }
-  function undoLastCommit(){if(!hasUndo)return;const lc=poty.undoHistory[poty.undoHistory.length-1];if(!confirm('Undo commit from "'+lc.tournamentName+'"?'))return;const newPoty=JSON.parse(JSON.stringify(poty));newPoty.players=lc.snapshot;newPoty.committed=lc.committedBefore;newPoty.undoHistory.pop();setPoty(newPoty);savePOTY(newPoty);alert('Undone.'+(newPoty.undoHistory.length>0?' ('+newPoty.undoHistory.length+' more available)':''));}
+  async function undoLastCommit(){
+    if(!hasUndo)return;
+    const lc=poty.undoHistory[0];
+    if(!confirm('Undo cloud commit from "'+lc.tournamentName+'"?'))return;
+    setIsSyncing(true); setSyncStatus('Undoing on cloud…');
+    try {
+      const res = await fetch('https://spc-members.onrender.com/api/poty/undo', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        body:JSON.stringify({year:selectedYear, commit_id:lc.commitId}),
+      });
+      const data = await res.json();
+      if(!res.ok){alert('Undo failed: '+(data.error||res.statusText)); setSyncStatus('⚠ Undo failed'); setIsSyncing(false); return;}
+      await syncFromCloud(selectedYear);
+      alert('Undone on cloud: '+lc.tournamentName);
+    } catch(e) {
+      alert('Undo failed: '+e.message); setSyncStatus('⚠ Undo failed'); setIsSyncing(false);
+    }
+  }
   function exportCSV(){let csv='Rank,Player,Points\n';sorted.forEach((p,i)=>{csv+=(i+1)+',"'+p.name+'",'+p.points+'\n';});if(window.electronAPI&&window.electronAPI.showSaveDialog){window.electronAPI.showSaveDialog({defaultPath:'POTY_'+selectedYear+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{if(!r.canceled&&r.filePath)window.electronAPI.writeFile(r.filePath,csv);});}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+selectedYear+'_Standings.csv';a.click();}}
   const potyNames=Object.keys(poty.players).sort();
   return(<div style={{flex:1,overflowY:'auto',padding:'18px 22px'}}>
-    <div className="view-title" style={{display:'flex',alignItems:'center',gap:12}}><span>Player of the Year</span>
+    <div className="view-title" style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}><span>Player of the Year</span>
       <select value={selectedYear} onChange={e=>switchYear(parseInt(e.target.value))} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#c8973a',padding:'4px 8px',borderRadius:4,fontSize:16,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",cursor:'pointer'}}>{availableYears.map(y=><option key={y} value={y}>{y}</option>)}</select>
       <span style={{fontSize:12,color:'#7aaa82',fontWeight:400}}>{sorted.length} players</span>
       {!isCurrentYear&&<span style={{fontSize:11,color:'#c87a3a',fontWeight:400}}>(archived)</span>}
+      <button onClick={()=>syncFromCloud(selectedYear)} disabled={isSyncing} style={{marginLeft:'auto',padding:'5px 12px',background:'transparent',border:'1px solid #1a5c3a',color:isSyncing?'#527a5c':'#4caf82',fontSize:11,fontWeight:600,borderRadius:5,cursor:isSyncing?'wait':'pointer',fontFamily:'inherit'}}>{isSyncing?'⟳ Syncing…':'🔄 Sync POTY'}</button>
+      {syncStatus&&<span style={{fontSize:10,color:'#527a5c',fontWeight:400,width:'100%'}}>{syncStatus}</span>}
     </div>
     {isCurrentYear&&activePlayers>0&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>⚠ Tournament has {activePlayers} active players. Commit after event finishes.</div>}
     <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
