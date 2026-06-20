@@ -137,19 +137,19 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .tour-layout{display:flex;height:100vh;overflow:hidden}
 /* Sidebar */
 .sidebar{width:215px;flex-shrink:0;background:var(--sidebar-bg,#08120a);border-right:1px solid #152018;display:flex;flex-direction:column;overflow:hidden}
-.sidebar-brand{padding:36px 14px 14px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.brand-label{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1.5px;color:var(--accent,#3dba6f);text-transform:uppercase;line-height:1.2}
-.brand-name{font-size:16px;font-weight:700;color:#b2d4ba;margin-top:5px;line-height:1.35}
-.brand-status{font-size:12px;color:#7aaa82;margin-top:4px;font-family:'Rajdhani',sans-serif;letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.sidebar-brand{padding:12px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.brand-label{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--accent,#3dba6f);text-transform:uppercase;line-height:1.2}
+.brand-name{font-size:14px;font-weight:600;color:#e4f0e8;margin-top:4px;line-height:1.35}
+.brand-status{font-size:10px;color:#3a5a42;margin-top:3px;font-family:'Rajdhani',sans-serif;letter-spacing:1.5px;text-transform:uppercase}
 .brand-status.running{color:var(--accent,#3dba6f)}
 .brand-status.complete{color:#c8973a}
 .sidebar-nav{flex:1;padding:10px 8px;overflow-y:auto}
-.nav-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:7px;border:none;background:none;color:#7aaa82;font-size:13px;font-weight:500;font-family:'Barlow',sans-serif;cursor:pointer;margin-bottom:2px;transition:.15s;text-align:left}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:7px;border:none;background:none;color:#527a5c;font-size:13px;font-weight:500;font-family:'Barlow',sans-serif;cursor:pointer;margin-bottom:2px;transition:.15s;text-align:left}
 .nav-btn:hover{background:var(--active-bg,#0f1e13);color:#b2d4ba}
 .nav-btn.active{background:var(--active-nav,#112016);color:var(--accent,#3dba6f);font-weight:600}
 .nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
 .sidebar-footer{padding:10px 8px;border-top:1px solid #152018;display:flex;flex-direction:column;gap:5px}
-.sf-btn{width:100%;padding:7px 10px;background:none;border:1px solid #2a4a35;color:#7aaa82;border-radius:6px;font-size:12px;font-family:'Barlow',sans-serif;cursor:pointer;transition:.15s;text-align:left}
+.sf-btn{width:100%;padding:7px 10px;background:none;border:1px solid #1a2e22;color:#527a5c;border-radius:6px;font-size:12px;font-family:'Barlow',sans-serif;cursor:pointer;transition:.15s;text-align:left}
 .sf-btn:hover{border-color:#3dba6f;color:#3dba6f}
 .sf-btn.display{border-color:#c8973a20;color:#c8973a}
 .sf-btn.display:hover{border-color:#c8973a;color:#c8973a;background:#120f07}
@@ -267,7 +267,7 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .players-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .view-head{padding:16px 22px;border-bottom:1px solid #152018;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#08120a}
 .view-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#e4f0e8}
-.view-sub{font-size:12px;color:#7aaa82;margin-top:2px}
+.view-sub{font-size:11px;color:#3a5a42;margin-top:2px}
 .btn-row{display:flex;gap:7px;align-items:center}
 .btn-primary{background:var(--accent,#3dba6f);color:#04080a;border:none;padding:6px 14px;border-radius:5px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
 .btn-primary:hover{opacity:.88}
@@ -293,11 +293,11 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .tables-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;margin-top:12px}
 .table-card{background:#0b1610;border:1px solid #152018;border-radius:9px;padding:13px}
 .table-num{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:#3dba6f;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
-.table-count{font-size:11px;color:#527a5c;font-family:'Barlow',sans-serif;font-weight:400}
+.table-count{font-size:11px;color:#2a4a35;font-family:'Barlow',sans-serif;font-weight:400}
 .seat-row{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px}
-.seat-n{color:#3a5a42;width:14px;flex-shrink:0;font-size:11px}
+.seat-n{color:#1a2e22;width:14px;flex-shrink:0;font-size:10px}
 .seat-name{color:#b2d4ba;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.seat-empty{color:#2a4a35;font-style:italic}
+.seat-empty{color:#1a2e22;font-style:italic}
 /* PAYOUTS */
 .payouts-view{flex:1;overflow-y:auto;padding:18px 22px}
 .payout-stats{display:flex;gap:10px;margin-bottom:18px}
@@ -339,13 +339,12 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .fs-blind{text-align:center}
 .fs-blind-lbl{font-size:1.2vw;color:rgba(255,255,255,0.45);letter-spacing:.25em;text-transform:uppercase;margin-bottom:.4vh}
 .fs-blind-val{font-size:5.5vw;color:#e4f0e8;font-weight:700}
-.fs-next{font-size:1.7vw;color:#7aaa82;letter-spacing:.04em;margin-bottom:3vh;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:.6vh 2vw;text-align:center}
-.fs-next span{color:#b2d4ba;font-weight:600}
-.fs-stats{position:absolute;left:3vw;top:2vh;bottom:2vh;display:flex;flex-direction:column;align-items:center;gap:2.5vh;padding:0 1.8vw;white-space:nowrap;z-index:5}
-.fs-stats-inner{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2.5vh;padding:2vh 0}
+.fs-next{font-size:1.4vw;color:#4a7a55;letter-spacing:.04em;margin-bottom:8vh}
+.fs-next span{color:#7aaa82}
+.fs-stats{position:absolute;bottom:3vh;left:50%;transform:translateX(-50%);display:flex;gap:4.5vw;white-space:nowrap;padding:1.2vh 3vw;background:rgba(0,0,0,0.35);border-top:1px solid rgba(255,255,255,0.07);width:100%;justify-content:center}
 .fs-stat{text-align:center}
-.fs-stat-lbl{font-size:1.0vw;color:rgba(255,255,255,0.5);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.3vh;font-weight:600}
-.fs-stat-val{font-size:2.6vw;font-weight:700;font-family:'Rajdhani',sans-serif}
+.fs-stat-lbl{font-size:1.1vw;color:rgba(255,255,255,0.75);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.4vh;font-weight:600}
+.fs-stat-val{font-size:2.8vw;font-weight:700;font-family:'Rajdhani',sans-serif}
 .ctx-menu{position:fixed;background:#0d1a10;border:1px solid #1e3a26;border-radius:9px;padding:6px;min-width:190px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.7);animation:ctxIn .1s ease}
 @keyframes ctxIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 .ctx-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Barlow',sans-serif;color:#b2d4ba;transition:.12s;white-space:nowrap}
@@ -393,20 +392,20 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .reg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .reg-title{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#b2d4ba;letter-spacing:.5px}
 .reg-mode-row{display:flex;align-items:center;gap:10px}
-.reg-mode-label{font-size:13px;color:#7aaa82;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.reg-mode-label{font-size:11px;color:#527a5c;letter-spacing:1px;text-transform:uppercase}
 .mode-toggle{display:flex;border:1px solid #1a2e22;border-radius:6px;overflow:hidden}
 .mode-btn{padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;background:transparent;border:none;color:#527a5c;transition:.15s}
 .mode-btn.active{background:var(--accent,#c8973a);color:#0a0a0a}
 .scan-box{background:#060e09;border:2px solid #1a2e22;border-radius:10px;padding:20px 24px;margin-bottom:20px;transition:.15s}
 .scan-box:focus-within{border-color:var(--accent,#c8973a)}
-.scan-label{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#7aaa82;margin-bottom:8px;font-weight:600}
+.scan-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#527a5c;margin-bottom:8px}
 .scan-input{width:100%;background:transparent;border:none;outline:none;font-size:16px;color:#e8f0ea;font-family:'Barlow',sans-serif;caret-color:var(--accent,#c8973a)}
 .scan-input::placeholder{color:#2a4a35}
-.scan-hint{font-size:13px;color:#5a8a6a;margin-top:6px}
+.scan-hint{font-size:11px;color:#3a5a42;margin-top:6px}
 .reg-info-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .reg-info-card{flex:1;min-width:140px;background:#060e09;border:1px solid #1a2e22;border-radius:8px;padding:12px 14px}
-.reg-info-lbl{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7aaa82;margin-bottom:5px;font-weight:600}
-.reg-info-val{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:#e4f0e8}
+.reg-info-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#3a5a42;margin-bottom:4px}
+.reg-info-val{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#b2d4ba}
 .reg-info-val.warn{color:#c8973a}
 .reg-info-val.ok{color:#3dba6f}
 .reg-info-val.closed{color:#8a4040}
@@ -415,7 +414,7 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .reentry-badge.closed{background:#1a0a0a;color:#8a4040;border:1px solid #3a1a1a}
 .reg-log{background:#060e09;border:1px solid #1a2e22;border-radius:10px;overflow:hidden}
 .reg-log-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #1a2e22}
-.reg-log-title{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7aaa82;font-weight:600}
+.reg-log-title{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#527a5c}
 .reg-log-list{max-height:340px;overflow-y:auto}
 .reg-log-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #0e1a12;transition:.12s}
 .reg-log-row:last-child{border-bottom:none}
@@ -423,9 +422,8 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .reg-log-row.dup{background:#1a1004}
 .reg-log-num{font-size:11px;color:#3a5a42;width:28px;text-align:right;flex-shrink:0}
 .reg-log-name{flex:1;font-size:14px;color:#b2d4ba;font-weight:500}
-.reg-log-seat{font-size:13px;color:#3dba6f;white-space:nowrap;font-weight:600}
+.reg-log-seat{font-size:11px;color:#527a5c;white-space:nowrap}
 .reg-log-seat.unassigned{color:#c8973a}
-.reg-log-time{font-size:11px;color:#7aaa82;white-space:nowrap;font-weight:500}
 .reg-log-badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.5px}
 .reg-log-badge.dup{background:#1a0a0a;color:#c87a40;border:1px solid #3a2010}
 .reg-log-badge.reentry{background:#0d0816;color:#9b7bce;border:1px solid #2a1a40}
@@ -460,7 +458,7 @@ const EVENT_CONFIGS = {
   me_1b: { name:'Main Event — Flight 1B', short:'ME 1B', group:'Main Event', subtitle:'Flight 1B', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:6, maxReentries:1 },
   me_1c: { name:'Main Event — Flight 1C', short:'ME 1C', group:'Main Event', subtitle:'Flight 1C', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:25, reentryUntilLevel:8, maxReentries:Infinity },
   me_1d: { name:'Main Event — Flight 1D', short:'ME 1D', group:'Main Event', subtitle:'Flight 1D', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:10, reentryUntilLevel:6, maxReentries:Infinity },
-  me_d2: { name:'Main Event — Day 2',     short:'ME D2', group:'Main Event', subtitle:'Day 2',     isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530,   adminFeePercent:4, itmPercent:13, guarantee:100000, stack:0,     color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:0, maxReentries:0 },
+  me_d2: { name:'Main Event — Day 2',     short:'ME D2', group:'Main Event', subtitle:'Day 2',     isMainEvent:true,  bgDeep:'#1a1004', buyin:0,   prizeComponent:0,   adminFeePercent:4, itmPercent:13, guarantee:100000, stack:0,     color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:0, maxReentries:0 },
   miniRoller:    { name:'Mini Roller',    short:'Mini Roller',    group:'Mini Roller',    subtitle:'',         isMainEvent:false, bgDeep:'#041408', buyin:1000, prizeComponent:883, adminFeePercent:4, itmPercent:15, guarantee:30000,  stack:30000, color:'#3dba6f', suit:'♥', levelMins:40 },
   mysteryBounty: { name:'Mystery Bounty', short:'Mystery Bounty', group:'Mystery Bounty', subtitle:'',         isMainEvent:false, bgDeep:'#0d0816', buyin:400,  prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0,      stack:15000, color:'#9b7bce', suit:'◆', levelMins:20, bountyAmount:90 },
   satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#040d18', buyin:60,   prizeComponent:52,  adminFeePercent:0, itmPercent:0,  guarantee:0,      stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10 },
@@ -483,7 +481,7 @@ function makeMED1(mins) {
   return [
     {level:1,  sb:100,  bb:100,  ante:100,  mins},
     {level:2,  sb:100,  bb:200,  ante:200,  mins},
-    {level:3,  sb:200,  bb:300,  ante:300,  mins},
+    {level:3,  sb:200,  bb:400,  ante:400,  mins},
     {level:4,  sb:200,  bb:400,  ante:400,  mins},
     {isBreak:true, mins:15, note:''},
     {level:5,  sb:300,  bb:600,  ante:600,  mins},
@@ -581,7 +579,7 @@ const STRUCTURES = {
     {level:17, sb:4000, bb:8000,  ante:8000,  mins:40},
     {level:18, sb:5000, bb:10000, ante:10000, mins:40},
     {isBreak:true, mins:10, note:''},
-    {level:19, sb:8000,  bb:16000, ante:16000, mins:40},
+    {level:19, sb:7500,  bb:15000, ante:15000, mins:40},
     {level:20, sb:10000, bb:20000, ante:20000, mins:40},
     {level:21, sb:15000, bb:30000, ante:30000, mins:40},
     {isBreak:true, mins:10, note:'Colour Up'},
@@ -650,7 +648,6 @@ const fmt = {
   chips(n) { if(!n&&n!==0)return'—'; if(n>=1000000)return(n/1000000).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1000)return(n/1000).toFixed(1).replace(/\.0$/,'')+'K'; return n.toLocaleString(); },
   currency(n) { return `S$${Number(n||0).toLocaleString()}`; },
   ago(ms) { const m=Math.round((Date.now()-ms)/60000); if(m<2)return'just now'; if(m<60)return`${m}m ago`; const h=Math.round(m/60); return`${h}h ago`; },
-  ordinal(n) { const s=['th','st','nd','rd']; const v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); },
 };
 function getPayouts(entries, prizePool) {
   const keys=Object.keys(PAYOUT_DATA).map(Number).sort((a,b)=>a-b);
@@ -660,8 +657,10 @@ function getPayouts(entries, prizePool) {
 function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
   startTable=startTable||1; seatLocks=seatLocks||{};
   const active = players.filter(p=>p.status==='active');
+  const n = active.length + 1;
+  const tablesNeeded = Math.min(maxTables, Math.max(1, Math.ceil(n / seatsPerTable)));
   const counts = {};
-  for(let i=0;i<maxTables;i++) counts[startTable+i]=0;
+  for(let i=0;i<tablesNeeded;i++) counts[startTable+i]=0;
   active.forEach(p=>{ if(p.tableNum!==null&&p.tableNum!==undefined&&counts[p.tableNum]!==undefined) counts[p.tableNum]=(counts[p.tableNum]||0)+1; });
   const tables=Object.keys(counts).map(Number)
     .filter(t=>counts[t]<seatsPerTable)
@@ -679,50 +678,11 @@ function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
 }
 
 // QR parser — boarding pass string is semicolon-delimited; name is at index 3
-function countryFlag(cc){if(!cc)return'';try{return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));}catch(e){return cc.toUpperCase();}}
-function pf(p){if(!p||!p.country)return'';return' '+countryFlag(p.country);}
-
 function parseQR(raw) {
   if(!raw||!raw.trim()) return null;
-  const trimmed = raw.trim();
-
-  // Check if this is an SPC Community Card QR (Member ID format: SPC-XXXXX or SPC-XXXXX/CC)
-  const spcMatch = trimmed.match(/^(SPC-\d{5})(\/([A-Z]{2}))?$/i);
-  if(spcMatch) {
-    const memberId = spcMatch[1].toUpperCase();
-    const qrCountry = spcMatch[3] ? spcMatch[3].toUpperCase() : null;
-    try {
-      const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-      const entry = cache[memberId];
-      if(!entry) { alert('Member ID ' + memberId + ' not found in local cache. Try syncing members first.'); return null; }
-      // Support both old format (string) and new format ({name, country})
-      const name = typeof entry === 'string' ? entry : entry.name;
-      const country = qrCountry || (typeof entry === 'object' ? entry.country : null);
-      if(name) return {name, country};
-      return null;
-    } catch(e) { return null; }
-  }
-
-  // Boarding pass format: semicolon-separated, name in position 4
-  const parts=trimmed.split(';');
-  if(parts.length>=4) {
-    const name=parts[3]?parts[3].trim():'';
-    if(!name) return null;
-    return {name, country: memberCountryLookup(name)};
-  }
-  // Plain typed name — look up country from member cache
-  return trimmed?{name:trimmed, country: memberCountryLookup(trimmed)}:null;
-}
-function memberCountryLookup(name) {
-  try {
-    const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-    const match = Object.values(cache).find(e => {
-      const n = typeof e === 'string' ? e : e.name;
-      return n && n.toLowerCase() === name.toLowerCase();
-    });
-    if(match && typeof match === 'object') return match.country || null;
-    return null;
-  } catch(e) { return null; }
+  const parts=raw.trim().split(';');
+  const name=parts[3]?parts[3].trim():'';
+  return name||null;
 }
 function advanceLevelFn(t) {
   const ni=t.currentLevelIdx+1;
@@ -760,23 +720,11 @@ const SPC_PAYOUT_TABLE = [
   {minP:766,maxP:837,paid:108,pcts:[17.8,12.75,7.85,6.092,5.075,4.12,3.2,2.325,1.455,1.05,1.05,1.05,0.925,0.925,0.925,0.82,0.82,0.82,0.72,0.72,0.72,0.63,0.63,0.63,0.55,0.55,0.55,0.475,0.475,0.475,0.42,0.42,0.42,0.42,0.42,0.42,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.23,0.23,0.23,0.23,0.23,0.23,0.23,0.23,0.23]},
 ];
 
-function generatePayoutRows(entries, prizePool, roundToFifty=false, placesOverride=null) {
+function generatePayoutRows(entries, prizePool, roundToFifty=false) {
   if (entries <= 0 || prizePool <= 0) return [];
   // Find the matching bracket
-  let bracket = SPC_PAYOUT_TABLE.find(b => entries >= b.minP && entries <= b.maxP)
+  const bracket = SPC_PAYOUT_TABLE.find(b => entries >= b.minP && entries <= b.maxP)
     || SPC_PAYOUT_TABLE[SPC_PAYOUT_TABLE.length - 1];
-  // If places override is given, find the bracket that has that many payout places
-  if (placesOverride && placesOverride > 0) {
-    const match = SPC_PAYOUT_TABLE.find(b => b.pcts && b.pcts.length === placesOverride);
-    if (match) bracket = match;
-    else {
-      // If no exact match, trim or extend the bracket to fit
-      bracket = {...bracket, pcts: bracket.pcts.slice(0, placesOverride)};
-      // Normalize pcts to sum to 100
-      const sum = bracket.pcts.reduce((a,b)=>a+b,0);
-      if (sum > 0) bracket = {...bracket, pcts: bracket.pcts.map(p=>p/sum*100)};
-    }
-  }
   const multiple = roundToFifty ? 50 : 100;
   let rows = bracket.pcts.map((pct, i) => {
     const raw = pct / 100 * prizePool;
@@ -793,81 +741,23 @@ function generatePayoutRows(entries, prizePool, roundToFifty=false, placesOverri
 
 /* ==== EXPORT / IMPORT HELPERS ==== */
 function exportTournament(t, templateOnly=false) {
-  if(templateOnly){
-    // Tournament report — generate printable HTML summary
-    const evCfg=EVENT_CONFIGS[t.eventType]||{};
-    const entries=t.players.length+(t.inheritedEntries||0);
-    const busted=t.players.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
-    const active=t.players.filter(p=>p.status==='active').length;
-    const standings=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
-    let payouts=t.payoutTable||[];
-    const pp=t.prizePool||0;
-    const extraBags=t.extraBagCount||0;
-    const extraDed=extraBags*1500;
-    const payoutPool=pp-extraDed;
-    // If no saved payout table, generate one
-    if(payouts.length===0&&entries>0&&payoutPool>0){
-      payouts=generatePayoutRows(entries,payoutPool,t.eventType==='mysteryBounty');
-    }
-    // Always recalculate amounts from pct (saved amounts may be stale)
-    payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:Math.round(payoutPool*(p.pct||0)/100)}));
-    // Build position→amount lookup for standings
-    const payoutMap={};
-    payouts.forEach(p=>{payoutMap[p.position]=p;});
-    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${t.name||'Tournament'} Report</title>
-<style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#222}
-h1{font-size:24px;margin-bottom:4px}h2{font-size:16px;margin-top:24px;border-bottom:2px solid #333;padding-bottom:4px}
-.sub{color:#666;font-size:13px;margin-bottom:16px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0}
-.stat{background:#f5f5f5;border-radius:6px;padding:10px 14px}.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;font-weight:600}
-.stat-val{font-size:20px;font-weight:700;margin-top:2px}
-table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;padding:6px 10px;background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #ddd}
-td{padding:6px 10px;border-bottom:1px solid #eee}.r{text-align:right}
-.amt{font-weight:600;color:#1a7a3a}
-@media print{body{padding:0}.stats{break-inside:avoid}table{page-break-inside:auto}}</style></head><body>
-<h1>${t.name||'Tournament'}</h1>
-<div class="sub">${evCfg.group||''} ${evCfg.subtitle||''} · ${new Date().toLocaleDateString('en-SG',{day:'numeric',month:'long',year:'numeric'})}</div>
-<div class="stats">
-<div class="stat"><div class="stat-label">Total entries</div><div class="stat-val">${entries}</div></div>
-<div class="stat"><div class="stat-label">Prize pool</div><div class="stat-val">S$${pp.toLocaleString()}</div></div>
-<div class="stat"><div class="stat-label">Extra bags</div><div class="stat-val">${extraBags} (−S$${extraDed.toLocaleString()})</div></div>
-<div class="stat"><div class="stat-label">Payout pool</div><div class="stat-val">S$${payoutPool.toLocaleString()}</div></div>
-</div>
-${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name} ${countryFlag(w.country)}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
-<h2>Final Standings</h2><table><tr><th>#</th><th>Player</th><th>Status</th><th class="r">Payout (S$)</th></tr>
-${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name} ${countryFlag(p.country)}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
-${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name} ${countryFlag(p.country)}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
-</table></body></html>`;
-    const reportName=(t.name||'tournament').replace(/[^a-z0-9]/gi,'_')+'_Report.html';
-    if(window.electronAPI&&window.electronAPI.showSaveDialog){
-      window.electronAPI.showSaveDialog({defaultPath:reportName,filters:[{name:'HTML',extensions:['html']}]}).then(function(result){
-        if(!result.canceled&&result.filePath) window.electronAPI.writeFile(result.filePath,html);
-      });
-    }else{
-      const blob=new Blob([html],{type:'text/html'});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download=reportName;
-      a.click();URL.revokeObjectURL(a.href);
-    }
-    return;
-  }
-  // Full backup — .spc file
-  const payload = { _spcExport: 'tournament', _version: 1, ...t };
-  const json = JSON.stringify(payload, null, 2);
+  const payload = templateOnly ? {
+    _spcExport: 'template', _version: 1,
+    name: t.name, eventType: t.eventType, buyin: t.buyin,
+    prizeComponent: t.prizeComponent, adminFeePercent: t.adminFeePercent,
+    itmPercent: t.itmPercent, guarantee: t.guarantee,
+    bountyAmount: t.bountyAmount||0, stack: t.stack,
+    maxTables: t.maxTables, seatsPerTable: t.seatsPerTable,
+    structure: t.structure, payoutTable: t.payoutTable,
+  } : { _spcExport: 'tournament', _version: 1, ...t };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
   const safeName = (t.name||'tournament').replace(/[^a-z0-9]/gi,'_').toLowerCase();
-  const backupName = `spc_backup_${safeName}.spc`;
-  if(window.electronAPI&&window.electronAPI.showSaveDialog){
-    window.electronAPI.showSaveDialog({defaultPath:backupName,filters:[{name:'SPC Backup',extensions:['spc']}]}).then(function(result){
-      if(!result.canceled&&result.filePath) window.electronAPI.writeFile(result.filePath,json);
-    });
-  }else{
-    const blob = new Blob([json], {type:'application/octet-stream'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = backupName;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
+  a.href = url;
+  a.download = templateOnly ? `spc_template_${safeName}.json` : `spc_save_${safeName}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function importFromFile(file, onSuccess, onError) {
@@ -900,16 +790,6 @@ function deleteT(id) {
     localStorage.setItem('spc_index',JSON.stringify(getIndex().filter(x=>x.id!==id)));
   } catch(e){}
 }
-/* ==== POTY SYSTEM ==== */
-const POTY_RATE=10;
-const POTY_INITIAL_2026={"HOO BAI MING HENRY":2850,"CHANG HUAN PIAO":2350,"BRENDAN LEE JIA HAO":2300,"CALVIN TAN SEET PIN":2250,"TANG KHEANG WOOI":1950,"LIM YAN MING":1450,"MUTHUKUMARAN GOVINDASAMY":1440,"OLIVEIRO MARC CHRISTOPHER":1160,"TAN KENG YONG":1070,"YAR GIN WEE":970,"SIM CHEN HON KELVIN":895,"REMNANT MARK RICHARD":810,"DICKSON CHEW":800,"FABIAN YEO FANG YI":790,"TER GUO QIAN":770,"PANG SENG JUN DIXON":760,"CHIU KIM WAH":700,"LIEW KOK KONG":610,"LIM MIN SOON":610,"ADAM CHRISTOPHER SEVER":600,"DANILO PERISIC":570,"TAN QUAN WEI EDWIN":510,"KOH YONG CHONG":490,"LEE KONG FAI EUGENE":490,"KHOR JUNXIONG":480,"SAMSON YU JINDA":460,"WOON BAO SHENG":390,"YEOW LIAN QUAN, IVAN":390,"POH LENG WEE":380,"LIAO CHONGWEI":380,"TAN HAI SHIEN":380,"RAHUL VIJAY CHINCHALKAR":370,"SHI HUIQI CORINE":320,"SIARHEI CHUDAPAL":310,"YIEU HANN JONG":310,"MAR KWOK MENG JASON":280,"TAN JIA YOU":260,"LAU HENG SENG":240,"WARRICK WEE SHENG XIONG":240,"KENNETH ANTHONY":220,"TAN CHUNG HOWE SEAN":220,"JOSEPH KWAY KIM LENG":220,"LEE CHIN WEE":200,"JOHN LOW SOON HOCK":180,"TEO QIANCHENG IVAN":180,"CHUA WAN JIN JOEY":170,"ONG CHOON HAU":170,"SOIN JIAN XIANG DAVID":170,"SHAH PRATIK NIKHILBHAI":150,"LOPEZ TAN SEN LOONG":150,"MISHRA SIDDHARTH SANKAR":150,"LIM SOO GHEE":140,"YEO ENG HONG":140,"SIM WEI SHENG":140,"ONG JIA HAN":110,"LOH JIN JUN ZACHARIAH":110,"VIJAYARENGAN S/O VISVALINGAM":110,"NG SAING LENG":100,"LAI CHUN WEI":100,"LEE JUN XU":100,"THENG CHEE SIANG":100,"MARVIN SULLIVAN ROUGIER":100,"TEOW YAN RONG ALARICE":100,"FOO YONG CHEONG":100,"WAH QI LE":95,"RUBEN ENBASEGARAM":90,"PAUL TAN KE DA":90,"LUA ZUN HONG ELSTON":90,"VLADIMIR SITNIKOV":90,"TAN CHEE RAY, WALTSON":90,"HARESH S/O SHANMUGAM NATHAN":90,"ITSUKI CHIBA":90};
-function potyKey(yr){return 'spc_poty_'+yr;}
-function loadPOTYForYear(yr){try{const d=JSON.parse(localStorage.getItem(potyKey(yr)));if(d&&d.players)return d;return null;}catch(e){return null;}}
-function initPOTY(yr){const existing=loadPOTYForYear(yr);if(existing)return existing;const players={};if(yr===2026){Object.entries(POTY_INITIAL_2026).forEach(([name,pts])=>{players[name]={points:pts,events:['SPC XX & XXI (pre-loaded)']};});}const d={year:yr,players,committed:[],aliases:{}};localStorage.setItem(potyKey(yr),JSON.stringify(d));return d;}
-function savePOTY(d){try{localStorage.setItem(potyKey(d.year),JSON.stringify(d));}catch(e){}}
-function getPotyYears(){const years=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('spc_poty_')){const y=parseInt(k.replace('spc_poty_',''));if(!isNaN(y))years.push(y);}}const cur=new Date().getFullYear();if(years.indexOf(cur)<0)years.push(cur);return years.sort((a,b)=>b-a);}
-function getPotyPoints(tournament){const results=[];const entries=tournament.players.length+(tournament.inheritedEntries||0);let payouts=tournament.payoutTable||[];const pp=tournament.prizePool||0;const extraBags=tournament.extraBagCount||0;const extraDed=extraBags*1500;const payoutPool=pp-extraDed;if(payouts.length===0&&entries>0&&payoutPool>0){payouts=generatePayoutRows(entries,payoutPool,tournament.eventType==='mysteryBounty');}payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:p.amount||Math.round(payoutPool*(p.pct||0)/100)}));const payoutMap={};payouts.forEach(p=>{payoutMap[p.position]=p;});const busted=tournament.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));busted.forEach(p=>{const po=payoutMap[p.bustPosition];if(po&&po.amount>0){results.push({name:p.name,payoutAmount:po.amount,extraBagAmount:0,totalPrize:po.amount,points:Math.floor(po.amount/POTY_RATE)});}});if(tournament.extraBagWinners&&tournament.extraBagWinners.length>0){tournament.extraBagWinners.forEach(w=>{const amt=w.bags*1500;const existing=results.find(r=>r.name===w.name);if(existing){existing.extraBagAmount=amt;existing.totalPrize+=amt;existing.points=Math.floor(existing.totalPrize/POTY_RATE);}else{results.push({name:w.name,payoutAmount:0,extraBagAmount:amt,totalPrize:amt,points:Math.floor(amt/POTY_RATE)});}});}return results.filter(r=>r.points>0);}
-
 function writeLive(t, cur, nxt, active, tables) {
   try {
     const _payouts=(()=>{
@@ -926,7 +806,7 @@ function writeLive(t, cur, nxt, active, tables) {
       secs:t.timeRemainingSeconds, status:t.status,
       activePlayers:active.length, tablesInUse:tables, prizePool:t.prizePool, bountyPool:t.bountyPool||0,
       totalEntries:_cumEntries, totalBusted:_cumBusted,
-      avgStack:active.length>0?Math.round(((t.chipsInPlay||_cumEntries*t.stack))/active.length):0,
+      avgStack:active.length>0?Math.round((_cumEntries*t.stack)/active.length):0,
       payouts:_payouts, payoutsPublished:t.payoutsPublished||false, ts:Date.now()
     }));
   } catch(e){}
@@ -969,9 +849,9 @@ function DisplayPage({id}) {
   return(
     <div className="display-page" style={{background:`radial-gradient(ellipse at center, ${_dCfg?_dCfg.bgDeep:'#09180c'} 0%, #020806 72%)`}}>
       {/* SPC logo — always top-left */}
-      <img src={SPC_LOGO} alt="SPC" style={{position:'absolute',top:20,left:36,height:92,objectFit:'contain',zIndex:10}}/>
+      <img src={SPC_LOGO} alt="SPC" style={{position:'absolute',top:20,left:24,height:72,objectFit:'contain',zIndex:10}}/>
       {/* Natural8 logo — top-right, Main Event only */}
-      {_dIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:28,right:36,height:52,objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
+      {_dIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:28,right:24,height:42,objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
       <div className="d-name" style={{color:_dAccent}}>{_dCfg?_dCfg.group:name}</div>
       {_dCfg&&_dCfg.subtitle&&<div style={{fontSize:13,letterSpacing:3,color:'rgba(255,255,255,0.3)',marginBottom:4,textTransform:'uppercase'}}>{_dCfg.subtitle}</div>}
       <div className={`d-level ${isBreak?'break':''}`} style={{color:isBreak?'#c8973a':_dAccent}}>
@@ -995,10 +875,10 @@ function DisplayPage({id}) {
       <div className="d-stats">
         <div className="d-stat"><div className="d-stat-lbl">Players</div><div className="d-stat-val">{activePlayers}</div></div>
         <div className="d-stat"><div className="d-stat-lbl">Tables</div><div className="d-stat-val">{tablesInUse}</div></div>
+        <div className="d-stat"><div className="d-stat-lbl">Players</div><div className="d-stat-val">{activePlayers}</div></div>
         {avgStack>0&&<div className="d-stat"><div className="d-stat-lbl">Avg stack</div><div className="d-stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
         {bountyPool>0&&<div className="d-stat"><div className="d-stat-lbl">Bounty pool</div><div className="d-stat-val" style={{color:'#c8973a'}}>{fmt.currency(bountyPool)}</div></div>}
         <div className="d-stat"><div className="d-stat-lbl">Prize pool</div><div className="d-stat-val" style={{color:bountyPool>0?'#9b7bce':_dAccent}}>{fmt.currency(prizePool)}</div></div>
-        {(tournament.chipsInPlay>0||(totalEntries>0&&tournament.stack>0))&&<div className="d-stat"><div className="d-stat-lbl">Total chips</div><div className="d-stat-val" style={{color:'#3a5a42'}}>{fmt.chips(tournament.chipsInPlay||(totalEntries*tournament.stack))}</div></div>}
       </div>
       {payoutsPublished&&payouts&&payouts.length>0&&(
         <div style={{display:'flex',gap:20,marginTop:14,flexWrap:'wrap',justifyContent:'center',maxWidth:'80vw'}}>
@@ -1025,8 +905,6 @@ function App() {
   const [selEvent,setSelEvent] = useState(null);
   const [tournament,setTournament] = useState(null);
   const [subview,setSubview] = useState('clock');
-  // Global callback for RegisterView to persist regLog
-  window._spcUpdateRegLog = function(log){ setTournament(t=>({...t,regLog:log})); };
   const [modal,setModal] = useState(null);
   const [savedIndex,setSavedIndex] = useState(getIndex);
   const timerRef = useRef(null);
@@ -1066,7 +944,7 @@ function App() {
       });
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);
       const _activePlayers=tournament.players.filter(p=>p.status==='active');
-      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null}));
+      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name}));
       const _evCfg=EVENT_CONFIGS[tournament.eventType]||null;
       const _curLevel=cur&&!cur.isBreak?cur.level:null;
       const _reentryUntil=_evCfg?(_evCfg.reentryUntilLevel||0):0;
@@ -1080,7 +958,7 @@ function App() {
       const _st=tournament.startTable||1;
       const _mt=tournament.maxTables||15;
       for(let i=0;i<_mt;i++) _tableMap[_st+i]={num:_st+i,count:0,capacity:tournament.seatsPerTable||9,players:[]};
-      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null});}});
+      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum});}});
       window.electronAPI.sendTournamentState({
         active:_activePlayers.length,
         players:tournament.players.length,
@@ -1095,8 +973,6 @@ function App() {
         seatingMode:tournament.seatingMode||'auto',
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
-        regLog:(tournament.regLog||[]).slice(0,50).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
-        members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
       });
     }
   },[tournament]);
@@ -1110,10 +986,7 @@ function App() {
         // register by name if given, otherwise register next available number
         if(action.name){
           const existing=tournament.players.find(p=>p.name===action.name&&p.status==='active');
-          const isDup=!!existing;
-          if(!existing){addPlayer(action.name, false, action.country||null);SoundEngine.register();}
-          // Add to regLog so counter sees it
-          setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,100)};});
+          if(!existing){addPlayer(action.name);SoundEngine.register();}
         } else {
           // find next unused number
           const used=new Set(tournament.players.map(p=>p.name));
@@ -1142,7 +1015,13 @@ function App() {
           }
         }
       } else if(action.type==='undo-bust'){
-        undoBust();
+        // restore the most recently busted player
+        setTournament(t=>{
+          const busted=[...t.players].filter(p=>p.status==='busted').sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
+          if(busted.length===0)return t;
+          const restore=busted[0].id;
+          return {...t, players:t.players.map(p=>p.id===restore?{...p,status:'active',bustedAt:undefined,finishPos:undefined}:p)};
+        });
       } else if(action.type==='clock-toggle'){
         toggleClock();
       } else if(action.type==='clock-action'){
@@ -1151,7 +1030,7 @@ function App() {
         else if(action.action==='minus1')adjustTime(-60);
         else if(action.action==='plus1')adjustTime(60);
       } else if(action.type==='assign-seat'){
-        if(action.playerId) assignSeat(action.playerId, action.tableNum, action.seatNum);
+        if(action.playerId) assignSeat(action.playerId);
       } else if(action.type==='bust-player'){
         if(action.playerId){ bustPlayer(action.playerId); SoundEngine.bust(); }
       } else if(action.type==='move-player'){
@@ -1160,16 +1039,6 @@ function App() {
         }
       } else if(action.type==='open-table'){
         openTable();
-      } else if(action.type==='set-seating-mode'){
-        if(action.mode) setSeatingMode(action.mode);
-      } else if(action.type==='close-table-confirm'){
-        if(action.assignments&&action.closingTable){
-          closeTableConfirm(action.assignments, action.closingTable);
-        }
-      } else if(action.type==='break-table'){
-        if(action.tableNum){
-          const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const st=tournament.startTable||1;const mt=tournament.maxTables||15;const otherTables=Array.from({length:mt},(_,i)=>st+i).filter(t=>t!==tNumN);const avail=[];const tCounts={};otherTables.forEach(t=>{tCounts[t]=active.filter(p=>p.tableNum===t).length;});otherTables.forEach(t=>{for(let s=1;s<=spt;s++){const lockType=(lk[t+'-'+s])||'none';if(lockType==='move'||lockType==='all')continue;if(!active.find(p=>p.tableNum===t&&p.seatNum===s))avail.push({tableNum:t,seatNum:s});}});if(avail.length<displaced.length)return;const assignments=[];const tc={...tCounts};displaced.forEach(p=>{const rem=avail.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));rem.sort((a,b)=>(tc[a.tableNum]||0)-(tc[b.tableNum]||0)||a.tableNum-b.tableNum||a.seatNum-b.seatNum);const seat=rem[0];assignments.push({playerId:p.id,tableNum:seat.tableNum,seatNum:seat.seatNum});tc[seat.tableNum]=(tc[seat.tableNum]||0)+1;});closeTableConfirm(assignments,tNumN);
-        }
       } else if(action.type==='set-seat-lock'){
         if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
       }
@@ -1221,64 +1090,18 @@ function App() {
     const _inheritedPlayers=config.inheritedPlayers||[];
     const _maxT=config.maxTables||15;
     const _spt=config.seatsPerTable||9;
-    const isDay2=config.stack===0;
-
-    // Detect duplicate players in inherited list (multi-flight qualifiers)
-    let _deduped=_inheritedPlayers;
-    let _extraBagWinners=[];
-    let _totalExtraBags=0;
-    let _actualChips=0;
-
-    // Always deduplicate inherited players: keep best stack per name
-    if(_inheritedPlayers.length>0){
-      const bestByName={};
-      _inheritedPlayers.forEach(p=>{
-        if(!bestByName[p.name]||(p.chipCount||0)>(bestByName[p.name].chipCount||0)){
-          bestByName[p.name]=p;
-        }
-      });
-      _deduped=Object.values(bestByName);
-    }
-
-    // Day 2: calculate extra bags and actual chips
-    if(isDay2&&_inheritedPlayers.length>0){
-      const counts={};
-      _inheritedPlayers.forEach(p=>{counts[p.name]=(counts[p.name]||0)+1;});
-      const _ipCountries={};_inheritedPlayers.forEach(p=>{if(p.country)_ipCountries[p.name]=p.country;});
-      Object.keys(counts).forEach(name=>{
-        if(counts[name]>1){
-          const bags=counts[name]-1;
-          _extraBagWinners.push({name,bags,totalQualifications:counts[name],country:_ipCountries[name]||null});
-          _totalExtraBags+=bags;
-        }
-      });
-      _extraBagWinners.sort((a,b)=>b.bags-a.bags||a.name.localeCompare(b.name));
-      _actualChips=_deduped.reduce((s,p)=>s+(p.chipCount||0),0);
-    }
-
     let _seatedPlayers=[];
-    let _baggedPlayers=[];
-    if(isDay2){
-      // Day 2: seat deduplicated inherited players
-      _deduped.forEach((p,idx)=>{
+    if(_inheritedPlayers.length>0){
+      _inheritedPlayers.forEach((p,idx)=>{
         const tNum=(idx%_maxT)+1;
         const sNum=Math.floor(idx/_maxT)+1;
-        const bestHistorical=Math.max(p.chipCount||0,p.inheritedChipCount||0);
-        _seatedPlayers.push({...p,id:uid(),status:'active',bustPosition:null,inherited:true,
-          chipCount:p.chipCount||0,inheritedChipCount:bestHistorical,
+        _seatedPlayers.push({...p,id:uid(),status:'active',bustPosition:null,
           tableNum:sNum<=_spt?tNum:null,seatNum:sNum<=_spt?sNum:null});
       });
-    }else{
-      // Day 1 flights: store ALL inherited entries (no dedup) to preserve flight counts for Day 2 extra bags
-      _baggedPlayers=_inheritedPlayers.map(p=>({
-        name:p.name,
-        chipCount:Math.max(p.chipCount||0,p.inheritedChipCount||0),
-        inheritedChipCount:Math.max(p.chipCount||0,p.inheritedChipCount||0),
-      }));
     }
     // Pre-seeded survivors are now in players[] — remove them from
     // inheritedEntries and inheritedBusted to avoid double-counting
-    const adjustedInheritedEntries = isDay2 ? Math.max(0, inheritedEntries - _deduped.length) : inheritedEntries;
+    const adjustedInheritedEntries = Math.max(0, inheritedEntries - _inheritedPlayers.length);
     const adjustedInheritedBusted  = inheritedBusted; // busted count stays — survivors are not busted
     const bountyAmount=config.bountyAmount||0;
     const netPerEntry=(config.prizeComponent||0)*(1-(config.adminFeePercent||0)/100); // keep full decimal e.g. 508.80
@@ -1293,13 +1116,7 @@ function App() {
       bountyAmount,prizePerEntry,bountyPool:Math.max(Math.round(inheritedEntries*bountyAmount),0),
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
       players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,
-      status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
-      baggedPlayers:_baggedPlayers,
-      extraBagWinners:_extraBagWinners,extraBagCount:_totalExtraBags>0?_totalExtraBags:(config.extraBagCount||0),
-      chipsInPlay:_actualChips>0?_actualChips
-        :(config.stack===0&&inheritedEntries>0&&config.inheritedStack>0
-        ? inheritedEntries*(config.inheritedStack)
-        : 0)};
+      status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{}};
     setTournament({...t, payoutsPublished:false}); setSubview('register'); setView('tournament');
   }
 
@@ -1357,40 +1174,42 @@ Starting setup — you can adjust settings before launching.`);
     if(tournament&&tournament.id===id){setTournament(null);setView('home');}
   }
 
+  function openDisplayWindow() {
+    if(!tournament) return;
+    const url=window.location.href.split('#')[0]+'#display='+tournament.id;
+    window.open(url,'spc_display_'+tournament.id,'width=1920,height=1080,menubar=no,toolbar=no,scrollbars=no');
+  }
+
   function saveTournamentNow() {
     if(!tournament) return;
     saveT(tournament); setSavedIndex(getIndex()); alert('Saved!');
   }
 
-  function toggleClock(){setTournament(t=>{
-    const newStatus=t.status==='running'?'paused':'running';
-    return{...t,status:newStatus,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'clock',detail:newStatus==='running'?'Clock started':'Clock paused'}]};
-  });}
+  function toggleClock(){setTournament(t=>({...t,status:t.status==='running'?'paused':'running'}));}
   function publishPayouts(){setTournament(t=>({...t,payoutsPublished:true}));}
   function unpublishPayouts(){setTournament(t=>({...t,payoutsPublished:false}));}
   function prevLevel(){setTournament(t=>{const i=Math.max(0,t.currentLevelIdx-1);return{...t,currentLevelIdx:i,timeRemainingSeconds:t.structure[i].mins*60};});}
   function nextLevel(){setTournament(advanceLevelFn);}
   function adjustTime(s){setTournament(t=>({...t,timeRemainingSeconds:Math.max(0,t.timeRemainingSeconds+s)}));}
 
-  function addPlayer(name, forceAuto=false, country=null){
+  function addPlayer(name, forceAuto=false){
     setTournament(t=>{
       const mode=t.seatingMode||'auto';
-      let players=[...t.players];
-      const seat=(mode==='auto'||forceAuto)?findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}):{tableNum:null,seatNum:null};
+      const seat=(mode==='auto'||forceAuto)?findSeat(t.players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}):{tableNum:null,seatNum:null};
       const p={id:uid(),name,status:'active',bustPosition:null,...seat,registeredAt:Date.now()};
-      if(country) p.country=country;
-      players=[...players,p];
+      const players=[...t.players,p];
       const totalE=(players.length+(t.inheritedEntries||0));
       let prizePool;
       if(t.inheritedPrizePool>0&&t.prizePerEntry===0){
+        // Day 2: prize pool is fixed from carry-forward, doesn't grow with new entries
         prizePool=t.inheritedPrizePool;
       } else {
         const _ppeCalc=t.prizePerEntry!=null&&t.prizePerEntry>0?t.prizePerEntry:(t.prizeComponent||0)*(1-(t.adminFeePercent||0)/100);
-        const calcPrize=Math.round(totalE*_ppeCalc*100)/100;
+        const calcPrize=Math.round(totalE*_ppeCalc*100)/100; // round to cents
         prizePool=Math.max(calcPrize,t.guarantee||0);
       }
       const bountyPool=t.bountyAmount>0?Math.round(totalE*t.bountyAmount):0;
-      return{...t,players,prizePool,bountyPool,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'register',detail:`${name} registered${seat.tableNum?` → T${seat.tableNum} S${seat.seatNum}`:' (unseated)'}`}]};
+      return{...t,players,prizePool,bountyPool};
     });
   }
   function addPlayers(names){
@@ -1412,74 +1231,43 @@ Starting setup — you can adjust settings before launching.`);
     });
   }
   function bustPlayer(id){
-    const player=tournament.players.find(p=>p.id===id);
     setTournament(t=>{
       const active=t.players.filter(p=>p.status==='active');
       const position=active.length;
-      return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p),
-        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'bust',detail:`${player?player.name:'?'} busted ${fmt.ordinal(position)} (T${player?player.tableNum:''} S${player?player.seatNum:''})`}]};
+      return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,tableNum:null,seatNum:null}:p)};
     });
   }
   function updatePlayerName(id,name){setTournament(t=>({...t,players:t.players.map(p=>p.id===id?{...p,name}:p)}));}
   function bustManyPlayers(ids){
     setTournament(t=>{
       let players=[...t.players];
+      // Bust sequentially so each position is tracked correctly
       ids.forEach(id=>{
         const active=players.filter(p=>p.status==='active');
         const position=active.length;
-        players=players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p);
+        players=players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,tableNum:null,seatNum:null}:p);
       });
       return{...t,players};
-    });
-  }
-  function undoBust(){
-    setTournament(t=>{
-      const busted=[...t.players].filter(p=>p.status==='busted').sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
-      if(busted.length===0){alert('No busted players to undo.');return t;}
-      const p=busted[0];
-      let tableNum=p.prevTableNum||null,seatNum=p.prevSeatNum||null;
-      if(tableNum&&seatNum){const taken=t.players.find(x=>x.status==='active'&&x.tableNum===tableNum&&x.seatNum===seatNum);if(taken){tableNum=null;seatNum=null;}}
-      if(!tableNum||!seatNum){const seat=findSeat(t.players.filter(x=>x.id!==p.id),t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});tableNum=seat.tableNum;seatNum=seat.seatNum;}
-      return{...t,players:t.players.map(x=>x.id===p.id?{...x,status:'active',bustPosition:undefined,bustedAt:undefined,tableNum,seatNum,prevTableNum:undefined,prevSeatNum:undefined}:x),
-        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'undo-bust',detail:`${p.name} undo bust → T${tableNum||'?'} S${seatNum||'?'}`}]};
     });
   }
   function removePlayer(id){
     setTournament(t=>({...t,players:t.players.filter(p=>p.id!==id)}));
   }
-  function assignSeat(id, tableNum, seatNum){
+  function assignSeat(id){
     setTournament(t=>{
-      let seat;
-      if(tableNum&&seatNum){
-        seat={tableNum:Number(tableNum),seatNum:Number(seatNum)};
-      }else{
-        seat=findSeat(t.players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});
-      }
-      const p=t.players.find(x=>x.id===id);
-      return{...t,players:t.players.map(p=>p.id===id?{...p,...seat}:p),
-        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'move',detail:`${p?p.name:'?'} assigned → T${seat.tableNum||'?'} S${seat.seatNum||'?'}`}]};
+      const seat=findSeat(t.players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});
+      return{...t,players:t.players.map(p=>p.id===id?{...p,...seat}:p)};
     });
   }
   function movePlayerSeat(id,tableNum,seatNum){
     setTournament(t=>{
       const lk=(t.seatLocks||{})[tableNum+'-'+seatNum];
       if(lk==='move'||lk==='all') return t;
-      const p=t.players.find(x=>x.id===id);
-      const from=p?`T${p.tableNum||'?'} S${p.seatNum||'?'}`:'?';
-      return{...t,players:t.players.map(p=>p.id===id?{...p,tableNum,seatNum}:p),
-        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'move',detail:`${p?p.name:'?'} moved ${from} → T${tableNum} S${seatNum}`}]};
+      return{...t,players:t.players.map(p=>p.id===id?{...p,tableNum,seatNum}:p)};
     });
   }
   function setSeatingMode(mode){
     setTournament(t=>({...t,seatingMode:mode}));
-  }
-
-  function logActivity(type,detail){
-    setTournament(t=>{
-      const log=[...(t.activityLog||[]),{ts:Date.now(),type,detail}];
-      if(log.length>500) log.splice(0,log.length-500);
-      return{...t,activityLog:log};
-    });
   }
   function updateCurrentBlinds(sb, bb, ante) {
     setTournament(t=>{
@@ -1488,44 +1276,6 @@ Starting setup — you can adjust settings before launching.`);
       );
       return{...t,structure};
     });
-  }
-  function updateBlindLevel(idx, field, val) {
-    setTournament(t=>{
-      const structure=t.structure.map((lv,i)=>
-        i===idx ? {...lv, [field]:Number(val)||0} : lv
-      );
-      return{...t,structure};
-    });
-  }
-  function setChipsInPlay(val) {
-    setTournament(t=>({...t,chipsInPlay:Number(val)||0}));
-  }
-  function updateChipCount(playerId,chipCount){
-    setTournament(t=>({...t,players:t.players.map(p=>p.id===playerId?{...p,chipCount:Number(chipCount)||0}:p)}));
-  }
-  function exportSeating(){
-    const sorted=[...activePlayers].sort((a,b)=>(a.tableNum||0)-(b.tableNum||0)||(a.seatNum||0)-(b.seatNum||0));
-    const evName=tournament.name||'Tournament';
-    const rows=[['Table','Seat','Player','Chip Count']];
-    sorted.forEach(p=>rows.push([
-      p.tableNum||'',
-      p.seatNum||'',
-      p.name||'',
-      p.chipCount||''
-    ]));
-    const csv='\uFEFF'+rows.map(r=>r.map(v=>{
-      const s=String(v==null?'':v);
-      return s.includes(',')||s.includes('"')?'"'+s.replace(/"/g,'""')+'"':s;
-    }).join(',')).join('\n');
-    const defaultName=evName.replace(/[^a-zA-Z0-9]/g,'_')+'_Seating.csv';
-    if(window.electronAPI&&window.electronAPI.showSaveDialog){
-      window.electronAPI.showSaveDialog({defaultPath:defaultName,filters:[{name:'CSV',extensions:['csv']}]}).then(function(result){
-        if(!result.canceled&&result.filePath) window.electronAPI.writeFile(result.filePath,csv);
-      });
-    }else{
-      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=defaultName;a.click();
-    }
   }
   function setSeatLock(tableNum,seatNum,lockType){
     setTournament(t=>{
@@ -1578,50 +1328,28 @@ Starting setup — you can adjust settings before launching.`);
   }
 
   function openTable(){
+    // Increase maxTables by 1 (up to 15 absolute max)
     setTournament(t=>{
       const newMax=Math.min(15,t.maxTables+1);
-      const newTableNum=(t.startTable||1)+newMax-1;
-      return{...t,maxTables:newMax,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
+      return{...t,maxTables:newMax};
     });
     SoundEngine.register();
   }
 
-  function closeTableConfirm(assignments, closingTable){
-    logActivity('table',`Table ${closingTable} closed — ${Object.keys(assignments).length} players reassigned`);
+  function closeTable(){
+    // Close the highest-numbered active table, moving its players to manual queue
     setTournament(t=>{
-      if(t.maxTables<=1)return t;
-      const newMax=t.maxTables-1;
-      // Adjust startTable if we're closing a table that's NOT the last one
-      const lastTable=(t.startTable||1)+t.maxTables-1;
-      let newStart=t.startTable||1;
-      // Move players from closing table to their assigned seats
-      let players=[...t.players];
-      assignments.forEach(({playerId,tableNum,seatNum})=>{
-        players=players.map(p=>p.id===playerId?{...p,tableNum,seatNum}:p);
-      });
-      // If closing a middle table, shift higher tables down by 1
-      if(closingTable!==lastTable){
-        players=players.map(p=>p.status==='active'&&p.tableNum&&p.tableNum>closingTable
-          ?{...p,tableNum:p.tableNum-1}:p);
-      }
-      return{...t,maxTables:newMax,players};
-    });
-  }
-
-  function redrawSeats(){
-    setTournament(t=>{
-      const active=t.players.filter(p=>p.status==='active');
       const st=t.startTable||1;
-      const mt=t.maxTables||15;
-      const sp=t.seatsPerTable||9;
-      // Build all available seat positions
-      const seats=[];
-      for(let tb=0;tb<mt;tb++) for(let s=1;s<=sp;s++) seats.push({tableNum:st+tb,seatNum:s});
-      // Fisher-Yates shuffle
-      for(let i=seats.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seats[i],seats[j]]=[seats[j],seats[i]];}
-      const reassigned=active.map((p,i)=>({...p,...(seats[i]||{tableNum:null,seatNum:null})}));
-      const ids=new Set(reassigned.map(p=>p.id));
-      return{...t,players:[...reassigned,...t.players.filter(p=>!ids.has(p.id))]};
+      if(t.maxTables<=1)return t;
+      const closingTable=st+t.maxTables-1;
+      const newMax=t.maxTables-1;
+      // Players on closing table go to unseated (manual queue)
+      const players=t.players.map(p=>
+        p.status==='active'&&p.tableNum===closingTable
+          ?{...p,tableNum:null,seatNum:null}
+          :p
+      );
+      return{...t,maxTables:newMax,players,seatingMode:'manual'};
     });
   }
 
@@ -1672,19 +1400,16 @@ Starting setup — you can adjust settings before launching.`);
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
           <Sidebar tournament={tournament} subview={subview} setSubview={setSubview}
-            onSave={saveTournamentNow}
+            onDisplay={openDisplayWindow} onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
             onHome={()=>{clearInterval(timerRef.current);saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
-            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
-            {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
-            {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
-            {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
+            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
+            {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onClose={closeTable} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock}/>}
             {subview==='payouts'&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
-            {subview==='poty'&&<POTYView tournament={tournament}/>}
           </div>
         </div>);
       })()}
@@ -1763,8 +1488,8 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
           <div className="home-section" style={{margin:0}}>Saved tournaments</div>
           <div className="io-bar" style={{margin:0}}>
             <label className="io-btn import" title="Import a saved tournament or template (.json)">
-              <input type="file" accept=".spc,.json" style={{display:'none'}} onChange={e=>{if(e.target.files[0]){onImport(e.target.files[0]);e.target.value='';}}}/>
-              ↑ Load backup
+              <input type="file" accept=".json" style={{display:'none'}} onChange={e=>{if(e.target.files[0]){onImport(e.target.files[0]);e.target.value='';}}}/>
+              ↑ Import file
             </label>
           </div>
         </div>
@@ -1782,8 +1507,8 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
                   </div>
                   <div className="saved-actions">
                     <button className="resume-btn" onClick={()=>onResume(s.id)}>Resume</button>
-                    <button className="export-btn-sm" title="Download backup (.spc)" onClick={()=>{const t=loadT(s.id);if(t)onExportSave(t);}}>↓ Backup</button>
-                    <button className="export-btn-sm" title="Download tournament report" onClick={()=>{const t=loadT(s.id);if(t)onExportTemplate(t);}}>↓ Report</button>
+                    <button className="export-btn-sm" title="Export full save" onClick={()=>{const t=loadT(s.id);if(t)onExportSave(t);}}>↓ Save</button>
+                    <button className="export-btn-sm" title="Export as template (no player data)" onClick={()=>{const t=loadT(s.id);if(t)onExportTemplate(t);}}>↓ Template</button>
                     <button className="del-btn" onClick={()=>{if(confirm('Delete this tournament?'))onDelete(s.id);}}>✕</button>
                   </div>
                 </div>
@@ -1920,12 +1645,7 @@ function SetupScreen({eventType,onBack,onStart}) {
                   return(
                     <div key={s.id}
                       style={{cursor:'pointer',background:sel?'#112016':'#0b1610',border:`1px solid ${sel?'#3dba6f40':'#152018'}`,borderRadius:6,padding:'7px 11px',transition:'.15s'}}
-                      onClick={()=>{
-                        const activeP=t.players.filter(p=>p.status==='active');
-                        const bagged=(t.baggedPlayers||[]);
-                        const allForward=[...activeP.map(p=>({name:p.name,chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0})),...bagged];
-                        setInheritFrom({id:s.id,entries,busted,inheritedPrizePool,name:s.name,activePlayers:allForward,stack:t.stack||0});
-                      }}
+                      onClick={()=>setInheritFrom({id:s.id,entries,busted,inheritedPrizePool,name:s.name,activePlayers:t.players.filter(p=>p.status==='active')})}
                     >
                       <div style={{fontSize:12,color:sel?'#3dba6f':'#b2d4ba',fontWeight:500}}>{s.name}</div>
                       <div style={{fontSize:10,color:'#3a5a42',marginTop:1}}>{entries} entries · {busted} busted · {entries-busted} bagged · {fmt.currency(inheritedPrizePool)} prize pool</div>
@@ -1938,7 +1658,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               </div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>onStart({name,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables,startTable,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0})}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>onStart({name,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables,startTable,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],bountyAmount:isMB?bountyAmt:0})}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>
@@ -1973,61 +1693,10 @@ function SetupScreen({eventType,onBack,onStart}) {
 function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverInfo}) {
   const inputRef = useRef(null);
   const [lastScanned, setLastScanned] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [selIdx, setSelIdx] = useState(-1);
-  const [recentLog, setRecentLog] = useState(tournament.regLog||[]);
-  const [syncStatus, setSyncStatus] = useState(() => {
-    try {
-      const ts = localStorage.getItem('spc_members_synced_at');
-      const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-      const count = Object.keys(cache).length;
-      return ts ? `${count} members · synced ${new Date(ts).toLocaleString()}` : 'Not synced';
-    } catch(e) { return 'Not synced'; }
-  });
-
-  async function syncMembers() {
-    setSyncStatus('Syncing...');
-    try {
-      const res = await fetch('https://spc-members.onrender.com/api/members');
-      const data = await res.json();
-      if(data.members) {
-        const cache = {};
-        data.members.forEach(m => { cache[m.member_id] = {name: m.name, country: m.country || null}; });
-        localStorage.setItem('spc_members_cache', JSON.stringify(cache));
-        localStorage.setItem('spc_members_synced_at', data.syncedAt);
-        setSyncStatus(`${data.members.length} members · synced ${new Date(data.syncedAt).toLocaleString()}`);
-      }
-    } catch(e) {
-      setSyncStatus('Sync failed — check internet connection');
-    }
-  }
-  const displayLog = recentLog.filter(r=>Date.now()-r.ts<600000);
-  function addToLog(entry){
-    setRecentLog(prev=>{
-      const updated=[entry,...prev].slice(0,100);
-      // Sync back to tournament state for persistence
-      if(window._spcUpdateRegLog) window._spcUpdateRegLog(updated);
-      return updated;
-    });
-  }
+  const [recentLog, setRecentLog] = useState([]); // [{name, tableNum, seatNum, isDup, isReentry, ts}]
 
   const evCfg = EVENT_CONFIGS[tournament.eventType]||null;
   const mode = tournament.seatingMode||'auto';
-  const [assigningId,setAssigningId]=useState(null);
-  const [assignTable,setAssignTable]=useState('');
-  const [assignSeatN,setAssignSeatN]=useState('');
-  const st=tournament.startTable||1;const mt=tournament.maxTables||15;const spt=tournament.seatsPerTable||9;
-  const allTables=Array.from({length:mt},(_,i)=>st+i);
-  function getEmptySeats(tNum){
-    if(!tNum)return[];
-    const occupied=new Set(tournament.players.filter(p=>p.status==='active'&&p.tableNum===Number(tNum)).map(p=>p.seatNum));
-    const seats=[];
-    for(let s=1;s<=spt;s++){const lk=(tournament.seatLocks||{})[tNum+'-'+s];if(!occupied.has(s)&&lk!=='reg'&&lk!=='all')seats.push(s);}
-    return seats;
-  }
-  function confirmAssign(){
-    if(assigningId&&assignTable&&assignSeatN){onAssignSeat(assigningId,Number(assignTable),Number(assignSeatN));setAssigningId(null);setAssignTable('');setAssignSeatN('');}
-  }
   const cur = tournament.structure[tournament.currentLevelIdx];
   const curLevel = cur&&!cur.isBreak ? cur.level : null;
 
@@ -2053,12 +1722,8 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
 
   function handleScan(raw) {
     setLastScanned('');
-    setSuggestions([]);
-    setSelIdx(-1);
-    const result = parseQR(raw);
-    if(!result) return;
-    const name = result.name;
-    const country = result.country || null;
+    const name = parseQR(raw);
+    if(!name) return;
 
     // Check for duplicate (same name, currently active)
     const isDup = !!tournament.players.find(p=>p.name===name&&p.status==='active');
@@ -2075,53 +1740,25 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       }
     }
 
-    onRegister(name, false, country);
+    onRegister(name);
     SoundEngine.register();
 
     // Find the seat that was just assigned (last registered player)
     // We look it up after state update — store it for the log
-    const logEntry = {name, country, isDup, isReentry, ts: Date.now(), tableNum: null, seatNum: null};
-    addToLog(logEntry);
+    const logEntry = {name, isDup, isReentry, ts: Date.now(), tableNum: null, seatNum: null};
+    setRecentLog(prev=>[logEntry,...prev].slice(0,50));
   }
 
   function handleKeyDown(e) {
-    if(e.key==='ArrowDown') {
-      e.preventDefault();
-      setSelIdx(i => Math.min(i+1, suggestions.length-1));
-    } else if(e.key==='ArrowUp') {
-      e.preventDefault();
-      setSelIdx(i => Math.max(i-1, -1));
-    } else if(e.key==='Enter') {
-      if(selIdx>=0 && suggestions[selIdx]) {
-        const picked = suggestions[selIdx];
-        setLastScanned('');
-        setSuggestions([]);
-        setSelIdx(-1);
-        handleScan(picked);
-      } else {
-        const val = e.target.value.trim();
-        if(val) { handleScan(val); e.target.value=''; }
-      }
-    } else if(e.key==='Escape') {
-      setSuggestions([]);
-      setSelIdx(-1);
+    if(e.key==='Enter') {
+      const val = e.target.value.trim();
+      if(val) { handleScan(val); e.target.value=''; }
     }
   }
 
+  // Also handle change for continuous scanners that fire rapidly
   function handleChange(e) {
-    const val = e.target.value;
-    setLastScanned(val);
-    const q = val.trim().toLowerCase();
-    if(q.length < 2) { setSuggestions([]); setSelIdx(-1); return; }
-    // Don't show suggestions for SPC Member IDs
-    if(/^spc-/i.test(q)) { setSuggestions([]); setSelIdx(-1); return; }
-    try {
-      const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
-      const names = Object.values(cache).map(e => typeof e === 'string' ? e : e.name).filter(Boolean);
-      const matches = names.filter(n => n.toLowerCase().includes(q)).slice(0, 6);
-      setSuggestions(matches);
-      setSelIdx(-1);
-    } catch(e) { setSuggestions([]); }
+    setLastScanned(e.target.value);
   }
 
   return(
@@ -2141,21 +1778,15 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       {serverInfo&&(
         <div style={{display:'flex',gap:10,marginBottom:16}}>
           <div style={{flex:1,background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,padding:'10px 14px'}}>
-            <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#c8973a',marginBottom:5,fontWeight:700}}>Counter staff URL</div>
-            <div style={{fontSize:15,color:'#e8d8a0',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}/register`}</div>
+            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#c8973a',marginBottom:4,fontWeight:600}}>Counter staff URL</div>
+            <div style={{fontSize:13,color:'#e8d8a0',fontWeight:600,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}/register`}</div>
           </div>
           <div style={{flex:1,background:'#060e09',border:'1px solid #1a2e22',borderRadius:8,padding:'10px 14px'}}>
-            <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#7aaa82',marginBottom:5,fontWeight:700}}>Floor staff URL</div>
-            <div style={{fontSize:15,color:'#3dba6f',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}`}</div>
+            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#527a5c',marginBottom:4,fontWeight:600}}>Floor staff URL</div>
+            <div style={{fontSize:13,color:'#3dba6f',fontWeight:600,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}`}</div>
           </div>
         </div>
       )}
-
-      {/* Member sync */}
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'#0a0812',border:'1px solid #2a1c3a',borderRadius:8,padding:'10px 14px'}}>
-        <button onClick={e=>{e.stopPropagation();syncMembers();}} style={{padding:'8px 16px',background:'#C9A227',color:'#111',fontSize:13,fontWeight:700,border:'none',borderRadius:6,cursor:'pointer',whiteSpace:'nowrap'}}>Sync Members</button>
-        <div style={{fontSize:12,color:'#a89060'}}>{syncStatus}</div>
-      </div>
 
       {/* Stats row */}
       <div className="reg-info-row">
@@ -2178,7 +1809,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
               <span className={`reentry-badge ${reentryOpen?'open':'closed'}`}>
                 {reentryOpen ? '⬤ OPEN' : '✕ CLOSED'}
               </span>
-              <div style={{fontSize:12,color:'#7aaa82',marginTop:4}}>{reentryDesc}</div>
+              <div style={{fontSize:10,color:'#3a5a42',marginTop:4}}>{reentryDesc}</div>
             </div>
           </div>
         )}
@@ -2186,7 +1817,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
 
       {/* Scan input */}
       <div className="scan-box">
-        <div className="scan-label">Scan SPC card / boarding pass / type name + Enter</div>
+        <div className="scan-label">Scan boarding pass / type name + Enter</div>
         <input
           ref={inputRef}
           className="scan-input"
@@ -2199,19 +1830,6 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
           autoCapitalize="off"
           spellCheck={false}
         />
-        {suggestions.length>0 && (
-          <div style={{position:'relative'}}>
-            <div style={{position:'absolute',top:0,left:0,right:0,zIndex:50,background:'#1a2a1e',border:'1px solid #3a5a3e',borderRadius:8,maxHeight:240,overflowY:'auto'}}>
-              {suggestions.map((s,i)=>(
-                <div key={s}
-                  onMouseDown={e=>{e.preventDefault();setLastScanned('');setSuggestions([]);setSelIdx(-1);handleScan(s);}}
-                  style={{padding:'10px 14px',cursor:'pointer',fontSize:15,color:i===selIdx?'#111':'#e8f0ea',background:i===selIdx?'#c8973a':'transparent',borderBottom:'1px solid #2a3a2e'}}>
-                  {s}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="scan-hint">
           {mode==='auto' ? 'Player will be auto-seated at the least-full table' : 'Player will be added to the unassigned queue — assign seats from Tables tab'}
         </div>
@@ -2224,31 +1842,9 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
             <span className="uq-title">⚠ Awaiting seat assignment — {unassigned.length} player{unassigned.length!==1?'s':''}</span>
           </div>
           {unassigned.map(p=>(
-            <div key={p.id} style={{padding:'8px 14px',borderBottom:'1px solid #1a2e22'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-                <span className="uq-name">{p.name}{pf(p)}</span>
-                {assigningId===p.id?(
-                  <button style={{fontSize:11,background:'none',border:'1px solid #3a2020',borderRadius:4,color:'#8a4040',cursor:'pointer',padding:'3px 8px'}} onClick={()=>setAssigningId(null)}>Cancel</button>
-                ):(
-                  <button className="uq-btn" onClick={()=>{if(mode==='auto'){onAssignSeat(p.id);}else{setAssigningId(p.id);setAssignTable('');setAssignSeatN('');}}}>{mode==='auto'?'Auto assign':'Choose seat'}</button>
-                )}
-              </div>
-              {assigningId===p.id&&(
-                <div style={{display:'flex',gap:6,alignItems:'center',marginTop:6}}>
-                  <select style={{flex:1,padding:'6px 8px',background:'#060e09',border:'1px solid #1a2e22',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none'}}
-                    value={assignTable} onChange={e=>{setAssignTable(e.target.value);setAssignSeatN('');}}>
-                    <option value="">— Table —</option>
-                    {allTables.map(t=>{const occ=tournament.players.filter(pp=>pp.status==='active'&&pp.tableNum===t).length;return <option key={t} value={t}>Table {t} ({occ}/{spt})</option>;})}
-                  </select>
-                  <select style={{flex:1,padding:'6px 8px',background:'#060e09',border:'1px solid #1a2e22',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none'}}
-                    value={assignSeatN} onChange={e=>setAssignSeatN(e.target.value)} disabled={!assignTable}>
-                    <option value="">— Seat —</option>
-                    {getEmptySeats(assignTable).map(s=><option key={s} value={s}>Seat {s}</option>)}
-                  </select>
-                  <button style={{padding:'6px 12px',background:'#1a3a22',border:'1px solid #2a5a32',borderRadius:4,color:'#3dba6f',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
-                    onClick={confirmAssign} disabled={!assignTable||!assignSeatN}>✓ Assign</button>
-                </div>
-              )}
+            <div key={p.id} className="uq-row">
+              <span className="uq-name">{p.name}</span>
+              <button className="uq-btn" onClick={e=>{e.stopPropagation();onAssignSeat(p.id);}}>Assign seat</button>
             </div>
           ))}
         </div>
@@ -2258,27 +1854,26 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       <div className="reg-log">
         <div className="reg-log-hdr">
           <span className="reg-log-title">Recent registrations</span>
-          <span style={{fontSize:11,color:'#3a5a42'}}>{displayLog.length} this session</span>
+          <span style={{fontSize:11,color:'#3a5a42'}}>{recentLog.length} this session</span>
         </div>
         <div className="reg-log-list">
-          {displayLog.length===0&&(
+          {recentLog.length===0&&(
             <div style={{padding:'20px 16px',textAlign:'center',color:'#2a4a35',fontSize:12}}>No registrations yet this session</div>
           )}
-          {displayLog.map((r,i)=>{
+          {recentLog.map((r,i)=>{
             // Look up current seat from tournament state
             const live = tournament.players.find(p=>p.name===r.name&&p.status==='active');
             const seatStr = live&&live.tableNum ? `T${live.tableNum} S${live.seatNum}` : null;
             return(
               <div key={i} className={`reg-log-row ${r.isDup?'dup':''}`}>
-                <span className="reg-log-num">{displayLog.length-i}</span>
-                <span className="reg-log-name">{r.name}{r.country?' '+countryFlag(r.country):''}</span>
+                <span className="reg-log-num">{recentLog.length-i}</span>
+                <span className="reg-log-name">{r.name}</span>
                 {r.isDup&&<span className="reg-log-badge dup">DUP</span>}
                 {r.isReentry&&!r.isDup&&<span className="reg-log-badge reentry">RE-ENTRY</span>}
                 {seatStr
                   ? <span className="reg-log-seat">{seatStr}</span>
                   : <span className="reg-log-seat unassigned">Unassigned</span>
                 }
-                <span className="reg-log-time">{new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
               </div>
             );
           })}
@@ -2288,253 +1883,15 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
   );
 }
 
-/* ==== BLIND EDIT VIEW ==== */
-function BlindEditView({tournament, onUpdate, onSetChips}) {
-  const structure = tournament.structure || [];
-  const curIdx = tournament.currentLevelIdx || 0;
-
-  function inputStyle(highlight) {
-    return {width:72,padding:'4px 6px',background:highlight?'#0f0c04':'#060e09',border:'1px solid '+(highlight?'#2a1c06':'#0e1a12'),borderRadius:4,color:highlight?'#e8d8a0':'#b2d4ba',fontSize:12,outline:'none',textAlign:'right'};
-  }
-
-  return(
-    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      <div className="view-head">
-        <div>
-          <div className="view-title">Blind Structure</div>
-          <div className="view-sub">Edit any level — changes take effect immediately</div>
-        </div>
-        {tournament.stack===0&&(
-          <div style={{display:'flex',alignItems:'center',gap:8,background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,padding:'8px 14px'}}>
-            <span style={{fontSize:11,color:'#c8973a',fontWeight:600,whiteSpace:'nowrap'}}>Chips in play</span>
-            <input type="number" placeholder={`e.g. ${((tournament.players.length+(tournament.inheritedEntries||0))*25000).toLocaleString()}`}
-              defaultValue={tournament.chipsInPlay||''}
-              style={{width:130,padding:'4px 8px',background:'#06090a',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:13,outline:'none'}}
-              onBlur={e=>{if(onSetChips)onSetChips(e.target.value);}}
-              onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}/>
-            <span style={{fontSize:10,color:'#527a5c'}}>chips total</span>
-          </div>
-        )}
-      </div>
-      <div style={{flex:1,overflow:'auto',padding:'0 24px 24px'}}>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-          <thead>
-            <tr style={{borderBottom:'1px solid #1a2e22'}}>
-              <th style={{padding:'8px 10px',textAlign:'left',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42',fontWeight:600}}>Level</th>
-              <th style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42',fontWeight:600}}>SB</th>
-              <th style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42',fontWeight:600}}>BB</th>
-              <th style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42',fontWeight:600}}>Ante</th>
-              <th style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42',fontWeight:600}}>Mins</th>
-            </tr>
-          </thead>
-          <tbody>
-            {structure.map((lv,i)=>{
-              const isCur=i===curIdx;
-              const isPast=i<curIdx;
-              const textColor=isCur?'#e8d8a0':isPast?'#3a5a42':'#b2d4ba';
-              return(
-                <tr key={i} style={{background:isCur?'#0f0c04':'transparent',borderBottom:'1px solid #0e1a12',borderLeft:isCur?'3px solid #c8973a':'3px solid transparent'}}>
-                  <td style={{padding:'6px 10px',color:isCur?'#c8973a':textColor,fontWeight:isCur?700:400}}>
-                    {lv.isBreak?`Break${lv.note?' — '+lv.note:''}`:`Level ${lv.level}`}
-                    {isCur&&<span style={{fontSize:10,marginLeft:6,color:'#c8973a',fontWeight:700}}>← NOW</span>}
-                  </td>
-                  {lv.isBreak?(
-                    <>
-                      <td colSpan={3} style={{padding:'6px 10px',color:'#2a4a35',textAlign:'center',fontSize:11,fontStyle:'italic'}}>break</td>
-                      <td style={{padding:'6px 10px',textAlign:'right'}}>
-                        <input style={inputStyle(isCur)} type="number" defaultValue={lv.mins}
-                          onBlur={e=>onUpdate(i,'mins',e.target.value)}
-                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/>
-                      </td>
-                    </>
-                  ):(
-                    <>
-                      <td style={{padding:'6px 10px',textAlign:'right'}}>
-                        <input style={inputStyle(isCur)} type="number" defaultValue={lv.sb}
-                          onBlur={e=>onUpdate(i,'sb',e.target.value)}
-                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/>
-                      </td>
-                      <td style={{padding:'6px 10px',textAlign:'right'}}>
-                        <input style={inputStyle(isCur)} type="number" defaultValue={lv.bb}
-                          onBlur={e=>onUpdate(i,'bb',e.target.value)}
-                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/>
-                      </td>
-                      <td style={{padding:'6px 10px',textAlign:'right'}}>
-                        <input style={inputStyle(isCur)} type="number" defaultValue={lv.ante||0}
-                          onBlur={e=>onUpdate(i,'ante',e.target.value)}
-                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/>
-                      </td>
-                      <td style={{padding:'6px 10px',textAlign:'right'}}>
-                        <input style={inputStyle(isCur)} type="number" defaultValue={lv.mins}
-                          onBlur={e=>onUpdate(i,'mins',e.target.value)}
-                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function POTYView({tournament}) {
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [poty, setPoty] = useState(()=>initPOTY(currentYear));
-  const [showCommit, setShowCommit] = useState(false);
-  const [pendingPoints, setPendingPoints] = useState([]);
-  const [linkingIdx, setLinkingIdx] = useState(-1);
-  const [linkTarget, setLinkTarget] = useState('');
-  const [searchFilter, setSearchFilter] = useState('');
-  const isCurrentYear = selectedYear === currentYear;
-  const isCommitted = poty.committed.indexOf(tournament.id)>=0;
-  const activePlayers = tournament.players.filter(p=>p.status==='active').length;
-  const hasUndo = poty.undoHistory && poty.undoHistory.length > 0;
-  const sorted = Object.entries(poty.players).map(([name,d])=>({name,points:d.points,events:d.events||[]})).sort((a,b)=>b.points-a.points);
-  const filtered = searchFilter ? sorted.filter(p=>p.name.toLowerCase().includes(searchFilter.toLowerCase())) : sorted;
-  const availableYears = getPotyYears();
-  function switchYear(yr){setSelectedYear(yr);setPoty(initPOTY(yr));setShowCommit(false);setPendingPoints([]);setSearchFilter('');}
-  function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}const resolved=pts.map(p=>{const alias=poty.aliases[p.name];return{...p,potyName:alias||(poty.players[p.name]?p.name:null)};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
-  function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
-  function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
-  function confirmCommit(){const unlinked=pendingPoints.filter(p=>!p.potyName);if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);const evName=tournament.name||tournament.eventType||'Event';if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players?'))return;const newPoty=JSON.parse(JSON.stringify(poty));if(!newPoty.undoHistory)newPoty.undoHistory=[];newPoty.undoHistory.push({snapshot:JSON.parse(JSON.stringify(poty.players)),committedBefore:[...poty.committed],tournamentId:tournament.id,tournamentName:evName,date:new Date().toISOString(),pointsAdded:pendingPoints.map(p=>({name:p.potyName,points:p.points}))});const evLabel=evName+' ('+new Date().toLocaleDateString('en-SG')+')';pendingPoints.forEach(p=>{if(!newPoty.players[p.potyName])newPoty.players[p.potyName]={points:0,events:[]};newPoty.players[p.potyName].points+=p.points;newPoty.players[p.potyName].events.push(evLabel+': +'+p.points);});newPoty.committed.push(tournament.id);setPoty(newPoty);savePOTY(newPoty);
-    // Push tournament data to Supabase for permanent storage
-    pushTournamentToCloud(tournament, pendingPoints, poty);
-    setShowCommit(false);setPendingPoints([]);alert('Committed! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');}
-
-  async function pushTournamentToCloud(t, points, potyData){
-    try {
-      // Build results: include all players who busted (with payouts) + extra bag winners
-      const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
-      const memberIdByName={};
-      Object.entries(memberCache).forEach(([id,v])=>{
-        const name=typeof v==='string'?v:v.name;
-        if(name) memberIdByName[name.toLowerCase()]=id;
-      });
-
-      const pointsByName={};
-      points.forEach(p=>{pointsByName[p.name]=p;});
-
-      const results=[];
-      const seenNames=new Set();
-
-      // Busted players with positions and payouts
-      const payouts=t.payoutTable||[];
-      const payoutMap={};
-      payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p.amount||0;});
-      const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
-      busted.forEach(p=>{
-        const pts=pointsByName[p.name];
-        const payoutAmt=payoutMap[p.bustPosition]||0;
-        const extraBag=pts?pts.extraBagAmount||0:0;
-        results.push({
-          memberId:memberIdByName[p.name.toLowerCase()]||null,
-          name:p.name,
-          country:p.country||null,
-          bustPosition:p.bustPosition||null,
-          payoutAmount:payoutAmt,
-          extraBagAmount:extraBag,
-          totalPrize:payoutAmt+extraBag,
-          potyPoints:pts?pts.points:0,
-          reentryCount:0,
-        });
-        seenNames.add(p.name);
-      });
-
-      // Extra bag winners who didn't bust in this event (Day 1 carries)
-      (t.extraBagWinners||[]).forEach(w=>{
-        if(seenNames.has(w.name)) return;
-        const pts=pointsByName[w.name];
-        const extraAmt=(w.bags||0)*1500;
-        results.push({
-          memberId:memberIdByName[w.name.toLowerCase()]||null,
-          name:w.name,
-          country:w.country||null,
-          bustPosition:null,
-          payoutAmount:0,
-          extraBagAmount:extraAmt,
-          totalPrize:extraAmt,
-          potyPoints:pts?pts.points:0,
-          reentryCount:0,
-        });
-      });
-
-      const payload={
-        tournament:{
-          id:t.id,
-          name:t.name||t.eventType||'Event',
-          eventType:t.eventType||null,
-          date:t.startedAt?new Date(t.startedAt).toISOString():new Date().toISOString(),
-          buyin:t.buyin||0,
-          prizePool:t.prizePool||0,
-          entries:(t.players||[]).length+(t.inheritedEntries||0),
-          guarantee:t.guarantee||0,
-          hitGuarantee:(t.prizePool||0)>=(t.guarantee||0),
-          structure:t.structure||null,
-        },
-        results,
-        device:window.electronAPI&&window.electronAPI.platform?window.electronAPI.platform:'browser',
-      };
-
-      const res=await fetch('https://spc-members.onrender.com/api/tournament',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(payload),
-      });
-      const data=await res.json();
-      if(data.success){
-        console.log('Tournament pushed to cloud:',data.tournament_id,data.results_count,'results');
-      } else {
-        console.warn('Cloud push failed:',data.error);
-      }
-    } catch(err) {
-      // Silently fail — POTY commit still succeeded locally
-      console.warn('Cloud push error:',err.message);
-    }
-  }
-  function undoLastCommit(){if(!hasUndo)return;const lc=poty.undoHistory[poty.undoHistory.length-1];if(!confirm('Undo commit from "'+lc.tournamentName+'"?'))return;const newPoty=JSON.parse(JSON.stringify(poty));newPoty.players=lc.snapshot;newPoty.committed=lc.committedBefore;newPoty.undoHistory.pop();setPoty(newPoty);savePOTY(newPoty);alert('Undone.'+(newPoty.undoHistory.length>0?' ('+newPoty.undoHistory.length+' more available)':''));}
-  function exportCSV(){let csv='Rank,Player,Points\n';sorted.forEach((p,i)=>{csv+=(i+1)+',"'+p.name+'",'+p.points+'\n';});if(window.electronAPI&&window.electronAPI.showSaveDialog){window.electronAPI.showSaveDialog({defaultPath:'POTY_'+selectedYear+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{if(!r.canceled&&r.filePath)window.electronAPI.writeFile(r.filePath,csv);});}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+selectedYear+'_Standings.csv';a.click();}}
-  const potyNames=Object.keys(poty.players).sort();
-  return(<div style={{flex:1,overflowY:'auto',padding:'18px 22px'}}>
-    <div className="view-title" style={{display:'flex',alignItems:'center',gap:12}}><span>Player of the Year</span>
-      <select value={selectedYear} onChange={e=>switchYear(parseInt(e.target.value))} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#c8973a',padding:'4px 8px',borderRadius:4,fontSize:16,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",cursor:'pointer'}}>{availableYears.map(y=><option key={y} value={y}>{y}</option>)}</select>
-      <span style={{fontSize:12,color:'#7aaa82',fontWeight:400}}>{sorted.length} players</span>
-      {!isCurrentYear&&<span style={{fontSize:11,color:'#c87a3a',fontWeight:400}}>(archived)</span>}
-    </div>
-    {isCurrentYear&&activePlayers>0&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>⚠ Tournament has {activePlayers} active players. Commit after event finishes.</div>}
-    <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-      {isCurrentYear&&(!isCommitted?<button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>:<span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>)}
-      {isCurrentYear&&hasUndo&&<button className="sf-btn" style={{width:'auto',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={undoLastCommit}>↩ Undo last commit</button>}
-      <button className="sf-btn" style={{width:'auto'}} onClick={exportCSV}>↓ Export CSV</button>
-    </div>
-    <input type="text" placeholder="Search players..." value={searchFilter} onChange={e=>setSearchFilter(e.target.value)} style={{width:'100%',maxWidth:300,padding:'8px 12px',background:'#0a1a10',border:'1px solid #1a3a22',borderRadius:6,color:'#b2d4ba',fontSize:13,marginBottom:14,fontFamily:'inherit'}}/>
-    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><thead><tr><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'left',fontWeight:600,width:50}}>Rank</th><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'left',fontWeight:600}}>Player</th><th style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'#3dba6f',padding:'8px 14px',borderBottom:'1px solid #152018',textAlign:'right',fontWeight:600,width:80}}>Points</th></tr></thead><tbody>
-      {filtered.map((p,i)=>{const rank=sorted.indexOf(p)+1;const rowColor=rank===1?'#f0c040':rank===2?'#c8d0d8':rank===3?'#c87a3a':'#b2d4ba';return(<tr key={p.name} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'9px 14px',color:rank<=3?rowColor:'#527a5c',fontWeight:rank<=3?700:400}}>{rank}</td><td style={{padding:'9px 14px',color:rowColor,fontWeight:rank<=5?600:400}}>{p.name}</td><td style={{padding:'9px 14px',color:rowColor,textAlign:'right',fontFamily:"'Rajdhani',sans-serif",fontSize:rank<=3?18:14,fontWeight:700}}>{p.points.toLocaleString()}</td></tr>);})}
-    </tbody></table>
-    {showCommit&&<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}><div style={{background:'#0d1a12',border:'1px solid #1a3a22',borderRadius:12,padding:24,maxWidth:700,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
-      <div style={{fontSize:18,fontWeight:700,color:'#c8973a',marginBottom:4}}>Commit POTY Points</div>
-      <div style={{fontSize:12,color:'#7aaa82',marginBottom:16}}>{pendingPoints.length} players with points</div>
-      <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:16}}><thead><tr><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>Name</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Payout</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Extra Bag</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'right'}}>Points</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>POTY Name</th></tr></thead><tbody>
-        {pendingPoints.map((p,i)=>(<tr key={i} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'6px 10px',color:'#b2d4ba'}}>{p.name}</td><td style={{padding:'6px 10px',color:'#b2d4ba',textAlign:'right'}}>{p.payoutAmount>0?'S$'+p.payoutAmount.toLocaleString():'—'}</td><td style={{padding:'6px 10px',color:'#c8973a',textAlign:'right'}}>{p.extraBagAmount>0?'S$'+p.extraBagAmount.toLocaleString():'—'}</td><td style={{padding:'6px 10px',color:'#f0c040',textAlign:'right',fontWeight:700}}>{p.points}</td><td style={{padding:'6px 10px'}}>{p.potyName?<span style={{color:'#3dba6f',fontSize:12}}>✓ {p.potyName===p.name?'(new)':p.potyName}</span>:linkingIdx===i?<div style={{display:'flex',flexDirection:'column',gap:4}}><select value={linkTarget} onChange={e=>setLinkTarget(e.target.value)} style={{background:'#0a1a10',border:'1px solid #1a3a22',color:'#b2d4ba',padding:'4px 8px',borderRadius:4,fontSize:12}}><option value="">— Select —</option>{potyNames.map(n=><option key={n} value={n}>{n}</option>)}</select><div style={{display:'flex',gap:4}}><button onClick={()=>{if(linkTarget)resolveLink(i,linkTarget);}} style={{fontSize:11,padding:'3px 8px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:4,cursor:'pointer'}}>Link</button><button onClick={()=>createNew(i)} style={{fontSize:11,padding:'3px 8px',background:'#1a2a1a',border:'1px solid #7aaa82',color:'#7aaa82',borderRadius:4,cursor:'pointer'}}>New</button><button onClick={()=>{setLinkingIdx(-1);setLinkTarget('');}} style={{fontSize:11,padding:'3px 8px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:4,cursor:'pointer'}}>Cancel</button></div></div>:<button onClick={()=>setLinkingIdx(i)} style={{fontSize:11,padding:'3px 8px',background:'none',border:'1px solid #c8973a',color:'#c8973a',borderRadius:4,cursor:'pointer'}}>Link name</button>}</td></tr>))}
-      </tbody></table>
-      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><button onClick={()=>{setShowCommit(false);setPendingPoints([]);}} style={{padding:'8px 18px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:6,cursor:'pointer',fontSize:13}}>Cancel</button><button onClick={confirmCommit} disabled={pendingPoints.some(p=>!p.potyName)} style={{padding:'8px 18px',background:pendingPoints.some(p=>!p.potyName)?'#1a1a1a':'#1a3a22',border:'1px solid '+(pendingPoints.some(p=>!p.potyName)?'#333':'#3dba6f'),color:pendingPoints.some(p=>!p.potyName)?'#555':'#3dba6f',borderRadius:6,cursor:pendingPoints.some(p=>!p.potyName)?'not-allowed':'pointer',fontSize:13,fontWeight:700}}>Commit {pendingPoints.reduce((s,p)=>s+p.points,0).toLocaleString()} points</button></div>
-    </div></div>}
-  </div>);
-}
-
-function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
+function Sidebar({tournament,subview,setSubview,onDisplay,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
   const _cfg=EVENT_CONFIGS[tournament.eventType]||null;
-  const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'},{key:'poty',label:'POTY',icon:'🏆'}];
+  const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'}];
   const status=tournament.status;
   return(
     <div className="sidebar">
       <div className="sidebar-brand">
         <div className="brand-label">{_cfg?_cfg.group:'SPC Director'}</div>
-        {_cfg&&_cfg.subtitle&&<div style={{fontSize:14,color:'#b2d4ba',letterSpacing:1.5,marginTop:3,textTransform:'uppercase',fontWeight:500}}>{_cfg.subtitle}</div>}
+        {_cfg&&_cfg.subtitle&&<div style={{fontSize:10,color:'rgba(255,255,255,0.28)',letterSpacing:1.5,marginTop:2,textTransform:'uppercase'}}>{_cfg.subtitle}</div>}
         <div className={`brand-status ${status}`} style={{marginTop:4}}>{status.toUpperCase()}</div>
       </div>
       <div className="sidebar-nav">
@@ -2545,19 +1902,11 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
         ))}
       </div>
       <div className="sidebar-footer">
+        <button className="sf-btn display" onClick={onDisplay}>📺 Open display window</button>
         <button className="sf-btn" onClick={onSave}>💾 Save tournament</button>
         <button className="sf-btn" style={{borderColor:'#1a3a22',color:'#3dba6f'}} onClick={onFloor}>📱 Floor staff URL</button>
-        <button className="sf-btn" onClick={onExportSave} title="Download full backup as .spc">↓ Export backup</button>
-        <button className="sf-btn" onClick={onExportTemplate} title="Download printable tournament report">↓ Tournament report</button>
-        <button className="sf-btn" style={{borderColor:'#1a3a22',color:'#7aaa82'}} onClick={()=>{
-          const btn=event.target;btn.disabled=true;btn.textContent='Checking...';
-          if(window.electronAPI&&window.electronAPI.checkForUpdates){
-            window.electronAPI.checkForUpdates().then(r=>{
-              if(r.success){if(confirm('Updated: '+r.files.join(', ')+'. Restart now?')){window.electronAPI.restartApp();}else{btn.textContent='🔄 Check for updates';btn.disabled=false;}}
-              else{alert('Update failed: '+(r.error||'Unknown error'));btn.textContent='🔄 Check for updates';btn.disabled=false;}
-            }).catch(e=>{alert('Update error: '+e.message);btn.textContent='🔄 Check for updates';btn.disabled=false;});
-          }else{btn.textContent='🔄 Check for updates';btn.disabled=false;}
-        }}>🔄 Check for updates</button>
+        <button className="sf-btn" onClick={onExportSave} title="Download full save as .json">↓ Export save</button>
+        <button className="sf-btn" onClick={onExportTemplate} title="Download template (settings only)">↓ Export template</button>
         <button className="sf-btn" onClick={onHome}>← Back to home</button>
         <button className="sf-btn" style={{borderColor:'#3a2020',color:'#8a4040',marginTop:4}} onClick={onReset}
           onMouseEnter={e=>{e.target.style.borderColor='#e05a5a';e.target.style.color='#e05a5a';}}
@@ -2571,6 +1920,10 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
 
 /* ==== CLOCK ==== */
 function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,secs,clockCls,onToggle,onPrev,onNext,onAdjust,totalEntries,onUpdateBlinds,onRegisterRandom,onBustRandom}) {
+  const [editingBlinds,setEditingBlinds]=useState(false);
+  const [bSB,setBSB]=useState('');
+  const [bBB,setBBB]=useState('');
+  const [bAnte,setBAnte]=useState('');
   const _evCfg=EVENT_CONFIGS[tournament.eventType]||null;
   const [ctxMenu,setCtxMenu]=useState(null); // {x,y}
   const isBreak=cur&&cur.isBreak;
@@ -2607,7 +1960,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
     else document.exitFullscreen();
   }
   const entries=tournament.players.length;
-  const _effChips=tournament.chipsInPlay||(entries*(tournament.stack||0));const avgStack=activePlayers.length>0?Math.round(_effChips/activePlayers.length):0;
+  const avgStack=activePlayers.length>0?Math.round((entries*tournament.stack)/activePlayers.length):(tournament.stack||0);
   const fsTimerColor=secs<=60?'#e05a5a':secs<=300?'#c8973a':'#e4f0e8';
   const [_fsPage,_setFsPage]=useState(0);
   const _fsAllPayouts=(()=>{
@@ -2652,8 +2005,9 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
     return(
     <div ref={clockRef} className="clock-fs" onContextMenu={handleContextMenu}
       style={{background:`radial-gradient(ellipse at center, ${_fsCfg?_fsCfg.bgDeep:'#09180c'} 0%, #020806 72%)`}}>
-      {/* Logos */}
-      {_fsIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:'2vh',right:'2.5vw',height:'6vh',objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
+      {/* Logos — always visible, pinned to corners */}
+      <img src={SPC_LOGO} alt="SPC" style={{position:'absolute',top:18,left:22,height:'7vh',objectFit:'contain',zIndex:10}}/>
+      {_fsIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:22,right:22,height:'4.5vh',objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
       {/* Event name */}
       <div className="fs-name" style={{color:_fsAccent}}>{_fsCfg?_fsCfg.group:tournament.name}</div>
       {_fsCfg&&_fsCfg.subtitle&&<div style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.3)',letterSpacing:'0.3em',textTransform:'uppercase',marginBottom:'0.3vh'}}>{_fsCfg.subtitle}</div>}
@@ -2673,57 +2027,31 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
         </div>
       )}
       {nxt&&(
-        <div className="fs-next">
-          <span style={{color:'rgba(255,255,255,0.4)',fontSize:'1.2vw',letterSpacing:'.15em'}}>NEXT &nbsp;</span>
-          <span>{nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?` · Ante ${fmt.chips(nxt.ante)}`:''} · ${nxt.mins} min`}</span>
-        </div>
+        <div className="fs-next">Next: <span>{nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?` · Ante ${fmt.chips(nxt.ante)}`:''} · ${nxt.mins} min`}</span></div>
       )}
       {/* Stats row */}
       <div className="fs-stats">
-        <img src={SPC_LOGO} alt="SPC" style={{height:'10vh',objectFit:'contain'}}/>
-        <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:'2.5vh',background:'rgba(0,0,0,0.35)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,padding:'2vh 1.8vw'}}>
         {(()=>{
           const _cumE=tournament.players.length+(tournament.inheritedEntries||0);
           const _cumB=bustedPlayers.length+(tournament.inheritedBusted||0);
-          const _totalChips=tournament.chipsInPlay||(_cumE*(tournament.stack||0));
-          // Next break calculation
-          let _nextBreakMins=null;
-          if(tournament.structure&&!isComplete){
-            let mins=secs/60;
-            for(let i=tournament.currentLevelIdx+1;i<tournament.structure.length;i++){
-              const lv=tournament.structure[i];
-              if(lv.isBreak){_nextBreakMins=Math.round(mins);break;}
-              mins+=lv.mins;
-            }
-          }
           return(<>
             <div className="fs-stat"><div className="fs-stat-lbl">Players</div><div className="fs-stat-val" style={{color:_fsAccent}}>{activePlayers.length}{_cumE>0?`/${_cumE}`:''}</div></div>
             <div className="fs-stat"><div className="fs-stat-lbl">Tables</div><div className="fs-stat-val">{tablesInUse||'—'}</div></div>
             {avgStack>0&&<div className="fs-stat"><div className="fs-stat-lbl">Avg stack</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
             {tournament.bountyPool>0&&<div className="fs-stat"><div className="fs-stat-lbl">Bounty pool</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{fmt.currency(tournament.bountyPool)}</div></div>}
-            {(()=>{
-              const _extraTotal=(tournament.extraBagCount||0)*1500;
-              const _netPrize=tournament.prizePool-_extraTotal;
-              return(<>
-                {_netPrize>0&&<div className="fs-stat"><div className="fs-stat-lbl">{_extraTotal>0?'Net prize pool':'Prize pool'}</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.currency(_netPrize)}</div></div>}
-                {_extraTotal>0&&<div className="fs-stat"><div className="fs-stat-lbl">Extra bags</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{fmt.currency(_extraTotal)}</div></div>}
-              </>);
-            })()}
-            {_totalChips>0&&<div className="fs-stat"><div className="fs-stat-lbl">Total chips</div><div className="fs-stat-val" style={{color:'#527a5c'}}>{fmt.chips(_totalChips)}</div></div>}
-            {_nextBreakMins!==null&&<div className="fs-stat"><div className="fs-stat-lbl">Next break</div><div className="fs-stat-val" style={{color:'#c8973a',fontSize:'2.2vw'}}>{_nextBreakMins>=60?`${Math.floor(_nextBreakMins/60)}h ${_nextBreakMins%60}m`:`${_nextBreakMins}m`}</div></div>}
+            {tournament.prizePool>0&&<div className="fs-stat"><div className="fs-stat-lbl">Prize pool</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.currency(tournament.prizePool)}</div></div>}
           </>);
         })()}
-        </div>
       </div>
       {tournament.payoutsPublished&&_fsPayouts.length>0&&(
-        <div style={{position:'absolute',right:'2.5vw',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:'1.4vh',alignItems:'flex-end',zIndex:5}}>
-          <div style={{fontSize:'1vw',color:'rgba(255,255,255,0.4)',letterSpacing:'0.25em',textTransform:'uppercase',marginBottom:'0.4vh',textAlign:'right'}}>
+        <div style={{position:'absolute',right:'2.5vw',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:'1.2vh',alignItems:'flex-end',zIndex:5}}>
+          <div style={{fontSize:'0.75vw',color:'rgba(255,255,255,0.4)',letterSpacing:'0.25em',textTransform:'uppercase',marginBottom:'0.4vh',textAlign:'right'}}>
             Payouts{_fsPageCount>1?` · ${_fsPage+1}/${_fsPageCount}`:''}
           </div>
           {_fsPayouts.map((p,i)=>(
-            <div key={i} style={{textAlign:'right',display:'flex',alignItems:'baseline',justifyContent:'flex-end',gap:'0.6vw'}}>
-              <span style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase'}}>{p.label}</span>
-              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'3vw':p.top===1?'2.5vw':p.top===2?'2.2vw':'1.9vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{fmt.currency(p.amount)}</span>
+            <div key={i} style={{textAlign:'right',display:'flex',alignItems:'baseline',justifyContent:'flex-end',gap:'0.5vw'}}>
+              <span style={{fontSize:'0.9vw',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase'}}>{p.label}</span>
+              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'2.2vw':p.top===1?'1.8vw':p.top===2?'1.6vw':'1.4vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{fmt.currency(p.amount)}</span>
             </div>
           ))}
         </div>
@@ -2792,6 +2120,26 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
             <button className="cc-btn" onClick={()=>onAdjust(60)}>+1 min</button>
             <button className="cc-btn" onClick={onNext}>Next level ⏭</button>
             <button className="fs-btn" onClick={toggleFS} style={{marginLeft:8}}>⛶ Fullscreen</button>
+            {!cur||cur.isBreak?null:<button className="cc-btn" style={{marginLeft:8,borderColor:'#c8973a',color:'#c8973a'}} onClick={()=>{setEditingBlinds(v=>!v);setBSB(cur.sb);setBBB(cur.bb);setBAnte(cur.ante||0);}}>✎ Blinds</button>}
+          </div>
+        )}
+        {editingBlinds&&cur&&!cur.isBreak&&(
+          <div style={{display:'flex',gap:8,alignItems:'center',padding:'8px 16px',background:'#0f0c04',borderTop:'1px solid #2a1c06',flexWrap:'wrap'}}>
+            <span style={{fontSize:11,color:'#c8973a',letterSpacing:1,textTransform:'uppercase',fontWeight:700}}>Edit current level blinds:</span>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'#527a5c'}}>SB</span>
+              <input style={{width:80,padding:'4px 8px',background:'#06090a',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:13,outline:'none'}} type="number" value={bSB} onChange={e=>setBSB(e.target.value)}/>
+            </div>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'#527a5c'}}>BB</span>
+              <input style={{width:80,padding:'4px 8px',background:'#06090a',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:13,outline:'none'}} type="number" value={bBB} onChange={e=>setBBB(e.target.value)}/>
+            </div>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'#527a5c'}}>Ante</span>
+              <input style={{width:80,padding:'4px 8px',background:'#06090a',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:13,outline:'none'}} type="number" value={bAnte} onChange={e=>setBAnte(e.target.value)}/>
+            </div>
+            <button style={{padding:'5px 14px',background:'#c8973a',border:'none',borderRadius:4,color:'#0a0a0a',fontSize:12,fontWeight:700,cursor:'pointer'}} onClick={()=>{onUpdateBlinds(bSB,bBB,bAnte);setEditingBlinds(false);}}>Save</button>
+            <button style={{padding:'5px 10px',background:'transparent',border:'1px solid #2a3a30',borderRadius:4,color:'#527a5c',fontSize:12,cursor:'pointer'}} onClick={()=>setEditingBlinds(false)}>Cancel</button>
           </div>
         )}
       </div>
@@ -2800,8 +2148,8 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
           const cumE=tournament.players.length+(tournament.inheritedEntries||0);
           const cumB=bustedPlayers.length+(tournament.inheritedBusted||0);
           const hasPlayers=activePlayers.length>0||bustedPlayers.length>0||cumE>0||cumB>0;
-          const _eff2=tournament.chipsInPlay||(cumE*(tournament.stack||0));const avgStack=activePlayers.length>0
-            ?Math.round(_eff2/activePlayers.length)
+          const avgStack=activePlayers.length>0
+            ?Math.round((cumE*tournament.stack)/activePlayers.length)
             :(tournament.stack||0);
           return(<>
             <>
@@ -2811,11 +2159,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
               <div className="stat"><div className="stat-lbl">Busted out</div><div className="stat-val r">{cumB>0?cumB:hasPlayers?'0':'—'}</div></div>
             </>
             {tournament.bountyPool>0&&<div className="stat"><div className="stat-lbl">Bounty pool</div><div className="stat-val" style={{color:'#c8973a'}}>{fmt.currency(tournament.bountyPool)}</div></div>}
-          {(()=>{const _et=(tournament.extraBagCount||0)*1500;const _np=tournament.prizePool-_et;return(<>
-            {_np>0&&<div className="stat"><div className="stat-lbl">{_et>0?'Net prize pool':'Prize pool'}</div><div className="stat-val au">{fmt.currency(_np)}</div></div>}
-            {_et>0&&<div className="stat"><div className="stat-lbl">Extra bags</div><div className="stat-val" style={{color:'#c8973a',fontSize:13}}>{fmt.currency(_et)}</div></div>}
-          </>);})()}
-            {(tournament.chipsInPlay>0||(cumE>0&&tournament.stack>0))&&<div className="stat"><div className="stat-lbl">Total chips</div><div className="stat-val" style={{color:'#527a5c',fontSize:13}}>{fmt.chips(tournament.chipsInPlay||(cumE*tournament.stack))}</div></div>}
+          <div className="stat"><div className="stat-lbl">{tournament.bountyPool>0?'Prize pool':'Prize pool'}</div><div className="stat-val au">{tournament.prizePool>0?fmt.currency(tournament.prizePool):'—'}</div></div>
             <div className="stat"><div className="stat-lbl">Level</div><div className="stat-val">{tournament.currentLevelIdx+1}/{tournament.structure.length}</div></div>
             <div className="stat"><div className="stat-lbl">Blind</div><div className="stat-val" style={{fontSize:14,paddingTop:4}}>{cur&&!cur.isBreak?`${fmt.chips(cur.sb)}/${fmt.chips(cur.bb)}`:'Break'}</div></div>
             {avgStack>0&&<div className="stat"><div className="stat-lbl">Avg stack</div><div className="stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
@@ -2847,14 +2191,14 @@ function RegistrationBoard({players, onRegister}) {
   const [open, setOpen] = React.useState(true);
   const activeNums = new Set(players.filter(p=>p.status==='active').map(p=>p.name));
   const bustedNums = new Set(players.filter(p=>p.status==='busted').map(p=>p.name));
-  const total = 400;
+  const total = 700;
   const activeCount = activeNums.size;
   const bustedCount = bustedNums.size;
   const available = total - activeCount - bustedCount;
   return(
     <div className="reg-board-wrap">
       <div className="reg-board-header" onClick={()=>setOpen(o=>!o)}>
-        <span className="reg-board-title">Player board 001–400</span>
+        <span className="reg-board-title">Player board 001–700</span>
         <span className="reg-board-stats">
           <span style={{color:'#3dba6f'}}>{activeCount} active</span>
           {bustedCount>0&&<span style={{color:'#e05a5a',marginLeft:8}}>{bustedCount} busted</span>}
@@ -2885,44 +2229,15 @@ function RegistrationBoard({players, onRegister}) {
 }
 
 
-function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onRename,onRemove,modal,setModal}) {
+function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onRename,onRemove,modal,setModal}) {
   const [search,setSearch]=useState('');
   const [newName,setNewName]=useState('');
   const [bulkText,setBulkText]=useState('');
   const [bulkCount,setBulkCount]=useState('');
-  const [rangeFrom,setRangeFrom]=useState('');
-  const [rangeTo,setRangeTo]=useState('');
   const [bulkBustCount,setBulkBustCount]=useState('');
   const [editId,setEditId]=useState(null);
   const [editName,setEditName]=useState('');
   const [showBusted,setShowBusted]=useState(true);
-
-  function exportToCSV(){
-    const rows=[['Name','Status','Table','Seat','Registered']];
-    const all=[...tournament.players].sort((a,b)=>(a.registeredAt||0)-(b.registeredAt||0));
-    all.forEach(p=>{
-      const time=p.registeredAt?new Date(p.registeredAt).toLocaleTimeString():'';
-      rows.push([p.name,p.status,p.tableNum?'Table '+p.tableNum:'',p.seatNum?'Seat '+p.seatNum:'',time]);
-    });
-    const csv=rows.map(r=>r.map(v=>'"'+(String(v||'').replace(/"/g,'""'))+'"').join(',')).join('\n');
-    const defaultName=(tournament.name||'players').replace(/\s+/g,'_')+'.csv';
-    if(window.electronAPI&&window.electronAPI.showSaveDialog){
-      window.electronAPI.showSaveDialog({
-        defaultPath:defaultName,
-        filters:[{name:'CSV Files',extensions:['csv']},{name:'All Files',extensions:['*']}]
-      }).then(function(result){
-        if(!result.canceled&&result.filePath){
-          window.electronAPI.writeFile(result.filePath,csv);
-        }
-      });
-    } else {
-      const blob=new Blob([csv],{type:'text/csv'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download=defaultName;
-      a.click();URL.revokeObjectURL(url);
-    }
-  }
 
   function handleAdd(){const n=newName.trim();if(!n)return;onAdd(n);setNewName('');}
   function handleBulk(){const names=bulkText.split('\n').map(s=>s.trim()).filter(Boolean);if(names.length){onAddMany(names);setBulkText('');setModal(null);}}
@@ -2947,17 +2262,6 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     }
     if(toAdd.length>0){onAddMany(toAdd);setBulkCount('');}
   }
-  function handleRangeRegister(){
-    const from=parseInt(rangeFrom)||0;const to=parseInt(rangeTo)||0;
-    if(from<1||to<from)return;
-    const registered=new Set(tournament.players.map(p=>p.name));
-    const toAdd=[];
-    for(let i=from;i<=to&&i<=700;i++){
-      const num=String(i).padStart(3,'0');
-      if(!registered.has(num))toAdd.push(num);
-    }
-    if(toAdd.length>0){onAddMany(toAdd);setRangeFrom('');setRangeTo('');}
-  }
 
   const sorted=[...tournament.players].sort((a,b)=>{
     if(a.status!==b.status)return a.status==='active'?-1:1;
@@ -2974,19 +2278,19 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     <div className="players-view">
       <div className="view-head">
         <div><div className="view-title">Players</div><div className="view-sub">{activePlayers.length} active · {bustedPlayers.length} busted · {tournament.players.length} total</div></div>
-        <button className="btn-sec" style={{fontSize:12,padding:'5px 12px'}} onClick={exportToCSV} title="Download player list as CSV">↓ Export CSV</button>
         <div className="btn-row">
           <button className="btn-sec" onClick={()=>setShowBusted(b=>!b)}>{showBusted?'Hide':'Show'} busted</button>
-          {bustedPlayers.length>0&&<button className="btn-sec" style={{borderColor:'#c87a3a',color:'#c87a3a'}} onClick={onUndoBust}>↩ Undo bust</button>}
           <button className="btn-sec" onClick={()=>setModal({type:'bulk'})}>Bulk add</button>
         </div>
       </div>
       <RegistrationBoard players={tournament.players} onRegister={name=>onAdd(name)}/>
       <div className="quick-add">
-        <div style={{display:'flex',alignItems:'center',gap:7}}>
+        <input className="qa-input" placeholder="Player name..." value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')handleAdd();}} style={{width:210}}/>
+        <button className="btn-primary" onClick={handleAdd}>+ Add</button>
+        <div style={{display:'flex',alignItems:'center',gap:7,marginLeft:16,paddingLeft:16,borderLeft:'1px solid #152018'}}>
           <input
             className="qa-input"
-            type="number" min="1" max="400"
+            type="number" min="1" max="700"
             placeholder="e.g. 50"
             value={bulkCount}
             onChange={e=>setBulkCount(e.target.value)}
@@ -2997,22 +2301,10 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
             Bulk register{bulkCount&&parseInt(bulkCount)>0?` ${parseInt(bulkCount)}`:''}
           </button>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:5,marginLeft:10,paddingLeft:16,borderLeft:'1px solid #152018'}}>
-          <input className="qa-input" type="number" min="1" max="400" placeholder="from" value={rangeFrom}
-            onChange={e=>setRangeFrom(e.target.value)} style={{width:60,textAlign:'center'}}/>
-          <span style={{color:'#3a5a42',fontSize:12}}>–</span>
-          <input className="qa-input" type="number" min="1" max="400" placeholder="to" value={rangeTo}
-            onChange={e=>setRangeTo(e.target.value)}
-            onKeyDown={e=>{if(e.key==='Enter')handleRangeRegister();}}
-            style={{width:60,textAlign:'center'}}/>
-          <button className="btn-primary" onClick={handleRangeRegister} style={{whiteSpace:'nowrap'}}>
-            Range{rangeFrom&&rangeTo?` ${rangeFrom}–${rangeTo}`:''}
-          </button>
-        </div>
         <div style={{display:'flex',alignItems:'center',gap:7,marginLeft:10,paddingLeft:16,borderLeft:'1px solid #152018'}}>
           <input
             className="qa-input"
-            type="number" min="1" max="400"
+            type="number" min="1" max="700"
             placeholder="e.g. 10"
             value={bulkBustCount}
             onChange={e=>setBulkBustCount(e.target.value)}
@@ -3036,11 +2328,11 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
             {filtered.length===0&&<tr><td colSpan="7" className="empty-state">No players yet — add one above or use Bulk add</td></tr>}
             {filtered.map((p,i)=>(
               <tr key={p.id} className={p.status==='busted'?'busted-row':''}>
-                <td style={{color:'#7aaa82',fontSize:12,fontWeight:500}}>{i+1}</td>
+                <td style={{color:'#2a4a35',fontSize:10}}>{i+1}</td>
                 <td style={{fontWeight:500}}>
                   {editId===p.id
                     ?<input className="qa-input" style={{padding:'3px 8px',fontSize:12,width:140}} value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){onRename(p.id,editName);setEditId(null);}}} autoFocus/>
-                    :<span onDoubleClick={()=>{setEditId(p.id);setEditName(p.name);}} title="Double-click to rename">{p.name}{pf(p)}</span>
+                    :<span onDoubleClick={()=>{setEditId(p.id);setEditName(p.name);}} title="Double-click to rename">{p.name}</span>
                   }
                 </td>
                 <td>{p.tableNum?`Table ${p.tableNum}`:'—'}</td>
@@ -3073,280 +2365,108 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
   );
 }
 
-function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onUpdateChipCount,onExportSeating}) {
+function TablesView({tournament,activePlayers,onBalance,onOpen,onClose,onMove,onRemove,onLock}) {
   const [selectedPlayer,setSelectedPlayer] = useState(null);
-  const [closeMode,setCloseMode] = useState(null);
-  const [breakMode,setBreakMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
-  const [chipMode,setChipMode] = useState(false);
-  const [searchQ,setSearchQ] = useState('');
-  const searchMatch=searchQ.trim().length>0?activePlayers.filter(p=>p.name.toLowerCase().includes(searchQ.toLowerCase())):[];
   const startTable = tournament.startTable||1;
   const maxTables = tournament.maxTables||15;
   const locks = tournament.seatLocks||{};
-  const evCfg = EVENT_CONFIGS[tournament.eventType]||null;
-  const isMultiDay = evCfg && (evCfg.group==='Main Event'||evCfg.group==='Mini Roller');
 
   const tables={};
   activePlayers.forEach(p=>{if(p.tableNum){if(!tables[p.tableNum])tables[p.tableNum]=[];tables[p.tableNum].push(p);}});
   const allTableNums = Array.from({length:maxTables},(_,i)=>startTable+i);
+  const activeTableNums = [...new Set(activePlayers.map(p=>p.tableNum).filter(Boolean))];
   const unseated=activePlayers.filter(p=>!p.tableNum);
 
-  // --- Close table logic ---
-  function startCloseTable(){
-    if(maxTables<=1){alert('Cannot close — only one table remaining.');return;}
-    // Open table picker first — no assignments yet
-    setCloseMode({choosingTable:true,closingTable:null,assignments:{},displaced:[]});
-  }
-
-  function selectTableToClose(tNum){
-    const tNumN=Number(tNum);
-    const displaced=(tables[tNumN]||[]);
-    // Count available seats in remaining tables
-    const otherPlayers=activePlayers.filter(p=>p.tableNum&&p.tableNum!==tNumN);
-    const otherCapacity=(maxTables-1)*(tournament.seatsPerTable||9);
-    const available=otherCapacity-otherPlayers.length;
-    if(available<displaced.length){
-      alert(`Cannot close Table ${tNumN} — only ${available} seat${available!==1?'s':''} available across other tables but ${displaced.length} player${displaced.length!==1?'s':''} need reseating.`);
-      return;
+  function handleSeatClick(p) {
+    if(!selectedPlayer) {
+      setSelectedPlayer({id:p.id,name:p.name,tableNum:p.tableNum,seatNum:p.seatNum});
+    } else if(selectedPlayer.id===p.id) {
+      setSelectedPlayer(null);
+    } else {
+      onMove(selectedPlayer.id, p.tableNum, p.seatNum);
+      onMove(p.id, selectedPlayer.tableNum, selectedPlayer.seatNum);
+      setSelectedPlayer(null);
     }
-    const assignments={};
-    displaced.forEach(p=>{assignments[p.id]={tableNum:'',seatNum:''};});
-    setCloseMode({choosingTable:false,closingTable:tNumN,assignments,displaced});
   }
 
-  function setAssignment(playerId,field,val){
-    setCloseMode(cm=>{
-      const cur=cm.assignments[playerId]||{tableNum:'',seatNum:''};
-      const updated=field==='tableNum'
-        ?{tableNum:Number(val)||'',seatNum:''}
-        :{...cur,seatNum:Number(val)||''};
-      return{...cm,assignments:{...cm.assignments,[playerId]:updated}};
-    });
-  }
-
-  function confirmClose(){
-    const {closingTable,assignments,displaced}=closeMode;
-    if(!closingTable||!displaced){return;}
-    for(const p of displaced){
-      const a=assignments[p.id];
-      if(!a||!a.tableNum||!a.seatNum){alert(`Please assign a table and seat for ${p.name}.`);return;}
-    }
-    const taken=new Set();
-    for(const p of displaced){
-      const a=assignments[p.id];
-      const key=a.tableNum+'-'+a.seatNum;
-      if(taken.has(key)){alert('Two players assigned to the same seat. Please fix.');return;}
-      const occupant=activePlayers.find(ap=>ap.tableNum===a.tableNum&&ap.seatNum===a.seatNum&&!displaced.find(d=>d.id===ap.id));
-      if(occupant){alert(`Seat ${a.seatNum} at Table ${a.tableNum} is occupied by ${occupant.name}.`);return;}
-      taken.add(key);
-    }
-    const assList=displaced.map(p=>({playerId:p.id,tableNum:assignments[p.id].tableNum,seatNum:assignments[p.id].seatNum}));
-    onCloseConfirm(assList,closingTable);
-    setCloseMode(null);
-  }
-
-  // --- Seat move logic ---
-  function handleSeatClick(p){
-    if(closeMode)return;
-    if(!selectedPlayer){setSelectedPlayer({id:p.id,name:p.name,tableNum:p.tableNum,seatNum:p.seatNum});}
-    else if(selectedPlayer.id===p.id){setSelectedPlayer(null);}
-    else{onMove(selectedPlayer.id,p.tableNum,p.seatNum);onMove(p.id,selectedPlayer.tableNum,selectedPlayer.seatNum);setSelectedPlayer(null);}
-  }
-  function handleEmptySeatClick(tNum,seat){
-    if(!selectedPlayer)return;
+  function handleEmptySeatClick(tNum, seat) {
+    if(!selectedPlayer) return;
     const lk=locks[tNum+'-'+seat];
-    if(lk==='move'||lk==='all')return;
-    onMove(selectedPlayer.id,tNum,seat);setSelectedPlayer(null);
-  }
-  function cycleLock(tNum,seat,e){e.stopPropagation();const key=tNum+'-'+seat;const cur=locks[key]||'none';const cycle=['none','move','reg','all'];const next=cycle[(cycle.indexOf(cur)+1)%cycle.length];onLock(tNum,seat,next);}
-  function lockLabel(lk){if(lk==='move')return{text:'M',color:'#c8973a'};if(lk==='reg')return{text:'R',color:'#5a8ac8'};if(lk==='all')return{text:'L',color:'#c85a5a'};return null;}
-
-  // Get available seats for close table assignment (excluding already assigned in this session)
-  function getAvailableSeats(targetTable){
-    if(!targetTable)return[];
-    const {closingTable,assignments}=closeMode;
-    const alreadyAssigned=Object.values(assignments).filter(a=>a.tableNum===targetTable&&a.seatNum).map(a=>a.seatNum);
-    const occupied=(tables[targetTable]||[]).filter(p=>!closeMode.displaced.find(d=>d.id===p.id)).map(p=>p.seatNum);
-    const taken=new Set([...alreadyAssigned,...occupied]);
-    const seats=[];
-    for(let s=1;s<=(tournament.seatsPerTable||9);s++){if(!taken.has(s))seats.push(s);}
-    return seats;
+    if(lk==='move'||lk==='all') return;
+    onMove(selectedPlayer.id, tNum, seat);
+    setSelectedPlayer(null);
   }
 
-  function startBreakTable(){if(maxTables<=1){alert('Only one table.');return;}setBreakMode({stage:'pick'});}
-  function selectTableToBreak(tNum){const tNumN=Number(tNum);const displaced=(tables[tNumN]||[]).map(p=>({id:p.id,name:p.name,tableNum:p.tableNum,seatNum:p.seatNum,country:p.country||null}));if(displaced.length===0){if(confirm('Table '+tNumN+' is empty. Close it?')){onCloseConfirm([],tNumN);setBreakMode(null);}return;}const spt=tournament.seatsPerTable||9;const lk=tournament.seatLocks||{};const otherTables=allTableNums.filter(t=>t!==tNumN);const availableSeats=[];const tableCounts={};otherTables.forEach(t=>{tableCounts[t]=(tables[t]||[]).length;});otherTables.forEach(t=>{for(let s=1;s<=spt;s++){const lockKey=t+'-'+s;const lockType=lk[lockKey]||'none';if(lockType==='move'||lockType==='all')continue;const occupied=activePlayers.find(p=>p.tableNum===t&&p.seatNum===s);if(!occupied)availableSeats.push({tableNum:t,seatNum:s});}});if(availableSeats.length<displaced.length){alert('Cannot break Table '+tNumN+' — only '+availableSeats.length+' seats available, '+displaced.length+' needed.');return;}const assignments=[];const tempCounts={...tableCounts};displaced.forEach(p=>{const remaining=availableSeats.filter(s=>!assignments.find(a=>a.tableNum===s.tableNum&&a.seatNum===s.seatNum));remaining.sort((a,b)=>(tempCounts[a.tableNum]||0)-(tempCounts[b.tableNum]||0)||a.tableNum-b.tableNum||a.seatNum-b.seatNum);const seat=remaining[0];assignments.push({playerId:p.id,name:p.name,country:p.country,fromTable:p.tableNum,fromSeat:p.seatNum,tableNum:seat.tableNum,seatNum:seat.seatNum});tempCounts[seat.tableNum]=(tempCounts[seat.tableNum]||0)+1;});setBreakMode({stage:'preview',closingTable:tNumN,assignments,displaced});}
-  function confirmBreak(){if(!breakMode||breakMode.stage!=='preview')return;const assList=breakMode.assignments.map(a=>({playerId:a.playerId,tableNum:a.tableNum,seatNum:a.seatNum}));onCloseConfirm(assList,breakMode.closingTable);setBreakMode({...breakMode,stage:'done'});}
+  function cycleLock(tNum, seat, e) {
+    e.stopPropagation();
+    const key=tNum+'-'+seat;
+    const cur=locks[key]||'none';
+    const cycle=['none','move','reg','all'];
+    const next=cycle[(cycle.indexOf(cur)+1)%cycle.length];
+    onLock(tNum,seat,next);
+  }
+
+  function lockLabel(lk) {
+    if(lk==='move') return {text:'M',color:'#c8973a',title:'Locked: moves blocked'};
+    if(lk==='reg') return {text:'R',color:'#5a8ac8',title:'Locked: registration blocked'};
+    if(lk==='all') return {text:'L',color:'#c85a5a',title:'Locked: all blocked'};
+    return null;
+  }
 
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div className="view-head">
         <div>
           <div className="view-title">Tables</div>
-          <div className="view-sub">{`Tables ${startTable}–${startTable+maxTables-1} · ${Object.keys(tables).length} in use · ${activePlayers.length} seated`}{unseated.length>0?` · ${unseated.length} unseated`:''}</div>
+          <div className="view-sub">
+            {`Tables ${startTable}–${startTable+maxTables-1} · ${activeTableNums.length} in use · ${activePlayers.length} seated`}
+            {unseated.length>0?` · ${unseated.length} unseated`:''}
+          </div>
         </div>
-        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {selectedPlayer&&(
             <div style={{fontSize:12,color:'#c8973a',padding:'5px 12px',background:'#1a1004',border:'1px solid #2a1c06',borderRadius:5}}>
-              Moving: <strong>{selectedPlayer.name}{pf(selectedPlayer)}</strong>
-              <button style={{marginLeft:8,background:'none',border:'none',color:'#8a4040',cursor:'pointer',fontSize:12}} onClick={()=>setSelectedPlayer(null)}>✕</button>
+              Moving: <strong>{selectedPlayer.name}</strong> — click a seat
+              <button style={{marginLeft:10,background:'none',border:'none',color:'#8a4040',cursor:'pointer',fontSize:12}} onClick={()=>setSelectedPlayer(null)}>✕ Cancel</button>
             </div>
           )}
           <button className="btn-sec" onClick={onBalance}>Auto-balance</button>
-          {isMultiDay&&!closeMode&&<button className="btn-sec" style={{borderColor:'#5a8ac8',color:'#5a8ac8'}} onClick={()=>{if(confirm('Randomly redraw ALL player seats? This cannot be undone.'))onRedraw();}}>⇄ Redraw seats</button>}
-          {!closeMode&&<button className="btn-sec" style={{borderColor:chipMode?'#3dba6f':'#2a5a32',color:chipMode?'#3dba6f':'#527a5c',background:chipMode?'#0d1a0f':'transparent'}} onClick={()=>setChipMode(!chipMode)}>📊 Chip counts</button>}
-          {!closeMode&&<button className="btn-sec" style={{borderColor:'#2a5a32',color:'#527a5c'}} onClick={onExportSeating}>↓ Export seating</button>}
-          <div style={{position:'relative',marginLeft:'auto'}}>
-            <input type="text" placeholder="🔍 Find player..." value={searchQ} onChange={e=>setSearchQ(e.target.value)}
-              style={{width:160,padding:'6px 10px',background:'#060e09',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:12,outline:'none'}}/>
-            {searchMatch.length>0&&searchQ&&(
-              <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'#0b1610',border:'1px solid #1a2e22',borderRadius:8,padding:4,zIndex:20,minWidth:220,maxHeight:200,overflowY:'auto',boxShadow:'0 8px 24px rgba(0,0,0,.5)'}}>
-                {searchMatch.map(p=>(
-                  <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',borderRadius:4,cursor:'default',fontSize:12}}
-                    onMouseEnter={e=>e.currentTarget.style.background='#112016'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <span style={{color:'#e4f0e8',fontWeight:500}}>{p.name}{pf(p)}</span>
-                    <span style={{color:'#3dba6f',fontWeight:600,fontSize:13}}>T{p.tableNum} S{p.seatNum}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {!closeMode&&!breakMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
-          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#c87a40',color:'#c87a40'}} onClick={startBreakTable}>✂ Break table</button>}
-          {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
-          {closeMode&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setCloseMode(null)}>Cancel</button>}
-          {closeMode&&!closeMode.choosingTable&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={confirmClose}>✓ Confirm close</button>}
-          {breakMode&&breakMode.stage==='pick'&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setBreakMode(null)}>Cancel</button>}
+          <button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen} title={`Open Table ${startTable+maxTables}`}>+ Open table</button>
+          <button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={()=>{if(confirm(`Close Table ${startTable+maxTables-1}? Its players will go to the unseated queue.`))onClose();}} title={`Close Table ${startTable+maxTables-1}`}>− Close table</button>
         </div>
       </div>
-
-      {/* Close table panel */}
-      {closeMode&&(
-        <div style={{background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,margin:'8px 16px',padding:16}}>
-          {closeMode.choosingTable?(
-            <>
-              <div style={{fontSize:12,color:'#c8973a',fontWeight:700,marginBottom:12}}>Select table to close:</div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                {allTableNums.map(tNum=>(
-                  <button key={tNum} style={{padding:'8px 16px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:13,cursor:'pointer'}}
-                    onClick={()=>selectTableToClose(tNum)}>
-                    Table {tNum} · {(tables[tNum]||[]).length} players
-                  </button>
-                ))}
-              </div>
-            </>
-          ):(
-            <>
-              <div style={{fontSize:12,color:'#c8973a',fontWeight:700,marginBottom:12}}>
-                Closing Table {closeMode.closingTable} — assign {closeMode.displaced.length} player{closeMode.displaced.length!==1?'s':''} to new seats
-              </div>
-              {closeMode.displaced.length===0&&<div style={{fontSize:12,color:'#3dba6f'}}>Table is empty — safe to close.</div>}
-              {closeMode.displaced.map(p=>{
-                const a=closeMode.assignments[p.id]||{tableNum:'',seatNum:''};
-                const availSeats=a.tableNum?getAvailableSeats(a.tableNum):[];
-                return(
-                  <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8,padding:'8px 10px',background:'#0b1610',borderRadius:6}}>
-                    <span style={{flex:1,fontSize:13,color:'#e8d8a0',fontWeight:500}}>{p.name}{pf(p)}</span>
-                    <select style={{padding:'5px 8px',background:'#060e09',border:'1px solid #2a1c06',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none'}}
-                      value={a.tableNum||''} onChange={e=>setAssignment(p.id,'tableNum',e.target.value)}>
-                      <option value=''>— Table —</option>
-                      {allTableNums.filter(t=>t!==closeMode.closingTable).map(t=>(
-                        <option key={t} value={t}>Table {t} ({(tables[t]||[]).length}/{tournament.seatsPerTable})</option>
-                      ))}
-                    </select>
-                    <select style={{padding:'5px 8px',background:'#060e09',border:'1px solid #2a1c06',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none'}}
-                      value={a.seatNum||''} onChange={e=>setAssignment(p.id,'seatNum',e.target.value)} disabled={!a.tableNum}>
-                      <option value=''>— Seat —</option>
-                      {availSeats.map(s=><option key={s} value={s}>Seat {s}</option>)}
-                    </select>
-                  </div>
-                );
-              })}
-            </>
-          )}
-        </div>
-      )}
-
-      {breakMode&&breakMode.stage==='pick'&&(<div style={{background:'#0f0c04',border:'1px solid #c87a40',borderRadius:8,margin:'8px 16px',padding:16}}><div style={{fontSize:12,color:'#c87a40',fontWeight:700,marginBottom:12}}>✂ Select table to break:</div><div style={{display:'flex',flexWrap:'wrap',gap:8}}>{allTableNums.map(tNum=>(<button key={tNum} style={{padding:'8px 16px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:13,cursor:'pointer'}} onClick={()=>selectTableToBreak(tNum)}>Table {tNum} · {(tables[tNum]||[]).length} players</button>))}</div></div>)}
-
-      {breakMode&&(breakMode.stage==='preview'||breakMode.stage==='done')&&(<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}><div style={{background:'#0d1a12',border:'1px solid '+(breakMode.stage==='done'?'#3dba6f':'#c87a40'),borderRadius:12,padding:24,maxWidth:600,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
-        <div style={{fontSize:18,fontWeight:700,color:breakMode.stage==='done'?'#3dba6f':'#c87a40',marginBottom:4}}>{breakMode.stage==='done'?'✓ Table '+breakMode.closingTable+' Broken':'✂ Break Table '+breakMode.closingTable+'?'}</div>
-        <div style={{fontSize:12,color:'#7aaa82',marginBottom:16}}>{breakMode.assignments.length} player{breakMode.assignments.length!==1?'s':''} {breakMode.stage==='done'?'reassigned':'to be reassigned'}</div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:16}}><thead><tr><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'left'}}>Player</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#c85a5a',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>From</th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}></th><th style={{fontSize:9,letterSpacing:1,textTransform:'uppercase',color:'#3dba6f',padding:'6px 10px',borderBottom:'1px solid #152018',textAlign:'center'}}>To</th></tr></thead><tbody>
-          {breakMode.assignments.map((a,i)=>(<tr key={i} style={{borderBottom:'1px solid #0a1412'}}><td style={{padding:'8px 10px',color:'#e8d8a0',fontWeight:500}}>{a.name}{a.country?' '+countryFlag(a.country):''}</td><td style={{padding:'8px 10px',textAlign:'center',color:'#c85a5a',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:600}}>T{a.fromTable} S{a.fromSeat}</td><td style={{padding:'8px 10px',textAlign:'center',color:'#527a5c',fontSize:14}}>→</td><td style={{padding:'8px 10px',textAlign:'center',color:'#3dba6f',fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:700}}>T{a.tableNum} S{a.seatNum}</td></tr>))}
-        </tbody></table>
-        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>{breakMode.stage==='preview'&&<><button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'none',border:'1px solid #3a2020',color:'#8a4040',borderRadius:6,cursor:'pointer',fontSize:13}}>Cancel</button><button onClick={confirmBreak} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>✓ Confirm break</button></>}{breakMode.stage==='done'&&<button onClick={()=>setBreakMode(null)} style={{padding:'8px 18px',background:'#1a3a22',border:'1px solid #3dba6f',color:'#3dba6f',borderRadius:6,cursor:'pointer',fontSize:13,fontWeight:700}}>Done</button>}</div>
-      </div></div>)}
-
-      {/* Chip count entry panel */}
-      {chipMode&&(
-        <div style={{flex:1,overflow:'auto',padding:'8px 16px'}}>
-          <div style={{background:'#0b1610',border:'1px solid #1a2e22',borderRadius:10,overflow:'hidden'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid #1a2e22'}}>
-              <div>
-                <div style={{fontSize:13,color:'#b2d4ba',fontWeight:600}}>End-of-flight chip counts</div>
-                <div style={{fontSize:11,color:'#3a5a42',marginTop:2}}>Enter each survivor's stack · {activePlayers.filter(p=>p.chipCount>0).length}/{activePlayers.length} entered · Total: {fmt.chips(activePlayers.reduce((s,p)=>s+(p.chipCount||0),0))}</div>
-              </div>
-            </div>
-            <div style={{maxHeight:'calc(100vh - 260px)',overflowY:'auto'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                <thead>
-                  <tr style={{borderBottom:'1px solid #1a2e22',position:'sticky',top:0,background:'#0b1610',zIndex:1}}>
-                    <th style={{padding:'8px 12px',textAlign:'left',color:'#7aaa82',fontSize:10,letterSpacing:1.5,textTransform:'uppercase',fontWeight:600}}>Table</th>
-                    <th style={{padding:'8px 8px',textAlign:'left',color:'#7aaa82',fontSize:10,letterSpacing:1.5,textTransform:'uppercase',fontWeight:600}}>Seat</th>
-                    <th style={{padding:'8px 8px',textAlign:'left',color:'#7aaa82',fontSize:10,letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,flex:1}}>Player</th>
-                    <th style={{padding:'8px 16px',textAlign:'right',color:'#7aaa82',fontSize:10,letterSpacing:1.5,textTransform:'uppercase',fontWeight:600}}>Chip count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...activePlayers].sort((a,b)=>(a.tableNum||0)-(b.tableNum||0)||(a.seatNum||0)-(b.seatNum||0)).map(p=>{
-                    const hasCount=p.chipCount>0;
-                    return(
-                      <tr key={p.id} style={{borderBottom:'1px solid #0e1a12'}}>
-                        <td style={{padding:'7px 12px',color:'#3a5a42'}}>{p.tableNum||'—'}</td>
-                        <td style={{padding:'7px 8px',color:'#3a5a42'}}>{p.seatNum||'—'}</td>
-                        <td style={{padding:'7px 8px',color:hasCount?'#7aaa82':'#b2d4ba',fontWeight:500}}>{p.name}{pf(p)}</td>
-                        <td style={{padding:'4px 12px',textAlign:'right'}}>
-                          <input type="number" defaultValue={p.chipCount||''} placeholder="—"
-                            onBlur={e=>onUpdateChipCount(p.id,e.target.value)}
-                            onKeyDown={e=>{if(e.key==='Enter'){e.target.blur();}}}
-                            style={{width:100,padding:'5px 8px',background:hasCount?'#0d1a0f':'#060e09',border:'1px solid '+(hasCount?'#2a5a32':'#1a2e22'),borderRadius:4,color:hasCount?'#3dba6f':'#b2d4ba',fontSize:14,textAlign:'right',outline:'none',fontWeight:600}}/>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!chipMode&&<div className="tables-view">
+      <div className="tables-view">
         <div className="tables-grid">
           {allTableNums.map(tNum=>{
             const seated=tables[tNum]||[];
-            const isClosing=closeMode&&tNum===closeMode.closingTable;
             return(
-              <div key={tNum} className="table-card" style={{opacity:isClosing?.5:1,borderColor:isClosing?'#c85a5a':''}}>
-                <div className="table-num">Table {tNum}<span className="table-count">{seated.length}/{tournament.seatsPerTable}</span>{isClosing&&<span style={{fontSize:9,color:'#c85a5a',marginLeft:4}}>CLOSING</span>}</div>
+              <div key={tNum} className="table-card">
+                <div className="table-num">Table {tNum}<span className="table-count">{seated.length}/{tournament.seatsPerTable}</span></div>
                 {Array.from({length:tournament.seatsPerTable},(_,i)=>i+1).map(seat=>{
                   const p=seated.find(x=>x.seatNum===seat);
                   const isSel=selectedPlayer&&p&&p.id===selectedPlayer.id;
                   const lk=locks[tNum+'-'+seat];
                   const lkInfo=lockLabel(lk);
-                  const lockBtn=<button style={{background:'none',border:'1px solid '+(lkInfo?lkInfo.color:'#1a2e22'),borderRadius:3,color:lkInfo?lkInfo.color:'#1a2e22',cursor:'pointer',fontSize:9,padding:'1px 4px',lineHeight:'14px',fontWeight:700,minWidth:18}} title='Click to cycle lock' onClick={e=>cycleLock(tNum,seat,e)}>{lkInfo?lkInfo.text:'·'}</button>;
-                  if(p){return(
-                    <div key={seat} className="seat-row" style={{cursor:'pointer',background:isSel?'#1a1004':'',borderLeft:isSel?'2px solid #c8973a':'2px solid transparent'}} onClick={()=>handleSeatClick(p)}>
-                      <span className="seat-n">{seat}</span>
-                      <span className="seat-name" style={{color:isSel?'#c8973a':'',flex:1}}>{p.name}{pf(p)}</span>
-                      {lockBtn}
-                      {!selectedPlayer&&!closeMode&&onRemove&&<button style={{background:'none',border:'none',color:'#3a2020',cursor:'pointer',fontSize:11,padding:'0 3px'}} onClick={e=>{e.stopPropagation();if(confirm(`Remove ${p.name}?`))onRemove(p.id);}}>✕</button>}
-                    </div>
-                  );}else{
-                    const isTarget=!!selectedPlayer&&!isSel;
+                  const lockBtn=<button style={{background:'none',border:'1px solid '+(lkInfo?lkInfo.color:'#1a2e22'),borderRadius:3,color:lkInfo?lkInfo.color:'#2a3a30',cursor:'pointer',fontSize:9,padding:'1px 4px',lineHeight:'14px',fontWeight:700,minWidth:18}} title={lkInfo?lkInfo.title:'Click to lock (cycles: M→R→L→unlock)'} onClick={e=>cycleLock(tNum,seat,e)}>{lkInfo?lkInfo.text:'·'}</button>;
+                  if(p) {
+                    return(
+                      <div key={seat} className="seat-row" style={{cursor:'pointer',background:isSel?'#1a1004':'',borderLeft:isSel?'2px solid #c8973a':'2px solid transparent'}}
+                        onClick={()=>handleSeatClick(p)}>
+                        <span className="seat-n">{seat}</span>
+                        <span className="seat-name" style={{color:isSel?'#c8973a':'',flex:1}}>{p.name}</span>
+                        {lockBtn}
+                        {!selectedPlayer&&onRemove&&(
+                          <button style={{background:'none',border:'none',color:'#3a2020',cursor:'pointer',fontSize:11,padding:'0 3px'}} title="Remove"
+                            onClick={e=>{e.stopPropagation();if(confirm(`Remove ${p.name}?`))onRemove(p.id);}}>✕</button>
+                        )}
+                      </div>
+                    );
+                  } else {
+                    const isTarget=!!selectedPlayer;
                     const isBlocked=isTarget&&(lk==='move'||lk==='all');
                     return(
-                      <div key={seat} className="seat-row" style={{cursor:isTarget&&!isBlocked?'pointer':'default',background:isTarget&&!isBlocked?'#0b1a0c':'',borderLeft:'2px solid transparent',opacity:isBlocked?.4:1}} onClick={()=>!isBlocked&&handleEmptySeatClick(tNum,seat)}>
+                      <div key={seat} className="seat-row" style={{cursor:isTarget&&!isBlocked?'pointer':'default',background:isTarget&&!isBlocked?'#0b1a0c':isBlocked?'#1a0a0a':'',borderLeft:'2px solid transparent',opacity:isBlocked?.4:1}}
+                        onClick={()=>!isBlocked&&handleEmptySeatClick(tNum,seat)}>
                         <span className="seat-n">{seat}</span>
                         <span className="seat-empty" style={{color:isTarget&&!isBlocked?'#2a5a32':'',flex:1}}>{isBlocked?'locked':isTarget?'← move here':'empty'}</span>
                         {lockBtn}
@@ -3361,52 +2481,18 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
         {unseated.length>0&&(
           <div style={{marginTop:16,padding:'12px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:7}}>
             <div style={{fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#c8973a',marginBottom:7}}>Unseated ({unseated.length})</div>
-            {unseated.map(p=><div key={p.id} style={{fontSize:12,color:'#b2d4ba',padding:'2px 0'}}>{p.name}{pf(p)}</div>)}
+            {unseated.map(p=>(
+              <div key={p.id} style={{fontSize:12,color:'#b2d4ba',padding:'3px 0',display:'flex',gap:8}}>
+                <span style={{flex:1}}>{p.name}</span>
+              </div>
+            ))}
           </div>
         )}
-      </div>}
+      </div>
     </div>
   );
 }
 
-/* ==== ACTIVITY LOG ==== */
-function LogView({activityLog}) {
-  const [filter,setFilter]=useState('all');
-  const types={all:'All',bust:'Busts',move:'Moves',clock:'Clock',table:'Tables',register:'Register'};
-  const filtered=filter==='all'?activityLog:activityLog.filter(e=>e.type===filter);
-  const sorted=[...filtered].reverse();
-  return(
-    <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-      <div className="view-header">
-        <div>
-          <div className="view-title">Activity Log</div>
-          <div className="view-sub">{activityLog.length} events recorded</div>
-        </div>
-        <div style={{display:'flex',gap:4}}>
-          {Object.entries(types).map(([k,v])=>(
-            <button key={k} style={{padding:'5px 10px',fontSize:11,fontWeight:filter===k?600:400,
-              background:filter===k?'#112016':'transparent',border:'1px solid '+(filter===k?'#3dba6f':'#1a2e22'),
-              borderRadius:5,color:filter===k?'#3dba6f':'#7aaa82',cursor:'pointer'}} onClick={()=>setFilter(k)}>{v}</button>
-          ))}
-        </div>
-      </div>
-      <div style={{flex:1,overflowY:'auto',padding:'0 22px 18px'}}>
-        {sorted.length===0&&<div style={{padding:40,textAlign:'center',color:'#3a5a42'}}>No events yet</div>}
-        {sorted.map((e,i)=>(
-          <div key={i} style={{display:'flex',gap:12,alignItems:'flex-start',padding:'8px 0',borderBottom:'1px solid #0e1a12',fontSize:13}}>
-            <span style={{color:'#3a5a42',fontSize:11,whiteSpace:'nowrap',minWidth:70,flexShrink:0}}>{new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
-            <span style={{padding:'1px 8px',borderRadius:3,fontSize:10,fontWeight:600,letterSpacing:.5,textTransform:'uppercase',flexShrink:0,
-              background:e.type==='bust'?'#1a0808':e.type==='move'?'#0a1018':e.type==='clock'?'#18180a':e.type==='table'?'#0a1810':'#101810',
-              color:e.type==='bust'?'#c06060':e.type==='move'?'#6080c0':e.type==='clock'?'#c0a040':e.type==='table'?'#40a060':'#7aaa82',
-              border:'1px solid '+(e.type==='bust'?'#2a1515':e.type==='move'?'#15152a':e.type==='clock'?'#2a2a15':e.type==='table'?'#152a18':'#1a2e22')
-            }}>{e.type}</span>
-            <span style={{color:'#b2d4ba'}}>{e.detail}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ==== PAYOUTS ==== */
 function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublish}) {
@@ -3421,37 +2507,6 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   const isMainEvent = tournament.eventType && tournament.eventType.startsWith('me_');
   const EXTRA_BAG_RATE = 1500;
   const [extraBags,setExtraBags] = useState(tournament.extraBagCount||0);
-  const [newWinnerName,setNewWinnerName] = useState('');
-
-  function syncBagTotal(winners){
-    const total=winners.reduce((s,w)=>s+w.bags,0);
-    setExtraBags(total);
-    onUpdate({extraBagCount:total,extraBagWinners:winners});
-  }
-  function adjustBag(idx,delta){
-    const winners=[...(tournament.extraBagWinners||[])];
-    if(!winners[idx])return;
-    winners[idx]={...winners[idx],bags:Math.max(0,winners[idx].bags+delta),totalQualifications:Math.max(1,(winners[idx].totalQualifications||1)+delta)};
-    if(winners[idx].bags<=0){winners.splice(idx,1);}
-    syncBagTotal(winners);
-  }
-  function removeBagWinner(idx){
-    const winners=[...(tournament.extraBagWinners||[])];
-    winners.splice(idx,1);
-    syncBagTotal(winners);
-  }
-  function addBagWinner(name){
-    if(!name||!name.trim())return;
-    const winners=[...(tournament.extraBagWinners||[])];
-    const existing=winners.findIndex(w=>w.name===name.trim());
-    if(existing>=0){
-      winners[existing]={...winners[existing],bags:winners[existing].bags+1,totalQualifications:(winners[existing].totalQualifications||1)+1};
-    }else{
-      winners.push({name:name.trim(),bags:1,totalQualifications:2});
-    }
-    syncBagTotal(winners);
-    setNewWinnerName('');
-  }
   const extraBagDeduction = isMainEvent ? extraBags * EXTRA_BAG_RATE : 0;
   const payoutPrizePool = prizePool - extraBagDeduction;  // what's left for payouts
   const [itmInput,setItmInput] = useState(tournament.itmPercent||15);
@@ -3472,8 +2527,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
 
   const isMBEvent = tournament.eventType==='mysteryBounty';
   function regen(p) {
-    const places = p || Math.max(1, Math.round(entries * itmInput / 100));
-    const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, places);
+    const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent);
     setRows(newRows);
     onUpdate({payoutTable:newRows});
   }
@@ -3515,31 +2569,17 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   }
 
   function addRow() {
-    const newPlaces = rows.length + 1;
-    const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, newPlaces);
-    if (newRows.length === newPlaces) {
-      setRows(newRows); onUpdate({payoutTable:newRows});
-    } else {
-      // Fallback: just append a blank row and redistribute
-      setRows(rs=>{
-        const r=[...rs,{position:rs.length+1,pct:0,amount:0}];
-        onUpdate({payoutTable:r}); return r;
-      });
-    }
+    setRows(rs=>{
+      const r=[...rs,{position:rs.length+1,pct:0,amount:0}];
+      onUpdate({payoutTable:r}); return r;
+    });
   }
 
   function removeRow(i) {
-    const newPlaces = rows.length - 1;
-    if (newPlaces < 1) return;
-    const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, newPlaces);
-    if (newRows.length === newPlaces) {
-      setRows(newRows); onUpdate({payoutTable:newRows});
-    } else {
-      setRows(rs=>{
-        const r=rs.filter((_,j)=>j!==i).map((x,j)=>({...x,position:j+1}));
-        onUpdate({payoutTable:r}); return r;
-      });
-    }
+    setRows(rs=>{
+      const r=rs.filter((_,j)=>j!==i).map((x,j)=>({...x,position:j+1}));
+      onUpdate({payoutTable:r}); return r;
+    });
   }
 
   const totalPaid = rows.reduce((s,r)=>s+(r.amount||0),0);
@@ -3583,16 +2623,17 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
           </div>
           <div className="pstat">
             <div className="pstat-lbl">ITM %</div>
-            <div style={{display:'flex',alignItems:'center',gap:5,marginTop:6,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:5,marginTop:6}}>
               <input type="number" className="form-input" style={{width:58,padding:'4px 8px',fontSize:15}}
                 value={itmInput}
                 onChange={e=>setItmInput(+e.target.value)}
-                onKeyDown={e=>{if(e.key==='Enter'){const pct=itmInput;const p=Math.max(1,Math.round(entries*pct/100));setPlacesInput(p);onUpdate({itmPercent:pct});regen(p);}}}/>
+                onBlur={e=>{
+                  const pct=+e.target.value;
+                  const p=Math.max(1,Math.floor(entries*pct/100));
+                  setPlacesInput(p); onUpdate({itmPercent:pct}); regen(p);
+                }}/>
               <span style={{fontSize:12,color:'#3a5a42'}}>%</span>
-              <button style={{padding:'4px 10px',background:'#0d1a0f',border:'1px solid #1a2e22',borderRadius:4,color:'#3dba6f',fontSize:11,fontWeight:600,cursor:'pointer'}}
-                onClick={()=>{const pct=itmInput;const p=Math.max(1,Math.round(entries*pct/100));setPlacesInput(p);onUpdate({itmPercent:pct});regen(p);}}>↻ Recalc</button>
             </div>
-            <div style={{fontSize:10,color:'#2a4a35',marginTop:3}}>{Math.round(entries*itmInput/100)} places from {entries} entries</div>
           </div>
           <div className="pstat">
             <div className="pstat-lbl">Places paid</div>
@@ -3630,39 +2671,6 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                     <div style={{fontSize:11,color:'#3dba6f'}}>Payout pool: {fmt.currency(payoutPrizePool)}</div>
                   </div>
                 )}
-              </div>
-            </div>
-            {/* Extra Bag Winners list */}
-            <div style={{marginTop:12,borderTop:'1px solid #2a1e06',paddingTop:10}}>
-              <div style={{fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:'#c8973a',marginBottom:8,fontWeight:600}}>
-                Extra bag winners
-                {tournament.extraBagWinners&&tournament.extraBagWinners.length>0&&
-                  ` (${tournament.extraBagWinners.length} player${tournament.extraBagWinners.length!==1?'s':''} · ${tournament.extraBagWinners.reduce((s,w)=>s+w.bags,0)} total bags)`
-                }
-              </div>
-              {tournament.extraBagWinners&&tournament.extraBagWinners.length>0&&(
-                <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:10}}>
-                  {tournament.extraBagWinners.map((w,i)=>(
-                    <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',background:'#1a1004',border:'1px solid #2a1c06',borderRadius:5,fontSize:12}}>
-                      <span style={{color:'#e8d8a0',fontWeight:600,flex:1}}>{w.name}{w.country?' '+countryFlag(w.country):''}</span>
-                      <span style={{color:'#527a5c',fontSize:10}}>({w.totalQualifications||'-'} flights)</span>
-                      <button style={{background:'none',border:'1px solid #2a1c06',borderRadius:3,color:'#8a4040',cursor:'pointer',fontSize:13,padding:'1px 6px',lineHeight:'18px'}}
-                        onClick={()=>adjustBag(i,-1)} title="Remove 1 bag">−</button>
-                      <span style={{color:'#c8973a',fontWeight:700,minWidth:24,textAlign:'center'}}>×{w.bags}</span>
-                      <button style={{background:'none',border:'1px solid #2a1c06',borderRadius:3,color:'#3dba6f',cursor:'pointer',fontSize:13,padding:'1px 6px',lineHeight:'18px'}}
-                        onClick={()=>adjustBag(i,+1)} title="Add 1 bag">+</button>
-                      <button style={{background:'none',border:'none',color:'#3a2020',cursor:'pointer',fontSize:12,padding:'0 4px'}}
-                        onClick={()=>removeBagWinner(i)} title="Remove player">✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                <input type="text" placeholder="Player name" value={newWinnerName} onChange={e=>setNewWinnerName(e.target.value)}
-                  onKeyDown={e=>{if(e.key==='Enter'){addBagWinner(newWinnerName);}}}
-                  style={{flex:1,maxWidth:200,padding:'5px 8px',background:'#060e09',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:12,outline:'none'}}/>
-                <button style={{padding:'5px 10px',background:'#0d1a0f',border:'1px solid #1a2e22',borderRadius:4,color:'#3dba6f',fontSize:11,fontWeight:600,cursor:'pointer'}}
-                  onClick={()=>addBagWinner(newWinnerName)}>+ Add winner</button>
               </div>
             </div>
           </div>
