@@ -2401,7 +2401,101 @@ function POTYView({tournament}) {
   function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}const resolved=pts.map(p=>{const alias=poty.aliases[p.name];return{...p,potyName:alias||(poty.players[p.name]?p.name:null)};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
   function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
   function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
-  function confirmCommit(){const unlinked=pendingPoints.filter(p=>!p.potyName);if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);const evName=tournament.name||tournament.eventType||'Event';if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players?'))return;const newPoty=JSON.parse(JSON.stringify(poty));if(!newPoty.undoHistory)newPoty.undoHistory=[];newPoty.undoHistory.push({snapshot:JSON.parse(JSON.stringify(poty.players)),committedBefore:[...poty.committed],tournamentId:tournament.id,tournamentName:evName,date:new Date().toISOString(),pointsAdded:pendingPoints.map(p=>({name:p.potyName,points:p.points}))});const evLabel=evName+' ('+new Date().toLocaleDateString('en-SG')+')';pendingPoints.forEach(p=>{if(!newPoty.players[p.potyName])newPoty.players[p.potyName]={points:0,events:[]};newPoty.players[p.potyName].points+=p.points;newPoty.players[p.potyName].events.push(evLabel+': +'+p.points);});newPoty.committed.push(tournament.id);setPoty(newPoty);savePOTY(newPoty);setShowCommit(false);setPendingPoints([]);alert('Committed! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');}
+  function confirmCommit(){const unlinked=pendingPoints.filter(p=>!p.potyName);if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);const evName=tournament.name||tournament.eventType||'Event';if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players?'))return;const newPoty=JSON.parse(JSON.stringify(poty));if(!newPoty.undoHistory)newPoty.undoHistory=[];newPoty.undoHistory.push({snapshot:JSON.parse(JSON.stringify(poty.players)),committedBefore:[...poty.committed],tournamentId:tournament.id,tournamentName:evName,date:new Date().toISOString(),pointsAdded:pendingPoints.map(p=>({name:p.potyName,points:p.points}))});const evLabel=evName+' ('+new Date().toLocaleDateString('en-SG')+')';pendingPoints.forEach(p=>{if(!newPoty.players[p.potyName])newPoty.players[p.potyName]={points:0,events:[]};newPoty.players[p.potyName].points+=p.points;newPoty.players[p.potyName].events.push(evLabel+': +'+p.points);});newPoty.committed.push(tournament.id);setPoty(newPoty);savePOTY(newPoty);
+    // Push tournament data to Supabase for permanent storage
+    pushTournamentToCloud(tournament, pendingPoints, poty);
+    setShowCommit(false);setPendingPoints([]);alert('Committed! '+pendingPoints.length+' players, '+totalPts.toLocaleString()+' points.');}
+
+  async function pushTournamentToCloud(t, points, potyData){
+    try {
+      // Build results: include all players who busted (with payouts) + extra bag winners
+      const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
+      const memberIdByName={};
+      Object.entries(memberCache).forEach(([id,v])=>{
+        const name=typeof v==='string'?v:v.name;
+        if(name) memberIdByName[name.toLowerCase()]=id;
+      });
+
+      const pointsByName={};
+      points.forEach(p=>{pointsByName[p.name]=p;});
+
+      const results=[];
+      const seenNames=new Set();
+
+      // Busted players with positions and payouts
+      const payouts=t.payoutTable||[];
+      const payoutMap={};
+      payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p.amount||0;});
+      const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
+      busted.forEach(p=>{
+        const pts=pointsByName[p.name];
+        const payoutAmt=payoutMap[p.bustPosition]||0;
+        const extraBag=pts?pts.extraBagAmount||0:0;
+        results.push({
+          memberId:memberIdByName[p.name.toLowerCase()]||null,
+          name:p.name,
+          country:p.country||null,
+          bustPosition:p.bustPosition||null,
+          payoutAmount:payoutAmt,
+          extraBagAmount:extraBag,
+          totalPrize:payoutAmt+extraBag,
+          potyPoints:pts?pts.points:0,
+          reentryCount:0,
+        });
+        seenNames.add(p.name);
+      });
+
+      // Extra bag winners who didn't bust in this event (Day 1 carries)
+      (t.extraBagWinners||[]).forEach(w=>{
+        if(seenNames.has(w.name)) return;
+        const pts=pointsByName[w.name];
+        const extraAmt=(w.bags||0)*1500;
+        results.push({
+          memberId:memberIdByName[w.name.toLowerCase()]||null,
+          name:w.name,
+          country:w.country||null,
+          bustPosition:null,
+          payoutAmount:0,
+          extraBagAmount:extraAmt,
+          totalPrize:extraAmt,
+          potyPoints:pts?pts.points:0,
+          reentryCount:0,
+        });
+      });
+
+      const payload={
+        tournament:{
+          id:t.id,
+          name:t.name||t.eventType||'Event',
+          eventType:t.eventType||null,
+          date:t.startedAt?new Date(t.startedAt).toISOString():new Date().toISOString(),
+          buyin:t.buyin||0,
+          prizePool:t.prizePool||0,
+          entries:(t.players||[]).length+(t.inheritedEntries||0),
+          guarantee:t.guarantee||0,
+          hitGuarantee:(t.prizePool||0)>=(t.guarantee||0),
+          structure:t.structure||null,
+        },
+        results,
+        device:window.electronAPI&&window.electronAPI.platform?window.electronAPI.platform:'browser',
+      };
+
+      const res=await fetch('https://spc-members.onrender.com/api/tournament',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload),
+      });
+      const data=await res.json();
+      if(data.success){
+        console.log('Tournament pushed to cloud:',data.tournament_id,data.results_count,'results');
+      } else {
+        console.warn('Cloud push failed:',data.error);
+      }
+    } catch(err) {
+      // Silently fail — POTY commit still succeeded locally
+      console.warn('Cloud push error:',err.message);
+    }
+  }
   function undoLastCommit(){if(!hasUndo)return;const lc=poty.undoHistory[poty.undoHistory.length-1];if(!confirm('Undo commit from "'+lc.tournamentName+'"?'))return;const newPoty=JSON.parse(JSON.stringify(poty));newPoty.players=lc.snapshot;newPoty.committed=lc.committedBefore;newPoty.undoHistory.pop();setPoty(newPoty);savePOTY(newPoty);alert('Undone.'+(newPoty.undoHistory.length>0?' ('+newPoty.undoHistory.length+' more available)':''));}
   function exportCSV(){let csv='Rank,Player,Points\n';sorted.forEach((p,i)=>{csv+=(i+1)+',"'+p.name+'",'+p.points+'\n';});if(window.electronAPI&&window.electronAPI.showSaveDialog){window.electronAPI.showSaveDialog({defaultPath:'POTY_'+selectedYear+'_Standings.csv',filters:[{name:'CSV',extensions:['csv']}]}).then(r=>{if(!r.canceled&&r.filePath)window.electronAPI.writeFile(r.filePath,csv);});}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='POTY_'+selectedYear+'_Standings.csv';a.click();}}
   const potyNames=Object.keys(poty.players).sort();
