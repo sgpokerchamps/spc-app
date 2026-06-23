@@ -357,7 +357,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .fs-btn{background:#0b1610;border:1px solid #1a2e22;color:#527a5c;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Barlow',sans-serif;transition:.15s;white-space:nowrap}
 .fs-btn:hover{border-color:#3dba6f;color:#3dba6f}
 .clock-outer:-webkit-full-screen{background:#020806}
-.clock-outer:fullscreen{background:#020806}
 .d-waiting{font-family:'Rajdhani',sans-serif;font-size:22px;color:#2a4a35;letter-spacing:3px;text-transform:uppercase}
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:5000}
@@ -456,25 +455,25 @@ const N8_LOGO  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABrCAYAAAA4
 
 /* ==== EVENT CONFIGS ==== */
 const EVENT_CONFIGS = {
-  me_1a: { name:'Main Event — Flight 1A', short:'ME 1A', group:'Main Event', subtitle:'Flight 1A', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:40, reentryUntilLevel:8, maxReentries:Infinity },
-  me_1b: { name:'Main Event — Flight 1B', short:'ME 1B', group:'Main Event', subtitle:'Flight 1B', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:6, maxReentries:1 },
-  me_1c: { name:'Main Event — Flight 1C', short:'ME 1C', group:'Main Event', subtitle:'Flight 1C', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:25, reentryUntilLevel:8, maxReentries:Infinity },
-  me_1d: { name:'Main Event — Flight 1D', short:'ME 1D', group:'Main Event', subtitle:'Flight 1D', isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:10, reentryUntilLevel:6, maxReentries:Infinity },
-  me_d2: { name:'Main Event — Day 2',     short:'ME D2', group:'Main Event', subtitle:'Day 2',     isMainEvent:true,  bgDeep:'#1a1004', buyin:600, prizeComponent:530,   adminFeePercent:4, itmPercent:13, guarantee:100000, stack:0,     color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:0, maxReentries:0 },
-  miniRoller:    { name:'Mini Roller',    short:'Mini Roller',    group:'Mini Roller',    subtitle:'',         isMainEvent:false, bgDeep:'#041408', buyin:1000, prizeComponent:883, adminFeePercent:4, itmPercent:15, guarantee:30000,  stack:30000, color:'#3dba6f', suit:'♥', levelMins:40 },
-  mysteryBounty: { name:'Mystery Bounty', short:'Mystery Bounty', group:'Mystery Bounty', subtitle:'',         isMainEvent:false, bgDeep:'#0d0816', buyin:400,  prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0,      stack:15000, color:'#9b7bce', suit:'◆', levelMins:20, bountyAmount:90 },
-  satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#040d18', buyin:60,   prizeComponent:52,  adminFeePercent:0, itmPercent:0,  guarantee:0,      stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10 },
+  me_1a: { name:'Main Event — Flight 1A', short:'ME 1A', group:'Main Event', subtitle:'Flight 1A', isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:40, reentryUntilLevel:8, maxReentries:Infinity },
+  me_1b: { name:'Main Event — Flight 1B', short:'ME 1B', group:'Main Event', subtitle:'Flight 1B', isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:6, maxReentries:1 },
+  me_1c: { name:'Main Event — Flight 1C', short:'ME 1C', group:'Main Event', subtitle:'Flight 1C', isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:25, reentryUntilLevel:8, maxReentries:Infinity },
+  me_1d: { name:'Main Event — Flight 1D', short:'ME 1D', group:'Main Event', subtitle:'Flight 1D', isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530, adminFeePercent:4, itmPercent:13, guarantee:100000, stack:25000, color:'#c8973a', suit:'♠', levelMins:10, reentryUntilLevel:6, maxReentries:Infinity },
+  me_d2: { name:'Main Event — Day 2',     short:'ME D2', group:'Main Event', subtitle:'Day 2',     isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530,   adminFeePercent:4, itmPercent:13, guarantee:100000, stack:0,     color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:0, maxReentries:0 },
+  miniRoller:    { name:'Mini Roller',    short:'Mini Roller',    group:'Mini Roller',    subtitle:'',         isMainEvent:false, bgDeep:'#0a3018', buyin:1000, prizeComponent:883, adminFeePercent:4, itmPercent:15, guarantee:30000,  stack:30000, color:'#3dba6f', suit:'♥', levelMins:40 },
+  mysteryBounty: { name:'Mystery Bounty', short:'Mystery Bounty', group:'Mystery Bounty', subtitle:'',         isMainEvent:false, bgDeep:'#2a1c4a', buyin:400,  prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0,      stack:15000, color:'#9b7bce', suit:'◆', levelMins:20, bountyAmount:90 },
+  satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#0a2240', buyin:60,   prizeComponent:52,  adminFeePercent:0, itmPercent:0,  guarantee:0,      stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10 },
 };
 
 const EVENT_THEMES = {
-  me_1a:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#1f1505', activeNav:'#2a1c06' },
-  me_1b:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#1f1505', activeNav:'#2a1c06' },
-  me_1c:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#1f1505', activeNav:'#2a1c06' },
-  me_1d:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#1f1505', activeNav:'#2a1c06' },
-  me_d2:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#1f1505', activeNav:'#2a1c06' },
+  me_1a:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#2a1c06', activeNav:'#2a1c06' },
+  me_1b:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#2a1c06', activeNav:'#2a1c06' },
+  me_1c:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#2a1c06', activeNav:'#2a1c06' },
+  me_1d:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#2a1c06', activeNav:'#2a1c06' },
+  me_d2:        { accent:'#c8973a', sidebarBg:'#0f0c04', activeBg:'#2a1c06', activeNav:'#2a1c06' },
   miniRoller:   { accent:'#3dba6f', sidebarBg:'#04120a', activeBg:'#0b2014', activeNav:'#112016' },
-  mysteryBounty:{ accent:'#9b7bce', sidebarBg:'#0c0814', activeBg:'#160f22', activeNav:'#1e1430' },
-  satellite:    { accent:'#4fa8d4', sidebarBg:'#04101a', activeBg:'#0b1a26', activeNav:'#112030' },
+  mysteryBounty:{ accent:'#9b7bce', sidebarBg:'#0c0814', activeBg:'#221a32', activeNav:'#1e1430' },
+  satellite:    { accent:'#4fa8d4', sidebarBg:'#04101a', activeBg:'#0f2438', activeNav:'#112030' },
 };
 function getTheme(et){ return EVENT_THEMES[et]||EVENT_THEMES.miniRoller; }
 
