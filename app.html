@@ -1991,7 +1991,10 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       const data = await res.json();
       if(data.members) {
         const cache = {};
-        data.members.forEach(m => { cache[m.member_id] = {name: m.name, country: m.country || null}; });
+        data.members.forEach((m, i) => {
+          const key = m.member_id || ('noId_'+i);
+          cache[key] = {name: m.name, country: m.country || null, memberId: m.member_id || null};
+        });
         localStorage.setItem('spc_members_cache', JSON.stringify(cache));
         localStorage.setItem('spc_members_synced_at', data.syncedAt);
         setSyncStatus(`${data.members.length} members · synced ${new Date(data.syncedAt).toLocaleString()}`);
