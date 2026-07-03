@@ -693,7 +693,10 @@ function parseQR(raw) {
     try {
       const cache = JSON.parse(localStorage.getItem('spc_members_cache')||'{}');
       const entry = cache[memberId];
-      if(!entry) { alert('Member ID ' + memberId + ' not found in local cache. Try syncing members first.'); return null; }
+      if(!entry) {
+        alert(`Member ${memberId} not found in local cache.\n\nPlease type the player's name manually (as printed on their card) to register them.`);
+        return null;
+      }
       // Support both old format (string) and new format ({name, country})
       const name = typeof entry === 'string' ? entry : entry.name;
       const country = qrCountry || (typeof entry === 'object' ? entry.country : null);
