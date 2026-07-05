@@ -834,10 +834,10 @@ td{padding:6px 10px;border-bottom:1px solid #eee}.r{text-align:right}
 <div class="stat"><div class="stat-label">Extra bags</div><div class="stat-val">${extraBags} (−S$${extraDed.toLocaleString()})</div></div>
 <div class="stat"><div class="stat-label">Payout pool</div><div class="stat-val">S$${payoutPool.toLocaleString()}</div></div>
 </div>
-${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name} ${countryFlag(w.country)}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
-<h2>Final Standings</h2><table><tr><th>#</th><th>Player</th><th>Status</th><th class="r">Payout (S$)</th></tr>
-${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name} ${countryFlag(p.country)}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
-${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name} ${countryFlag(p.country)}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
+${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Country</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name}</td><td>${w.country||'—'}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
+<h2>Final Standings</h2><table><tr><th>#</th><th>Player</th><th>Country</th><th>Status</th><th class="r">Payout (S$)</th></tr>
+${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
+${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
 </table></body></html>`;
     const reportName=(t.name||'tournament').replace(/[^a-z0-9]/gi,'_')+'_Report.html';
     if(window.electronAPI&&window.electronAPI.showSaveDialog){
