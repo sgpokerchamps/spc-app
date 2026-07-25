@@ -912,7 +912,7 @@ function loadPOTYForYear(yr){try{const d=JSON.parse(localStorage.getItem(potyKey
 function initPOTY(yr){const existing=loadPOTYForYear(yr);if(existing)return existing;const players={};if(yr===2026){Object.entries(POTY_INITIAL_2026).forEach(([name,pts])=>{players[name]={points:pts,events:['SPC XX & XXI (pre-loaded)']};});}const d={year:yr,players,committed:[],aliases:{}};localStorage.setItem(potyKey(yr),JSON.stringify(d));return d;}
 function savePOTY(d){try{localStorage.setItem(potyKey(d.year),JSON.stringify(d));}catch(e){}}
 function getPotyYears(){const years=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('spc_poty_')){const y=parseInt(k.replace('spc_poty_',''));if(!isNaN(y))years.push(y);}}const cur=new Date().getFullYear();if(years.indexOf(cur)<0)years.push(cur);return years.sort((a,b)=>b-a);}
-function getPotyPoints(tournament){const results=[];const entries=tournament.players.length+(tournament.inheritedEntries||0);let payouts=tournament.payoutTable||[];const pp=tournament.prizePool||0;const extraBags=tournament.extraBagCount||0;const extraDed=extraBags*1500;const payoutPool=pp-extraDed;if(payouts.length===0&&entries>0&&payoutPool>0){payouts=generatePayoutRows(entries,payoutPool,tournament.eventType==='mysteryBounty');}payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:p.amount||Math.round(payoutPool*(p.pct||0)/100)}));const payoutMap={};payouts.forEach(p=>{payoutMap[p.position]=p;});const busted=tournament.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));busted.forEach(p=>{const po=payoutMap[p.bustPosition];if(po&&po.amount>0){results.push({name:p.name,payoutAmount:po.amount,extraBagAmount:0,totalPrize:po.amount,points:Math.floor(po.amount/POTY_RATE)});}});if(tournament.extraBagWinners&&tournament.extraBagWinners.length>0){tournament.extraBagWinners.forEach(w=>{const amt=w.bags*1500;const existing=results.find(r=>r.name===w.name);if(existing){existing.extraBagAmount=amt;existing.totalPrize+=amt;existing.points=Math.floor(existing.totalPrize/POTY_RATE);}else{results.push({name:w.name,payoutAmount:0,extraBagAmount:amt,totalPrize:amt,points:Math.floor(amt/POTY_RATE)});}});}return results.filter(r=>r.points>0);}
+function getPotyPoints(tournament){const results=[];const entries=tournament.players.length+(tournament.inheritedEntries||0);let payouts=tournament.payoutTable||[];const pp=tournament.prizePool||0;const extraBags=tournament.extraBagCount||0;const extraDed=extraBags*1500;const payoutPool=pp-extraDed;if(payouts.length===0&&entries>0&&payoutPool>0){payouts=generatePayoutRows(entries,payoutPool,tournament.eventType==='mysteryBounty');}payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:p.amount||Math.round(payoutPool*(p.pct||0)/100)}));const payoutMap={};payouts.forEach(p=>{payoutMap[p.position]=p;});const busted=tournament.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));busted.forEach(p=>{const po=payoutMap[p.bustPosition];if(po&&po.amount>0){const eff=(tournament.dealMade&&po.dealAmount!=null)?po.dealAmount:po.amount;results.push({name:p.name,payoutAmount:eff,extraBagAmount:0,totalPrize:eff,points:Math.floor(eff/POTY_RATE)});}});if(tournament.extraBagWinners&&tournament.extraBagWinners.length>0){tournament.extraBagWinners.forEach(w=>{const amt=w.bags*1500;const existing=results.find(r=>r.name===w.name);if(existing){existing.extraBagAmount=amt;existing.totalPrize+=amt;existing.points=Math.floor(existing.totalPrize/POTY_RATE);}else{results.push({name:w.name,payoutAmount:0,extraBagAmount:amt,totalPrize:amt,points:Math.floor(amt/POTY_RATE)});}});}return results.filter(r=>r.points>0);}
 
 function writeLive(t, cur, nxt, active, tables) {
   try {
@@ -2510,11 +2510,12 @@ function POTYView({tournament}) {
       // Busted players with positions and payouts
       const payouts=t.payoutTable||[];
       const payoutMap={};
-      payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p.amount||0;});
+      payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p;});
       const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
       busted.forEach(p=>{
         const pts=pointsByName[p.name];
-        const payoutAmt=payoutMap[p.bustPosition]||0;
+        const payoutRow=payoutMap[p.bustPosition]||null;
+        const payoutAmt=payoutRow?(payoutRow.amount||0):0;
         const extraBag=pts?pts.extraBagAmount||0:0;
         results.push({
           memberId:memberIdByName[p.name.toLowerCase()]||null,
@@ -2522,8 +2523,9 @@ function POTYView({tournament}) {
           country:p.country||null,
           bustPosition:p.bustPosition||null,
           payoutAmount:payoutAmt,
+          payoutAmountDeal:(t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:null,
           extraBagAmount:extraBag,
-          totalPrize:payoutAmt+extraBag,
+          totalPrize:((t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:payoutAmt)+extraBag,
           potyPoints:pts?pts.points:0,
           reentryCount:0,
         });
@@ -2553,6 +2555,7 @@ function POTYView({tournament}) {
           id:t.id,
           name:t.name||t.eventType||'Event',
           spc_series:t.spcSeries||null,
+          dealMade:t.dealMade||false,
           eventType:t.eventType||null,
           date:t.startedAt?new Date(t.startedAt).toISOString():new Date().toISOString(),
           buyin:t.buyin||0,
@@ -3775,6 +3778,25 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             </div>
           </div>
         )}
+        {/* Deal mode toggle */}
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'8px 14px',background:tournament.dealMade?'#1a1004':'#09140b',border:'1px solid '+(tournament.dealMade?'#2a1c06':'#1a2e22'),borderRadius:6,marginBottom:14}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:12,color:tournament.dealMade?'#c8973a':'#7aaa82',fontWeight:600,userSelect:'none'}}>
+            <input type="checkbox" checked={!!tournament.dealMade} onChange={e=>{
+              const on=e.target.checked;
+              if(on){
+                const withDeal=rows.map(r=>({...r,dealAmount:r.amount}));
+                setRows(withDeal);
+                onUpdate({dealMade:true,payoutTable:withDeal});
+              } else {
+                const withoutDeal=rows.map(r=>{const {dealAmount,dealAmount_raw,...rest}=r;return rest;});
+                setRows(withoutDeal);
+                onUpdate({dealMade:false,payoutTable:withoutDeal});
+              }
+            }} style={{cursor:'pointer'}}/>
+            <span>Deal made</span>
+          </label>
+          {tournament.dealMade&&<span style={{fontSize:11,color:'#c8973a'}}>Deal amounts editable in table below · raw amounts preserved for Hendon Mob</span>}
+        </div>
         {/* Reconciliation bar */}
         <div style={{display:'flex',gap:16,padding:'8px 14px',background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,fontSize:12,color:'#527a5c',marginBottom:14,flexWrap:'wrap'}}>
           <span>{isMainEvent&&extraBagDeduction>0?'Payout pool':'Prize pool'} <strong style={{color:'#c8973a'}}>{fmt.currency(payoutPrizePool)}</strong></span>
@@ -3794,9 +3816,10 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             <table className="payout-table" style={{tableLayout:'fixed',width:'100%'}}>
               <thead>
                 <tr>
-                  <th style={{width:'15%'}}>Place</th>
-                  <th style={{width:'25%'}}>%</th>
-                  <th style={{width:'45%'}}>Amount (S$)</th>
+                  <th style={{width:'12%'}}>Place</th>
+                  <th style={{width:'20%'}}>%</th>
+                  <th style={{width:tournament.dealMade?'26%':'53%'}}>Amount (S$)</th>
+                  {tournament.dealMade&&<th style={{width:'27%',color:'#c8973a'}}>Deal (S$)</th>}
                   <th style={{width:'15%'}}></th>
                 </tr>
               </thead>
@@ -3825,6 +3848,26 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                           onKeyDown={e=>{if(e.key==='Enter')commitRow(i,'amount');}}/>
                       </div>
                     </td>
+                    {tournament.dealMade&&<td style={{padding:'4px 14px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:4}}>
+                        <span style={{fontSize:12,color:'#c8973a'}}>S$</span>
+                        <input type="text" inputMode="numeric"
+                          style={{background:'#1a1004',border:'1px solid #2a1c06',color:'#c8973a',padding:'4px 7px',borderRadius:4,width:100,fontSize:13,fontWeight:600,fontFamily:"'Rajdhani',sans-serif",outline:'none'}}
+                          value={r.dealAmount_raw!==undefined?r.dealAmount_raw:(r.dealAmount!==undefined?r.dealAmount:r.amount)}
+                          onChange={e=>updateRowRaw(i,'dealAmount',e.target.value)}
+                          onBlur={()=>{
+                            const raw=rows[i].dealAmount_raw;
+                            if(raw!==undefined&&raw!==''){
+                              const v=parseFloat(raw);
+                              const dealAmount=isNaN(v)?rows[i].dealAmount:Math.round(v/100)*100;
+                              setRows(rs=>{const upd=rs.map((r2,j)=>j!==i?r2:{...r2,dealAmount,dealAmount_raw:undefined});onUpdate({payoutTable:upd});return upd;});
+                            } else {
+                              setRows(rs=>rs.map((r2,j)=>j!==i?r2:{...r2,dealAmount_raw:undefined}));
+                            }
+                          }}
+                          onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}/>
+                      </div>
+                    </td>}
                     <td style={{padding:'4px 10px'}}>
                       <button className="del-row-btn" onClick={()=>removeRow(i)}>✕</button>
                     </td>
