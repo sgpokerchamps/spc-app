@@ -159,8 +159,7 @@ function generatePayoutRows(entries, prizePool, roundToFifty=false, placesOverri
 
 
 /* ==== EXPORT / IMPORT HELPERS ==== */
-function exportTournament(t, templateOnly=false) {
-  if(templateOnly){
+function generateTournamentReportHTML(t) {
     // Tournament report — generate printable HTML summary
     const evCfg=EVENT_CONFIGS[t.eventType]||{};
     const entries=t.players.length+(t.inheritedEntries||0);
@@ -204,6 +203,12 @@ ${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><tabl
 ${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
 ${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
 </table></body></html>`;
+    return html;
+}
+
+function exportTournament(t, templateOnly=false) {
+  if(templateOnly){
+    const html=generateTournamentReportHTML(t);
     const reportName=(t.name||'tournament').replace(/[^a-z0-9]/gi,'_')+'_Report.html';
     if(window.electronAPI&&window.electronAPI.showSaveDialog){
       window.electronAPI.showSaveDialog({defaultPath:reportName,filters:[{name:'HTML',extensions:['html']}]}).then(function(result){
@@ -237,6 +242,95 @@ ${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;
   }
 }
 
+/* ==== COMMIT TOURNAMENT PAYLOAD ==== */
+function buildTournamentCommitPayload(t) {
+  const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
+  const memberIdByName={};
+  Object.entries(memberCache).forEach(([id,v])=>{
+    const name=typeof v==='string'?v:v.name;
+    if(name) memberIdByName[name.toLowerCase()]=id;
+  });
+
+  const reentryCountByName={};
+  (t.regLog||[]).forEach(e=>{ if(e.isReentry) reentryCountByName[e.name]=(reentryCountByName[e.name]||0)+1; });
+
+  const entries=t.players.length+(t.inheritedEntries||0);
+  const totalReentries=(t.regLog||[]).filter(e=>e.isReentry).length;
+  const uniqueEntries=entries-totalReentries;
+
+  let payouts=t.payoutTable||[];
+  const payoutMap={};
+  payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p;});
+
+  const results=[];
+  const seenNames=new Set();
+
+  const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
+  busted.forEach(p=>{
+    const payoutRow=payoutMap[p.bustPosition]||null;
+    const payoutAmt=payoutRow?(payoutRow.amount||0):0;
+    results.push({
+      member_id:memberIdByName[p.name.toLowerCase()]||null,
+      player_name:p.name,
+      country:p.country||null,
+      bust_position:p.bustPosition||null,
+      payout_amount:payoutAmt,
+      payout_amount_deal:(t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:null,
+      extra_bag_amount:0,
+      bounty_amount:0,
+      reentry_count:reentryCountByName[p.name]||0,
+    });
+    seenNames.add(p.name);
+  });
+
+  (t.extraBagWinners||[]).forEach(w=>{
+    const extraAmt=(w.bags||0)*1500;
+    if(seenNames.has(w.name)){
+      const row=results.find(r=>r.player_name===w.name);
+      if(row) row.extra_bag_amount=extraAmt;
+      return;
+    }
+    results.push({
+      member_id:memberIdByName[w.name.toLowerCase()]||null,
+      player_name:w.name,
+      country:w.country||null,
+      bust_position:null,
+      payout_amount:0,
+      payout_amount_deal:null,
+      extra_bag_amount:extraAmt,
+      bounty_amount:0,
+      reentry_count:reentryCountByName[w.name]||0,
+    });
+  });
+
+  const fee=(t.buyin!=null&&t.prizeComponent!=null)?Math.max(0,t.buyin-t.prizeComponent):null;
+
+  const tournament={
+    id:t.id,
+    name:t.name||getEventType(t.eventType)||'Event',
+    event_type:getEventType(t.eventType),
+    date:t.startedAt?new Date(t.startedAt).toISOString():new Date().toISOString(),
+    spc_series:t.spcSeries||CURRENT_SPC_SERIES,
+    buyin:t.buyin||0,
+    fee,
+    prize_pool:t.prizePool||0,
+    guarantee:t.guarantee||0,
+    hit_guarantee:(t.prizePool||0)>=(t.guarantee||0),
+    entries,
+    unique_entries:uniqueEntries,
+    reentries:totalReentries,
+    structure:t.structure||null,
+    deal_made:t.dealMade||false,
+  };
+
+  return {
+    tournament,
+    results,
+    device:(window.electronAPI&&window.electronAPI.platform)||'browser',
+    series:t.spcSeries||CURRENT_SPC_SERIES,
+  };
+}
+
 function importFromFile(file, onSuccess, onError) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -266,6 +360,16 @@ function deleteT(id) {
     localStorage.removeItem(`spc_t_${id}`);
     localStorage.setItem('spc_index',JSON.stringify(getIndex().filter(x=>x.id!==id)));
   } catch(e){}
+}
+function getCommittedTournamentIds() { try{return JSON.parse(localStorage.getItem('spc_committed_tournaments')||'[]');}catch(e){return[];} }
+function markTournamentCommitted(id) {
+  try {
+    const ids=getCommittedTournamentIds();
+    if(!ids.includes(id)){ids.push(id);localStorage.setItem('spc_committed_tournaments',JSON.stringify(ids));}
+  } catch(e){}
+}
+function markTournamentUncommitted(id) {
+  try { localStorage.setItem('spc_committed_tournaments',JSON.stringify(getCommittedTournamentIds().filter(x=>x!==id))); } catch(e){}
 }
 function writeLive(t, cur, nxt, active, tables) {
   try {

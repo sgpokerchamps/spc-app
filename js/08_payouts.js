@@ -144,6 +144,56 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   const posLabel = i => i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`;
   const posColor = i => i===0?'#f0c040':i===1?'#c8d0d8':i===2?'#c87a3a':'#b2d4ba';
 
+  const [committedIds,setCommittedIds] = useState(()=>getCommittedTournamentIds());
+  const [isCommitting,setIsCommitting] = useState(false);
+  const canCommit = canCommitTournament(tournament.eventType);
+  const isCommitted = committedIds.includes(tournament.id);
+
+  async function commitTournament(){
+    const evName = tournament.name||getEventType(tournament.eventType)||'Event';
+    const payload = buildTournamentCommitPayload(tournament);
+    if(!confirm(`Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`)) return;
+    setIsCommitting(true);
+    try {
+      const reportHtml = generateTournamentReportHTML(tournament);
+      const res = await fetch('https://spc-members.onrender.com/api/tournament', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        body:JSON.stringify({...payload, report_html:reportHtml}),
+      });
+      const data = await res.json();
+      if(!res.ok||!data.success){ alert('Commit failed: '+(data.error||res.statusText)); setIsCommitting(false); return; }
+      markTournamentCommitted(tournament.id);
+      setCommittedIds(getCommittedTournamentIds());
+      if(data.report_upload_error) alert('Committed, but report upload failed: '+data.report_upload_error);
+    } catch(e) {
+      alert('Commit failed: '+e.message+'\n\nCheck internet connection and try again.');
+    } finally {
+      setIsCommitting(false);
+    }
+  }
+
+  async function undoCommitTournament(){
+    const evName = tournament.name||getEventType(tournament.eventType)||'this event';
+    if(!confirm(`Undo cloud commit for "${evName}"? This deletes the tournament and its results from the cloud.`)) return;
+    setIsCommitting(true);
+    try {
+      const res = await fetch('https://spc-members.onrender.com/api/tournament/undo', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        body:JSON.stringify({tournament_id:tournament.id}),
+      });
+      const data = await res.json();
+      if(!res.ok||!data.success){ alert('Undo failed: '+(data.error||res.statusText)); setIsCommitting(false); return; }
+      markTournamentUncommitted(tournament.id);
+      setCommittedIds(getCommittedTournamentIds());
+    } catch(e) {
+      alert('Undo failed: '+e.message);
+    } finally {
+      setIsCommitting(false);
+    }
+  }
+
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div className="view-head">
@@ -159,6 +209,16 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             </>
             :<button className="btn-primary" style={{padding:'6px 16px',fontSize:12}} onClick={onPublish}>📢 Publish Payouts</button>
           }
+          {canCommit&&(
+            isCommitting
+              ?<button className="sf-btn" disabled style={{width:'auto',opacity:0.7,cursor:'wait'}}>⟳ Committing…</button>
+              :isCommitted
+                ?<>
+                  <button className="sf-btn" style={{width:'auto',borderColor:'#3dba6f',color:'#3dba6f'}} onClick={commitTournament}>✓ Committed · Re-commit?</button>
+                  <button className="btn-sec" style={{color:'#c87a3a',borderColor:'#4a2c1a'}} onClick={undoCommitTournament}>↩ Undo</button>
+                </>
+                :<button className="sf-btn" style={{width:'auto',borderColor:'#4fa8d4',color:'#4fa8d4'}} onClick={commitTournament}>☁ Commit Tournament</button>
+          )}
         </div>
       </div>
       <div className="payouts-view">

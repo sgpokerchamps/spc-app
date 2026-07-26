@@ -37,6 +37,17 @@ const EVENT_THEMES = {
 };
 function getTheme(et){ return EVENT_THEMES[et]||EVENT_THEMES.miniRoller; }
 
+/* ==== SERIES / TOURNAMENT COMMIT HELPERS ==== */
+const SPC_SERIES = ['SPC 22','SPC 23','SPC 24','SPC 25','SPC 26','SPC 27','SPC 28','SPC 29'];
+const EVENT_TYPE_LABELS = {
+  me_d2: 'Main Event',
+  miniRoller: 'Mini Roller',
+  mysteryBounty: 'Mystery Bounty',
+  satellite: 'Satellite',
+};
+function getEventType(eventKey){ return EVENT_TYPE_LABELS[eventKey] || (EVENT_CONFIGS[eventKey]||{}).name || eventKey; }
+function canCommitTournament(eventKey){ return !['me_1a','me_1b','me_1c','me_1d'].includes(eventKey); }
+
 /* ==== BLIND STRUCTURES ==== */
 function makeMED1(mins) {
   return [
