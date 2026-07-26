@@ -244,6 +244,33 @@ ipcMain.handle('check-for-updates', async () => {
       results.push('server.js (' + Math.round(serverJs.length / 1024) + 'KB)');
     }
 
+    var stylesCss = await downloadGitHub('styles.css');
+    if (stylesCss && stylesCss.length > 1000) {
+      fs.writeFileSync(path.join(updateDir, 'styles.css'), stylesCss, 'utf8');
+      results.push('styles.css (' + Math.round(stylesCss.length / 1024) + 'KB)');
+    } else {
+      return { success: false, error: 'styles.css invalid (' + (stylesCss ? stylesCss.length : 0) + ' bytes)' };
+    }
+
+    // js/ folder — fixed list matching the current 10-file split.
+    // If a new file gets added to the split later, add its name here too.
+    var updateJsDir = path.join(updateDir, 'js');
+    if (!fs.existsSync(updateJsDir)) fs.mkdirSync(updateJsDir, { recursive: true });
+    var jsFiles = [
+      '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
+      '06_sidebar.js', '07_views.js', '08_payouts.js', '09_potyview.js', '10_tournament.js',
+    ];
+    for (var i = 0; i < jsFiles.length; i++) {
+      var jsName = jsFiles[i];
+      var jsContent = await downloadGitHub('js/' + jsName);
+      if (jsContent && jsContent.length > 200) {
+        fs.writeFileSync(path.join(updateJsDir, jsName), jsContent, 'utf8');
+        results.push('js/' + jsName + ' (' + Math.round(jsContent.length / 1024) + 'KB)');
+      } else {
+        return { success: false, error: 'js/' + jsName + ' invalid (' + (jsContent ? jsContent.length : 0) + ' bytes)' };
+      }
+    }
+
     fs.writeFileSync(path.join(updateDir, 'updated_at.txt'), new Date().toISOString(), 'utf8');
     return { success: true, files: results };
   } catch (err) {
