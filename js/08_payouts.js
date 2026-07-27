@@ -68,6 +68,11 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   },[payoutPrizePool]);
 
   const isMBEvent = tournament.eventType==='mysteryBounty';
+  const bountyCfg = EVENT_CONFIGS[tournament.eventType];
+  const hasBounty = !!(bountyCfg && bountyCfg.bountyAmount);
+  const bountyAmountPerEntry = tournament.bountyAmount || (bountyCfg && bountyCfg.bountyAmount) || 0;
+  const bountyPool = tournament.bountyPool || 0;
+  const [showBounties,setShowBounties] = useState(false);
   function regen(p) {
     const places = p || Math.max(1, Math.round(entries * itmInput / 100));
     const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, places);
@@ -152,7 +157,12 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   async function commitTournament(){
     const evName = tournament.name||getEventType(tournament.eventType)||'Event';
     const payload = buildTournamentCommitPayload(tournament);
-    if(!confirm(`Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`)) return;
+    let confirmMsg = `Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`;
+    if(hasBounty){
+      const loggedTotal=Object.values(tournament.bounties||{}).reduce((s,v)=>s+(Number(v)||0),0);
+      if(loggedTotal!==bountyPool) confirmMsg += `\n\n⚠ Bounties logged S$${loggedTotal.toLocaleString()} of S$${bountyPool.toLocaleString()} — commit anyway?`;
+    }
+    if(!confirm(confirmMsg)) return;
     setIsCommitting(true);
     try {
       const reportHtml = generateTournamentReportHTML(tournament);
@@ -209,6 +219,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             </>
             :<button className="btn-primary" style={{padding:'6px 16px',fontSize:12}} onClick={onPublish}>📢 Publish Payouts</button>
           }
+          {hasBounty&&<button className="btn-sec" style={showBounties?{color:'#c8973a',borderColor:'#4a2c1a'}:{}} onClick={()=>setShowBounties(s=>!s)}>Log Bounties</button>}
           {canCommit&&(
             isCommitting
               ?<button className="sf-btn" disabled style={{width:'auto',opacity:0.7,cursor:'wait'}}>⟳ Committing…</button>
@@ -256,6 +267,13 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             <div className="pstat-val" style={{color:'#b2d4ba',marginTop:4}}>{rows.length}</div>
             <div style={{fontSize:10,color:'#2a4a35',marginTop:2}}>per SPC structure</div>
           </div>
+          {hasBounty&&(
+            <div className="pstat">
+              <div className="pstat-lbl">Bounty pool</div>
+              <div className="pstat-val" style={{color:'#c8973a'}}>{fmt.currency(bountyPool)}</div>
+              <div style={{fontSize:10,color:'#2a4a35',marginTop:2}}>S${bountyAmountPerEntry} x {entries} entries</div>
+            </div>
+          )}
         </div>
 
         {/* Extra Bag Bonus — Main Event only */}
@@ -426,6 +444,57 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             </button>
           </>
             )}
+        {hasBounty&&showBounties&&<BountyPanel tournament={tournament} bountyPool={bountyPool} onUpdate={onUpdate}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ==== BOUNTY LOGGING PANEL ==== */
+function BountyPanel({tournament, bountyPool, onUpdate}) {
+  const bounties = tournament.bounties || {};
+  const [raw,setRaw] = useState(()=>{
+    const r={};
+    Object.entries(bounties).forEach(([id,v])=>{ r[id]=String(v); });
+    return r;
+  });
+  const players = [...tournament.players].sort((a,b)=>a.name.localeCompare(b.name));
+  const loggedTotal = Object.values(bounties).reduce((s,v)=>s+(Number(v)||0),0);
+  const diff = bountyPool - loggedTotal;
+  const isExact = bountyPool>0 && diff===0;
+  const isOver = diff<0;
+  const barColor = isExact?'#3dba6f':isOver?'#e05a5a':'#c8973a';
+  const barText = isExact
+    ? `✓ Bounties logged: ${fmt.currency(loggedTotal)} of ${fmt.currency(bountyPool)}`
+    : isOver
+      ? `Bounties logged: ${fmt.currency(loggedTotal)} of ${fmt.currency(bountyPool)} · ${fmt.currency(-diff)} over`
+      : `Bounties logged: ${fmt.currency(loggedTotal)} of ${fmt.currency(bountyPool)} · ${fmt.currency(diff)} remaining`;
+
+  function handleChange(id, val) {
+    setRaw(r=>({...r,[id]:val}));
+    const v=parseFloat(val);
+    const updated={...bounties};
+    if (val===''||isNaN(v)) delete updated[id]; else updated[id]=v;
+    onUpdate({bounties:updated});
+  }
+
+  return (
+    <div style={{background:'#09140b',border:'1px solid #1a2e22',borderRadius:7,padding:'14px 16px',marginTop:14}}>
+      <div style={{fontSize:12,fontWeight:600,color:barColor,marginBottom:12}}>{barText}</div>
+      <div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:400,overflowY:'auto'}}>
+        {players.map(p=>(
+          <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 10px',background:'#0b1610',border:'1px solid #152018',borderRadius:5}}>
+            <span style={{flex:1,fontSize:13,color:'#b2d4ba'}}>{p.name}{p.country?' '+countryFlag(p.country):''}</span>
+            <div style={{display:'flex',alignItems:'center',gap:4}}>
+              <span style={{fontSize:12,color:'#3a5a42'}}>S$</span>
+              <input type="text" inputMode="numeric" placeholder="0"
+                style={{background:'#0b1610',border:'1px solid #1a2e22',color:'#c8973a',padding:'4px 7px',borderRadius:4,width:90,fontSize:13,fontWeight:600,fontFamily:"'Rajdhani',sans-serif",outline:'none'}}
+                value={raw[p.id]!==undefined?raw[p.id]:(bounties[p.id]!=null?String(bounties[p.id]):'')}
+                onChange={e=>handleChange(p.id,e.target.value)}/>
+            </div>
+          </div>
+        ))}
+        {players.length===0&&<div style={{fontSize:12,color:'#3a5a42',padding:'8px 0'}}>No players registered yet.</div>}
       </div>
     </div>
   );

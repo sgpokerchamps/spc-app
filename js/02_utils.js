@@ -265,6 +265,8 @@ function buildTournamentCommitPayload(t) {
   const results=[];
   const seenNames=new Set();
 
+  const bounties=t.bounties||{};
+
   const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
   busted.forEach(p=>{
     const payoutRow=payoutMap[p.bustPosition]||null;
@@ -277,7 +279,26 @@ function buildTournamentCommitPayload(t) {
       payout_amount:payoutAmt,
       payout_amount_deal:(t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:null,
       extra_bag_amount:0,
-      bounty_amount:0,
+      bounty_amount:bounties[p.id]||0,
+      reentry_count:reentryCountByName[p.name]||0,
+    });
+    seenNames.add(p.name);
+  });
+
+  // Players still active at commit time can still have logged bounties
+  // (the eliminator may not have busted yet) — carry those into results too.
+  t.players.filter(p=>p.status==='active').forEach(p=>{
+    const amt=bounties[p.id]||0;
+    if(amt<=0||seenNames.has(p.name)) return;
+    results.push({
+      member_id:memberIdByName[p.name.toLowerCase()]||null,
+      player_name:p.name,
+      country:p.country||null,
+      bust_position:null,
+      payout_amount:0,
+      payout_amount_deal:null,
+      extra_bag_amount:0,
+      bounty_amount:amt,
       reentry_count:reentryCountByName[p.name]||0,
     });
     seenNames.add(p.name);
