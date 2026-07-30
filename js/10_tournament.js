@@ -370,6 +370,7 @@ function App() {
       inheritedEntries:adjustedInheritedEntries,inheritedBusted:adjustedInheritedBusted,inheritedPrizePool,
       bountyAmount,prizePerEntry,bountyPool:Math.max(Math.round(inheritedEntries*bountyAmount),0),
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
+      tableNumbers:getTableNumbers({startTable:config.startTable||1,maxTables:config.maxTables}),
       players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
@@ -427,7 +428,7 @@ Starting setup — you can adjust settings before launching.`);
 
   function resumeTournament(id) {
     const t=loadT(id);
-    if(t){setTournament({...t, payoutsPublished:t.payoutsPublished||false});setSubview('clock');setView('tournament');}
+    if(t){setTournament({...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)});setSubview('clock');setView('tournament');}
   }
 
   function deleteTournament(id) {
@@ -657,9 +658,11 @@ Starting setup — you can adjust settings before launching.`);
 
   function openTable(){
     setTournament(t=>{
-      const newMax=Math.min(15,t.maxTables+1);
-      const newTableNum=(t.startTable||1)+newMax-1;
-      return{...t,maxTables:newMax,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
+      const tableNumbers=getTableNumbers(t);
+      if(tableNumbers.length>=15) return t;
+      const newTableNum=Math.max.apply(null,tableNumbers)+1;
+      const newTableNumbers=[...tableNumbers,newTableNum];
+      return{...t,tableNumbers:newTableNumbers,maxTables:newTableNumbers.length,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
     });
     SoundEngine.register();
   }
@@ -667,22 +670,15 @@ Starting setup — you can adjust settings before launching.`);
   function closeTableConfirm(assignments, closingTable){
     logActivity('table',`Table ${closingTable} closed — ${Object.keys(assignments).length} players reassigned`);
     setTournament(t=>{
-      if(t.maxTables<=1)return t;
-      const newMax=t.maxTables-1;
-      // Adjust startTable if we're closing a table that's NOT the last one
-      const lastTable=(t.startTable||1)+t.maxTables-1;
-      let newStart=t.startTable||1;
+      const tableNumbers=getTableNumbers(t);
+      if(tableNumbers.length<=1)return t;
+      const newTableNumbers=tableNumbers.filter(n=>n!==closingTable);
       // Move players from closing table to their assigned seats
       let players=[...t.players];
       assignments.forEach(({playerId,tableNum,seatNum})=>{
         players=players.map(p=>p.id===playerId?{...p,tableNum,seatNum}:p);
       });
-      // If closing a middle table, shift higher tables down by 1
-      if(closingTable!==lastTable){
-        players=players.map(p=>p.status==='active'&&p.tableNum&&p.tableNum>closingTable
-          ?{...p,tableNum:p.tableNum-1}:p);
-      }
-      return{...t,maxTables:newMax,players};
+      return{...t,tableNumbers:newTableNumbers,maxTables:newTableNumbers.length,players};
     });
   }
 

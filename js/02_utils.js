@@ -22,6 +22,7 @@ function getPayouts(entries, prizePool) {
   return PAYOUT_DATA[key].map((pct,i)=>({position:i+1,pct,amount:Math.floor((pct/100)*prizePool/100)*100}));
 }
 function getTableNumbers(tournament) {
+  if(tournament.tableNumbers && tournament.tableNumbers.length) return tournament.tableNumbers.slice();
   const startTable=tournament.startTable||1;
   const maxTables=tournament.maxTables||15;
   const out=[];
