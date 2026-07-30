@@ -157,9 +157,7 @@ function App() {
         `Unlimited re-entries · closes after Level ${_reentryUntil}`;
       // Build table map with full player data per seat
       const _tableMap={};
-      const _st=tournament.startTable||1;
-      const _mt=tournament.maxTables||15;
-      for(let i=0;i<_mt;i++) _tableMap[_st+i]={num:_st+i,count:0,capacity:tournament.seatsPerTable||9,players:[]};
+      getTableNumbers(tournament).forEach(num=>{ _tableMap[num]={num:num,count:0,capacity:tournament.seatsPerTable||9,players:[]}; });
       _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null});}});
       window.electronAPI.sendTournamentState({
         active:_activePlayers.length,
@@ -248,7 +246,7 @@ function App() {
         }
       } else if(action.type==='break-table'){
         if(action.tableNum){
-          const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const st=tournament.startTable||1;const mt=tournament.maxTables||15;const tableNumbers=Array.from({length:mt},(_,i)=>st+i);const result=computeBreakAssignments({closingTable:tNumN,players:active,tableNumbers:tableNumbers,seatsPerTable:spt,seatLocks:lk});if(!result.ok)return;closeTableConfirm(result.assignments,tNumN);
+          const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const tableNumbers=getTableNumbers(tournament);const result=computeBreakAssignments({closingTable:tNumN,players:active,tableNumbers:tableNumbers,seatsPerTable:spt,seatLocks:lk});if(!result.ok)return;closeTableConfirm(result.assignments,tNumN);
         }
       } else if(action.type==='set-seat-lock'){
         if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
@@ -456,7 +454,7 @@ Starting setup — you can adjust settings before launching.`);
     setTournament(t=>{
       const mode=t.seatingMode||'auto';
       let players=[...t.players];
-      const seat=(mode==='auto'||forceAuto)?findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}):{tableNum:null,seatNum:null};
+      const seat=(mode==='auto'||forceAuto)?findSeat(players,getTableNumbers(t),t.seatsPerTable,t.seatLocks||{}):{tableNum:null,seatNum:null};
       const p={id:uid(),name,status:'active',bustPosition:null,...seat,registeredAt:Date.now()};
       if(country) p.country=country;
       players=[...players,p];
@@ -476,7 +474,7 @@ Starting setup — you can adjust settings before launching.`);
   function addPlayers(names){
     setTournament(t=>{
       let players=[...t.players];
-      names.forEach(name=>{const seat=findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});players.push({id:uid(),name,status:'active',bustPosition:null,...seat});});
+      names.forEach(name=>{const seat=findSeat(players,getTableNumbers(t),t.seatsPerTable,t.seatLocks||{});players.push({id:uid(),name,status:'active',bustPosition:null,...seat});});
       const totalE=(players.length+(t.inheritedEntries||0));
       let prizePool;
       if(t.inheritedPrizePool>0&&t.prizePerEntry===0){
@@ -519,7 +517,7 @@ Starting setup — you can adjust settings before launching.`);
       const p=busted[0];
       let tableNum=p.prevTableNum||null,seatNum=p.prevSeatNum||null;
       if(tableNum&&seatNum){const taken=t.players.find(x=>x.status==='active'&&x.tableNum===tableNum&&x.seatNum===seatNum);if(taken){tableNum=null;seatNum=null;}}
-      if(!tableNum||!seatNum){const seat=findSeat(t.players.filter(x=>x.id!==p.id),t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});tableNum=seat.tableNum;seatNum=seat.seatNum;}
+      if(!tableNum||!seatNum){const seat=findSeat(t.players.filter(x=>x.id!==p.id),getTableNumbers(t),t.seatsPerTable,t.seatLocks||{});tableNum=seat.tableNum;seatNum=seat.seatNum;}
       return{...t,players:t.players.map(x=>x.id===p.id?{...x,status:'active',bustPosition:undefined,bustedAt:undefined,tableNum,seatNum,prevTableNum:undefined,prevSeatNum:undefined}:x),
         activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'undo-bust',detail:`${p.name} undo bust → T${tableNum||'?'} S${seatNum||'?'}`}]};
     });
@@ -533,7 +531,7 @@ Starting setup — you can adjust settings before launching.`);
       if(tableNum&&seatNum){
         seat={tableNum:Number(tableNum),seatNum:Number(seatNum)};
       }else{
-        seat=findSeat(t.players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{});
+        seat=findSeat(t.players,getTableNumbers(t),t.seatsPerTable,t.seatLocks||{});
       }
       const p=t.players.find(x=>x.id===id);
       return{...t,players:t.players.map(p=>p.id===id?{...p,...seat}:p),
@@ -625,9 +623,9 @@ Starting setup — you can adjust settings before launching.`);
           for (let s = 1; s <= t.seatsPerTable; s++) {
             if (!players.find(p => p.status==='active' && p.tableNum===tNum && p.seatNum===s)) { seatNum=s; break; }
           }
-          if (!seatNum) { const seat=findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}); tNum=seat.tableNum; seatNum=seat.seatNum; }
+          if (!seatNum) { const seat=findSeat(players,getTableNumbers(t),t.seatsPerTable,t.seatLocks||{}); tNum=seat.tableNum; seatNum=seat.seatNum; }
         } else {
-          const seat=findSeat(players,t.maxTables,t.seatsPerTable,t.startTable||1,t.seatLocks||{}); tNum=seat.tableNum; seatNum=seat.seatNum;
+          const seat=findSeat(players,getTableNumbers(t),t.seatsPerTable,t.seatLocks||{}); tNum=seat.tableNum; seatNum=seat.seatNum;
         }
         players.push({id:uid(),name,status:'active',bustPosition:null,tableNum:tNum,seatNum});
       });
@@ -649,9 +647,9 @@ Starting setup — you can adjust settings before launching.`);
     setTournament(t=>{
       const active=t.players.filter(p=>p.status==='active');
       if(!active.length)return t;
-      const st=t.startTable||1;
-      const numT=Math.min(t.maxTables,Math.ceil(active.length/t.seatsPerTable));
-      const reassigned=active.map((p,i)=>({...p,tableNum:st+(i%numT),seatNum:Math.floor(i/numT)+1}));
+      const tableNumbers=getTableNumbers(t);
+      const numT=Math.min(tableNumbers.length,Math.ceil(active.length/t.seatsPerTable));
+      const reassigned=active.map((p,i)=>({...p,tableNum:tableNumbers[i%numT],seatNum:Math.floor(i/numT)+1}));
       const ids=new Set(reassigned.map(p=>p.id));
       return{...t,players:[...reassigned,...t.players.filter(p=>!ids.has(p.id))]};
     });
@@ -691,12 +689,10 @@ Starting setup — you can adjust settings before launching.`);
   function redrawSeats(){
     setTournament(t=>{
       const active=t.players.filter(p=>p.status==='active');
-      const st=t.startTable||1;
-      const mt=t.maxTables||15;
       const sp=t.seatsPerTable||9;
       // Build all available seat positions
       const seats=[];
-      for(let tb=0;tb<mt;tb++) for(let s=1;s<=sp;s++) seats.push({tableNum:st+tb,seatNum:s});
+      getTableNumbers(t).forEach(tNum=>{ for(let s=1;s<=sp;s++) seats.push({tableNum:tNum,seatNum:s}); });
       // Fisher-Yates shuffle
       for(let i=seats.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seats[i],seats[j]]=[seats[j],seats[i]];}
       const reassigned=active.map((p,i)=>({...p,...(seats[i]||{tableNum:null,seatNum:null})}));

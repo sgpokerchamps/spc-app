@@ -57,8 +57,8 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
   const [assigningId,setAssigningId]=useState(null);
   const [assignTable,setAssignTable]=useState('');
   const [assignSeatN,setAssignSeatN]=useState('');
-  const st=tournament.startTable||1;const mt=tournament.maxTables||15;const spt=tournament.seatsPerTable||9;
-  const allTables=Array.from({length:mt},(_,i)=>st+i);
+  const spt=tournament.seatsPerTable||9;
+  const allTables=getTableNumbers(tournament);
   function getEmptySeats(tNum){
     if(!tNum)return[];
     const occupied=new Set(tournament.players.filter(p=>p.status==='active'&&p.tableNum===Number(tNum)).map(p=>p.seatNum));
@@ -935,7 +935,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
 
   const tables={};
   activePlayers.forEach(p=>{if(p.tableNum){if(!tables[p.tableNum])tables[p.tableNum]=[];tables[p.tableNum].push(p);}});
-  const allTableNums = Array.from({length:maxTables},(_,i)=>startTable+i);
+  const allTableNums = getTableNumbers(tournament);
   const unseated=activePlayers.filter(p=>!p.tableNum);
 
   // --- Close table logic ---

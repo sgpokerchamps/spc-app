@@ -21,11 +21,18 @@ function getPayouts(entries, prizePool) {
   const key=keys.find(k=>k>=entries)||keys[keys.length-1];
   return PAYOUT_DATA[key].map((pct,i)=>({position:i+1,pct,amount:Math.floor((pct/100)*prizePool/100)*100}));
 }
-function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
-  startTable=startTable||1; seatLocks=seatLocks||{};
+function getTableNumbers(tournament) {
+  const startTable=tournament.startTable||1;
+  const maxTables=tournament.maxTables||15;
+  const out=[];
+  for(let i=0;i<maxTables;i++) out.push(startTable+i);
+  return out;
+}
+function findSeat(players, tableNumbers, seatsPerTable, seatLocks) {
+  seatLocks=seatLocks||{};
   const active = players.filter(p=>p.status==='active');
   const counts = {};
-  for(let i=0;i<maxTables;i++) counts[startTable+i]=0;
+  tableNumbers.forEach(t=>counts[t]=0);
   active.forEach(p=>{ if(p.tableNum!==null&&p.tableNum!==undefined&&counts[p.tableNum]!==undefined) counts[p.tableNum]=(counts[p.tableNum]||0)+1; });
   const tables=Object.keys(counts).map(Number)
     .filter(t=>counts[t]<seatsPerTable)
