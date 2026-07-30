@@ -42,6 +42,62 @@ function findSeat(players, maxTables, seatsPerTable, startTable, seatLocks) {
   return{tableNum:null,seatNum:null};
 }
 
+// ---SHARED:computeBreakAssignments:START---
+// Table-break seat-reassignment. Kept plain ES5 (var/function, no arrow fns,
+// no destructuring/spread) because server.js extracts this exact block by
+// the markers above/below and embeds it verbatim into the floor UI's plain
+// (non-Babel) <script> tag — see getFloorHTML() in server.js.
+// opts: { closingTable, players, tableNumbers, seatsPerTable, seatLocks }
+// players must already be filtered to active/seated players by the caller.
+// returns: { ok, assignments, availableCount, neededCount }
+function computeBreakAssignments(opts) {
+  var closingTable = opts.closingTable;
+  var players = opts.players || [];
+  var tableNumbers = opts.tableNumbers || [];
+  var seatsPerTable = opts.seatsPerTable;
+  var seatLocks = opts.seatLocks || {};
+
+  var displaced = players.filter(function(p) { return p.tableNum === closingTable; });
+
+  var otherTables = tableNumbers.filter(function(t) { return t !== closingTable; });
+  var counts = {};
+  otherTables.forEach(function(t) {
+    counts[t] = players.filter(function(p) { return p.tableNum === t; }).length;
+  });
+
+  var avail = [];
+  otherTables.forEach(function(t) {
+    for (var s = 1; s <= seatsPerTable; s++) {
+      var lockType = seatLocks[t + '-' + s] || 'none';
+      if (lockType === 'move' || lockType === 'all') continue;
+      var occupied = players.some(function(p) { return p.tableNum === t && p.seatNum === s; });
+      if (!occupied) avail.push({ tableNum: t, seatNum: s });
+    }
+  });
+
+  if (avail.length < displaced.length) {
+    return { ok: false, assignments: [], availableCount: avail.length, neededCount: displaced.length };
+  }
+
+  var assignments = [];
+  var tc = {};
+  Object.keys(counts).forEach(function(k) { tc[k] = counts[k]; });
+  displaced.forEach(function(p) {
+    var remaining = avail.filter(function(s) {
+      return !assignments.some(function(a) { return a.tableNum === s.tableNum && a.seatNum === s.seatNum; });
+    });
+    remaining.sort(function(a, b) {
+      return (tc[a.tableNum] || 0) - (tc[b.tableNum] || 0) || a.tableNum - b.tableNum || a.seatNum - b.seatNum;
+    });
+    var seat = remaining[0];
+    assignments.push({ playerId: p.id, name: p.name, country: p.country || null, fromTable: closingTable, fromSeat: p.seatNum, tableNum: seat.tableNum, seatNum: seat.seatNum });
+    tc[seat.tableNum] = (tc[seat.tableNum] || 0) + 1;
+  });
+
+  return { ok: true, assignments: assignments, availableCount: avail.length, neededCount: displaced.length };
+}
+// ---SHARED:computeBreakAssignments:END---
+
 // QR parser — boarding pass string is semicolon-delimited; name is at index 3
 function countryFlag(cc){if(!cc)return'';try{return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));}catch(e){return cc.toUpperCase();}}
 function pf(p){if(!p||!p.country)return'';return' '+countryFlag(p.country);}
