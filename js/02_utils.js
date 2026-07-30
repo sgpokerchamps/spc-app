@@ -29,6 +29,19 @@ function getTableNumbers(tournament) {
   for(let i=0;i<maxTables;i++) out.push(startTable+i);
   return out;
 }
+function formatTableRanges(nums) {
+  if(!nums||!nums.length) return '';
+  const sorted=[...nums].sort((a,b)=>a-b);
+  const parts=[];
+  let start=sorted[0], prev=sorted[0];
+  for(let i=1;i<=sorted.length;i++){
+    const cur=sorted[i];
+    if(cur===prev+1){ prev=cur; continue; }
+    parts.push(start===prev?`${start}`:`${start}-${prev}`);
+    start=cur; prev=cur;
+  }
+  return parts.join(', ');
+}
 function findSeat(players, tableNumbers, seatsPerTable, seatLocks) {
   seatLocks=seatLocks||{};
   const active = players.filter(p=>p.status==='active');

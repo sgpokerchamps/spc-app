@@ -20,9 +20,9 @@ function SetupScreen({eventType,onBack,onStart}) {
   const _prizePerEntry=_netPerEntry-(isMB?bountyAmt:0);
   const [stack,setStack]=useState(cfg.stack);
   const [spcSeries,setSpcSeries]=useState(_tpl?_tpl.spcSeries||CURRENT_SPC_SERIES:CURRENT_SPC_SERIES);
-  const [maxTables,setMaxTables]=useState(15);
-  const [startTable,setStartTable]=useState(1);
+  const [selectedTables,setSelectedTables]=useState(Array.from({length:15},(_,i)=>i+1));
   const [seats,setSeats]=useState(9);
+  function toggleTable(n){setSelectedTables(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n].sort((a,b)=>a-b));}
   const _tpl=window._importedTemplate&&window._importedTemplate.eventType===eventType?window._importedTemplate:null;
   useEffect(()=>{ window._importedTemplate=null; },[]);
   const [structure,setStructure]=useState((_tpl&&_tpl.structure?_tpl.structure:STRUCTURES[eventType]||STRUCTURES.miniRoller).map((r,i)=>({...r,_id:i})));
@@ -105,12 +105,21 @@ function SetupScreen({eventType,onBack,onStart}) {
               <div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>% of field paid out</div>
             </div>
           </div>
-          <div className="grid-2">
-            <div className="form-group"><label className="form-label">First table #</label><input className="form-input" type="number" min="1" max="15" value={startTable} onChange={e=>setStartTable(Math.max(1,+e.target.value))}/></div>
-            <div className="form-group"><label className="form-label">Number of tables</label><input className="form-input" type="number" value={maxTables} onChange={e=>setMaxTables(+e.target.value)}/></div>
-            <div className="form-group"><label className="form-label">Seats / table</label><input className="form-input" type="number" value={seats} onChange={e=>setSeats(+e.target.value)}/></div>
+          <div className="form-group"><label className="form-label">Seats / table</label><input className="form-input" type="number" style={{maxWidth:120}} value={seats} onChange={e=>setSeats(+e.target.value)}/></div>
+          <div className="form-group">
+            <label className="form-label">Tables in play — tap to toggle</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:4}}>
+              {Array.from({length:15},(_,i)=>i+1).map(n=>{
+                const on=selectedTables.includes(n);
+                return <button key={n} type="button" onClick={()=>toggleTable(n)}
+                  style={{padding:'7px 13px',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer',
+                    background:on?'#1a3a22':'#0b1610',border:`1px solid ${on?'#3dba6f':'#152018'}`,color:on?'#3dba6f':'#527a5c'}}>
+                  {n}
+                </button>;
+              })}
+            </div>
           </div>
-          <div style={{fontSize:11,color:'#2a4a35',marginBottom:4}}>Tables {startTable}–{startTable+maxTables-1} · {maxTables} × {seats} = {maxTables*seats} seats</div>
+          <div style={{fontSize:11,color:'#2a4a35',marginBottom:4}}>Tables {formatTableRanges(selectedTables)||'none selected'} · {selectedTables.length} × {seats} = {selectedTables.length*seats} seats</div>
           {isME&&savedME.length>0&&(
             <div style={{marginBottom:16}}>
               <div className="form-label">Carry forward from previous flight</div>
@@ -148,7 +157,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               </div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables,startTable,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0})}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0});}}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>

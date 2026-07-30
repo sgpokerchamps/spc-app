@@ -237,7 +237,7 @@ function App() {
           movePlayerSeat(action.playerId, action.tableNum, action.seatNum);
         }
       } else if(action.type==='open-table'){
-        openTable();
+        openTable(action.tableNum);
       } else if(action.type==='set-seating-mode'){
         if(action.mode) setSeatingMode(action.mode);
       } else if(action.type==='close-table-confirm'){
@@ -370,7 +370,7 @@ function App() {
       inheritedEntries:adjustedInheritedEntries,inheritedBusted:adjustedInheritedBusted,inheritedPrizePool,
       bountyAmount,prizePerEntry,bountyPool:Math.max(Math.round(inheritedEntries*bountyAmount),0),
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
-      tableNumbers:getTableNumbers({startTable:config.startTable||1,maxTables:config.maxTables}),
+      tableNumbers:(config.tableNumbers&&config.tableNumbers.length)?[...config.tableNumbers].sort((a,b)=>a-b):getTableNumbers({startTable:config.startTable||1,maxTables:config.maxTables}),
       players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
@@ -656,12 +656,19 @@ Starting setup — you can adjust settings before launching.`);
     });
   }
 
-  function openTable(){
+  function openTable(specificNum){
     setTournament(t=>{
       const tableNumbers=getTableNumbers(t);
       if(tableNumbers.length>=15) return t;
-      const newTableNum=Math.max.apply(null,tableNumbers)+1;
-      const newTableNumbers=[...tableNumbers,newTableNum];
+      let newTableNum;
+      if(specificNum!=null){
+        const n=Number(specificNum);
+        if(!n||n<1||tableNumbers.includes(n)) return t;
+        newTableNum=n;
+      } else {
+        newTableNum=Math.max.apply(null,tableNumbers)+1;
+      }
+      const newTableNumbers=[...tableNumbers,newTableNum].sort((a,b)=>a-b);
       return{...t,tableNumbers:newTableNumbers,maxTables:newTableNumbers.length,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
     });
     SoundEngine.register();

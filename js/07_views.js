@@ -925,6 +925,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
   const [closeMode,setCloseMode] = useState(null);
   const [breakMode,setBreakMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
   const [chipMode,setChipMode] = useState(false);
+  const [openMode,setOpenMode] = useState(false);
   const [searchQ,setSearchQ] = useState('');
   const searchMatch=searchQ.trim().length>0?activePlayers.filter(p=>p.name.toLowerCase().includes(searchQ.toLowerCase())):[];
   const startTable = tournament.startTable||1;
@@ -1029,7 +1030,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
       <div className="view-head">
         <div>
           <div className="view-title">Tables</div>
-          <div className="view-sub">{`Tables ${startTable}–${startTable+maxTables-1} · ${Object.keys(tables).length} in use · ${activePlayers.length} seated`}{unseated.length>0?` · ${unseated.length} unseated`:''}</div>
+          <div className="view-sub">{`Tables ${formatTableRanges(allTableNums)} · ${Object.keys(tables).length} in use · ${activePlayers.length} seated`}{unseated.length>0?` · ${unseated.length} unseated`:''}</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
           {selectedPlayer&&(
@@ -1057,7 +1058,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
               </div>
             )}
           </div>
-          {!closeMode&&!breakMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={onOpen}>+ Open table</button>}
+          {!closeMode&&!breakMode&&<button className="btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={()=>{if(maxTables>=15){alert('Cannot open — 15 table cap reached.');return;}setOpenMode(true);}}>+ Open table</button>}
           {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#c87a40',color:'#c87a40'}} onClick={startBreakTable}>✂ Break table</button>}
           {!closeMode&&!breakMode&&<button className="btn-sec" style={{padding:'6px 14px',fontSize:12,borderColor:'#3a2020',color:'#c87a40'}} onClick={startCloseTable}>− Close table</button>}
           {closeMode&&<button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setCloseMode(null)}>Cancel</button>}
@@ -1114,6 +1115,21 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
       )}
 
       {breakMode&&breakMode.stage==='pick'&&(<div style={{background:'#0f0c04',border:'1px solid #c87a40',borderRadius:8,margin:'8px 16px',padding:16}}><div style={{fontSize:12,color:'#c87a40',fontWeight:700,marginBottom:12}}>✂ Select table to break:</div><div style={{display:'flex',flexWrap:'wrap',gap:8}}>{allTableNums.map(tNum=>(<button key={tNum} style={{padding:'8px 16px',background:'#0b1610',border:'1px solid #1a2e22',borderRadius:6,color:'#b2d4ba',fontSize:13,cursor:'pointer'}} onClick={()=>selectTableToBreak(tNum)}>Table {tNum} · {(tables[tNum]||[]).length} players</button>))}</div></div>)}
+
+      {openMode&&(<div style={{background:'#0a140c',border:'1px solid #3dba6f',borderRadius:8,margin:'8px 16px',padding:16}}>
+        <div style={{fontSize:12,color:'#3dba6f',fontWeight:700,marginBottom:12}}>+ Select a table number to open:</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+          {Array.from({length:15},(_,i)=>i+1).map(n=>{
+            const open=allTableNums.includes(n);
+            return <button key={n} disabled={open} onClick={()=>{onOpen(n);setOpenMode(false);}}
+              style={{padding:'8px 16px',borderRadius:6,fontSize:13,fontWeight:700,cursor:open?'default':'pointer',
+                background:open?'#0b1610':'#1a3a22',border:'1px solid '+(open?'#152018':'#3dba6f'),color:open?'#3a5a42':'#3dba6f'}}>
+              {n}{open?' · open':''}
+            </button>;
+          })}
+        </div>
+        <div style={{marginTop:12}}><button className="btn-sec" style={{borderColor:'#3a2020',color:'#8a4040'}} onClick={()=>setOpenMode(false)}>Cancel</button></div>
+      </div>)}
 
       {breakMode&&(breakMode.stage==='preview'||breakMode.stage==='done')&&(<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}><div style={{background:'#0d1a12',border:'1px solid '+(breakMode.stage==='done'?'#3dba6f':'#c87a40'),borderRadius:12,padding:24,maxWidth:600,width:'90%',maxHeight:'80vh',overflowY:'auto'}}>
         <div style={{fontSize:18,fontWeight:700,color:breakMode.stage==='done'?'#3dba6f':'#c87a40',marginBottom:4}}>{breakMode.stage==='done'?'✓ Table '+breakMode.closingTable+' Broken':'✂ Break Table '+breakMode.closingTable+'?'}</div>
