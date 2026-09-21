@@ -326,26 +326,107 @@ function commitPrizePool(pp){
   const n=Number(pp)||0;
   return Number.isInteger(n)?n:Math.floor(n/100)*100;
 }
+/* ---- Player-name helpers (commit-time only; live tournament state keeps names as typed) ---- */
+// Reads the members cache. Keys of the form 'noId_<n>' are array indices invented by syncMembers for members
+// without a member_id; they shift between syncs, so they are never treated as a real member_id.
+function loadMemberIndex(){
+  let cache={};
+  try{cache=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){}
+  const byLower={};
+  Object.entries(cache).forEach(([key,v])=>{
+    const name=typeof v==='string'?v:(v&&v.name);
+    if(!name) return;
+    const id=typeof v==='string'?(key.indexOf('noId_')===0?null:key):(v.memberId||null);
+    byLower[normalizeNameKey(name)]={name,id};
+  });
+  return {byLower,size:Object.keys(byLower).length};
+}
+function normalizeNameKey(name){ return String(name||'').trim().replace(/\s+/g,' ').toLowerCase(); }
+function titleCaseName(name){
+  const fix=seg=>{
+    if(!seg) return seg;
+    if(seg===seg.toUpperCase()||seg===seg.toLowerCase()) return seg.charAt(0).toUpperCase()+seg.slice(1).toLowerCase();
+    return seg.charAt(0).toUpperCase()+seg.slice(1);
+  };
+  return String(name||'').trim().replace(/\s+/g,' ').split(' ').map(tok=>tok.split(/([-'\/.])/).map(fix).join('')).join(' ');
+}
+// Members-table spelling if the name is a known member (case-insensitive), otherwise title-cased.
+function canonicalPlayerName(name,idx){
+  const m=idx.byLower[normalizeNameKey(name)];
+  return m?m.name:titleCaseName(name);
+}
+function editDistance(a,b){
+  if(a===b) return 0;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];
+    for(let j=1;j<=b.length;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1));
+    prev=cur;
+  }
+  return prev[b.length];
+}
+// Near-duplicate test: small edit distance, or one name's tokens (2+) are all contained in the other's.
+function namesLookRelated(a,b){
+  const ka=normalizeNameKey(a), kb=normalizeNameKey(b);
+  if(!ka||!kb||ka===kb) return false;
+  if(Math.min(ka.length,kb.length)>=5 && editDistance(ka,kb)<=2) return true;
+  const ta=ka.split(' '), tb=kb.split(' ');
+  const [sm,lg]=ta.length<=tb.length?[ta,tb]:[tb,ta];
+  return sm.length>=2 && sm.length<lg.length && sm.every(t=>lg.indexOf(t)>=0);
+}
+function suggestMemberName(name,idx){
+  const k=normalizeNameKey(name);
+  let best=null,bestD=99;
+  Object.keys(idx.byLower).forEach(mk=>{
+    if(!namesLookRelated(k,mk)) return;
+    const d=editDistance(k,mk);
+    if(d<bestD){bestD=d;best=idx.byLower[mk].name;}
+  });
+  return best;
+}
+
 // Pre-commit sanity checks on a built payload. Returns a list of human-readable problems (empty = clean).
 function validateCommitPayload(payload){
   const errors=[];
+  const results=payload.results||[];
+  const idx=loadMemberIndex();
+
+  // Two players sharing a bust position would both be paid that place's prize.
   const namesByPos={};
-  (payload.results||[]).forEach(r=>{
+  results.forEach(r=>{
     if(r.bust_position==null) return;
     (namesByPos[r.bust_position]=namesByPos[r.bust_position]||[]).push(r.player_name);
   });
   Object.entries(namesByPos).forEach(([pos,names])=>{
     if(names.length>1) errors.push('Position '+pos+' is assigned to '+names.length+' players: '+names.join(', '));
   });
+
+  // Placeholder / dummy entries ("001", "ab") that were never replaced with a real name.
+  const uniqueNames=[...new Set(results.map(r=>r.player_name))];
+  const isKnown=n=>!!idx.byLower[normalizeNameKey(n)];
+  const placeholders=uniqueNames.filter(n=>/^\d+$/.test(n.trim())||(n.trim().length<=3&&!isKnown(n)));
+  placeholders.forEach(n=>errors.push('Placeholder name "'+n+'" - replace with a real name or remove the player'));
+
+  // Names the members list does not recognise, with a suggestion when a close match exists.
+  // Skipped when the members cache is empty (not synced), otherwise every player would be flagged.
+  if(idx.size>0){
+    const unknown=uniqueNames.filter(n=>placeholders.indexOf(n)<0&&!isKnown(n));
+    const withHint=unknown.filter(n=>suggestMemberName(n,idx));
+    withHint.forEach(n=>errors.push('"'+n+'" is not a member - did you mean "'+suggestMemberName(n,idx)+'"?'));
+    const plain=unknown.filter(n=>withHint.indexOf(n)<0);
+    if(plain.length) errors.push(plain.length+' name(s) not in the members list (new players?): '+plain.slice(0,10).join(', ')+(plain.length>10?', +'+(plain.length-10)+' more':''));
+  }
+
+  // Near-duplicate names inside this tournament (same person entered twice under different spellings).
+  for(let i=0;i<uniqueNames.length;i++) for(let j=i+1;j<uniqueNames.length;j++){
+    if(namesLookRelated(uniqueNames[i],uniqueNames[j])) errors.push('Possible duplicate player: "'+uniqueNames[i]+'" and "'+uniqueNames[j]+'"');
+  }
   return errors;
 }
 function buildTournamentCommitPayload(t) {
-  const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
-  const memberIdByName={};
-  Object.entries(memberCache).forEach(([id,v])=>{
-    const name=typeof v==='string'?v:v.name;
-    if(name) memberIdByName[name.toLowerCase()]=id;
-  });
+  const memberIdx=loadMemberIndex();
+  const memberIdFor=name=>{const m=memberIdx.byLower[normalizeNameKey(name)];return m&&m.id?m.id:null;};
+  const canon=name=>canonicalPlayerName(name,memberIdx);
 
   const reentryCountByName={};
   (t.regLog||[]).forEach(e=>{ if(e.isReentry) reentryCountByName[e.name]=(reentryCountByName[e.name]||0)+1; });
@@ -368,8 +449,8 @@ function buildTournamentCommitPayload(t) {
     const payoutRow=payoutMap[p.bustPosition]||null;
     const payoutAmt=payoutRow?(payoutRow.amount||0):0;
     results.push({
-      member_id:memberIdByName[p.name.toLowerCase()]||null,
-      player_name:p.name,
+      member_id:memberIdFor(p.name),
+      player_name:canon(p.name),
       country:p.country||null,
       bust_position:p.bustPosition||null,
       payout_amount:payoutAmt,
@@ -378,17 +459,17 @@ function buildTournamentCommitPayload(t) {
       bounty_amount:bounties[p.id]||0,
       reentry_count:reentryCountByName[p.name]||0,
     });
-    seenNames.add(p.name);
+    seenNames.add(canon(p.name));
   });
 
   // Players still active at commit time can still have logged bounties
   // (the eliminator may not have busted yet) — carry those into results too.
   t.players.filter(p=>p.status==='active').forEach(p=>{
     const amt=bounties[p.id]||0;
-    if(amt<=0||seenNames.has(p.name)) return;
+    if(amt<=0||seenNames.has(canon(p.name))) return;
     results.push({
-      member_id:memberIdByName[p.name.toLowerCase()]||null,
-      player_name:p.name,
+      member_id:memberIdFor(p.name),
+      player_name:canon(p.name),
       country:p.country||null,
       bust_position:null,
       payout_amount:0,
@@ -397,19 +478,19 @@ function buildTournamentCommitPayload(t) {
       bounty_amount:amt,
       reentry_count:reentryCountByName[p.name]||0,
     });
-    seenNames.add(p.name);
+    seenNames.add(canon(p.name));
   });
 
   (t.extraBagWinners||[]).forEach(w=>{
     const extraAmt=(w.bags||0)*1500;
-    if(seenNames.has(w.name)){
-      const row=results.find(r=>r.player_name===w.name);
+    if(seenNames.has(canon(w.name))){
+      const row=results.find(r=>r.player_name===canon(w.name));
       if(row) row.extra_bag_amount=extraAmt;
       return;
     }
     results.push({
-      member_id:memberIdByName[w.name.toLowerCase()]||null,
-      player_name:w.name,
+      member_id:memberIdFor(w.name),
+      player_name:canon(w.name),
       country:w.country||null,
       bust_position:null,
       payout_amount:0,
