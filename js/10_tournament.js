@@ -493,6 +493,9 @@ Starting setup — you can adjust settings before launching.`);
   function bustPlayer(id){
     const player=tournament.players.find(p=>p.id===id);
     setTournament(t=>{
+      // Guard: a player who is already busted must not be re-busted (would reassign them the next position and tie with another player)
+      const target=t.players.find(p=>p.id===id);
+      if(!target||target.status!=='active') return t;
       const active=t.players.filter(p=>p.status==='active');
       const position=active.length;
       return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p),
@@ -504,6 +507,8 @@ Starting setup — you can adjust settings before launching.`);
     setTournament(t=>{
       let players=[...t.players];
       ids.forEach(id=>{
+        const target=players.find(p=>p.id===id);
+        if(!target||target.status!=='active') return;
         const active=players.filter(p=>p.status==='active');
         const position=active.length;
         players=players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p);

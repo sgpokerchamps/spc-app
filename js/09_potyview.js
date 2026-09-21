@@ -112,6 +112,8 @@ function POTYView({tournament}) {
       // Single payload builder shared with the Payouts-tab commit, so both paths send identical data
       // (bounties, unique/re-entries, fee, rounded prize pool). RPC replaces results on every call.
       const payload=buildTournamentCommitPayload(t);
+      // Never silently write a known-bad payload; the Payouts tab commit asks the TD first.
+      if(validateCommitPayload(payload).length){console.warn('Cloud push skipped: payload failed validation');return;}
 
       const res=await fetch('https://spc-members.onrender.com/api/tournament',{
         method:'POST',

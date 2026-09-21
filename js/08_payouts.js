@@ -157,6 +157,8 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   async function commitTournament(){
     const evName = tournament.name||getEventType(tournament.eventType)||'Event';
     const payload = buildTournamentCommitPayload(tournament);
+    const problems = validateCommitPayload(payload);
+    if(problems.length && !confirm('Problems found in this commit:\n\n- '+problems.join('\n- ')+'\n\nCommitting will write these to the cloud as-is. Commit anyway?')) return;
     let confirmMsg = `Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`;
     if(hasBounty){
       const loggedTotal=Object.values(tournament.bounties||{}).reduce((s,v)=>s+(Number(v)||0),0);

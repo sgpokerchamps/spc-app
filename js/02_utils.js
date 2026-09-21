@@ -326,6 +326,19 @@ function commitPrizePool(pp){
   const n=Number(pp)||0;
   return Number.isInteger(n)?n:Math.floor(n/100)*100;
 }
+// Pre-commit sanity checks on a built payload. Returns a list of human-readable problems (empty = clean).
+function validateCommitPayload(payload){
+  const errors=[];
+  const namesByPos={};
+  (payload.results||[]).forEach(r=>{
+    if(r.bust_position==null) return;
+    (namesByPos[r.bust_position]=namesByPos[r.bust_position]||[]).push(r.player_name);
+  });
+  Object.entries(namesByPos).forEach(([pos,names])=>{
+    if(names.length>1) errors.push('Position '+pos+' is assigned to '+names.length+' players: '+names.join(', '));
+  });
+  return errors;
+}
 function buildTournamentCommitPayload(t) {
   const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
   const memberIdByName={};
