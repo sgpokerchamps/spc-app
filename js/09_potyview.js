@@ -66,6 +66,7 @@ function POTYView({tournament}) {
   function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
   function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
   async function confirmCommit(){
+    if(tournament.testMode){alert('This tournament is in TEST MODE - POTY commit is disabled so test data cannot reach the standings.');return;}
     const unlinked=pendingPoints.filter(p=>!p.potyName);
     if(unlinked.length>0){alert(unlinked.length+' unlinked players.');return;}
     const totalPts=pendingPoints.reduce((s,p)=>s+p.points,0);

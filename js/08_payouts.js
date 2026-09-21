@@ -169,7 +169,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
     const payload = buildTournamentCommitPayload(tournament);
     const problems = validateCommitPayload(payload, tournament);
     if(problems.length && !confirm('Please review before committing:\n\n'+problems.map(p=>(p.level==='error'?'[!] ':'[?] ')+p.msg).join('\n')+'\n\nCommit anyway?')) return;
-    let confirmMsg = `Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`;
+    let confirmMsg = `${tournament.testMode?'[TEST MODE - hidden from history and stats] ':''}Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`;
     if(hasBounty){
       const loggedTotal=Object.values(tournament.bounties||{}).reduce((s,v)=>s+(Number(v)||0),0);
       if(loggedTotal!==bountyPool) confirmMsg += `\n\n⚠ Bounties logged S$${loggedTotal.toLocaleString()} of S$${bountyPool.toLocaleString()} — commit anyway?`;
@@ -219,7 +219,11 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div className="view-head">
-        <div><div className="view-title">Payouts</div></div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {/* Hidden dev toggle: shift-click the title. Test tournaments are flagged test_mode in the cloud and hidden from history/stats. */}
+          <div className="view-title" onClick={e=>{if(e.shiftKey)onUpdate({testMode:!tournament.testMode});}}>Payouts</div>
+          {tournament.testMode&&<span style={{background:'#3a1414',border:'1px solid #8a2a2a',color:'#e05a5a',borderRadius:4,padding:'2px 8px',fontSize:10,fontWeight:700,letterSpacing:1.5}}>TEST MODE</span>}
+        </div>
         <div className="btn-row">
           {tournament.payoutsPublished
             ?<>

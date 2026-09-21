@@ -532,6 +532,7 @@ function buildTournamentCommitPayload(t) {
     reentries:useFlightAgg?t.flightReentries:totalReentries,
     structure:t.structure||null,
     deal_made:t.dealMade||false,
+    test_mode:t.testMode===true,
   };
 
   return {
