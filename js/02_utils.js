@@ -320,6 +320,12 @@ function exportTournament(t, templateOnly=false) {
 }
 
 /* ==== COMMIT TOURNAMENT PAYLOAD ==== */
+// The live pool is kept as a full decimal (e.g. 530*0.96 = 508.80 per entry). Payouts are paid in S$100
+// chips, so a fractional pool is floored to S$100 before commit; integer pools pass through untouched.
+function commitPrizePool(pp){
+  const n=Number(pp)||0;
+  return Number.isInteger(n)?n:Math.floor(n/100)*100;
+}
 function buildTournamentCommitPayload(t) {
   const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
   const memberIdByName={};
@@ -411,7 +417,7 @@ function buildTournamentCommitPayload(t) {
     spc_series:t.spcSeries||CURRENT_SPC_SERIES,
     buyin:t.buyin||0,
     fee,
-    prize_pool:t.prizePool||0,
+    prize_pool:commitPrizePool(t.prizePool),
     guarantee:t.guarantee||0,
     hit_guarantee:(t.prizePool||0)>=(t.guarantee||0),
     entries,

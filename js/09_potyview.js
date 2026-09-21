@@ -109,81 +109,9 @@ function POTYView({tournament}) {
 
   async function pushTournamentToCloud(t, points, potyData){
     try {
-      // Build results: include all players who busted (with payouts) + extra bag winners
-      const memberCache=(()=>{try{return JSON.parse(localStorage.getItem('spc_members_cache')||'{}');}catch(e){return{};}})();
-      const memberIdByName={};
-      Object.entries(memberCache).forEach(([id,v])=>{
-        const name=typeof v==='string'?v:v.name;
-        if(name) memberIdByName[name.toLowerCase()]=id;
-      });
-
-      const pointsByName={};
-      points.forEach(p=>{pointsByName[p.name]=p;});
-
-      const results=[];
-      const seenNames=new Set();
-
-      // Busted players with positions and payouts
-      const payouts=t.payoutTable||[];
-      const payoutMap={};
-      payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p;});
-      const busted=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
-      busted.forEach(p=>{
-        const pts=pointsByName[p.name];
-        const payoutRow=payoutMap[p.bustPosition]||null;
-        const payoutAmt=payoutRow?(payoutRow.amount||0):0;
-        const extraBag=pts?pts.extraBagAmount||0:0;
-        results.push({
-          memberId:memberIdByName[p.name.toLowerCase()]||null,
-          name:p.name,
-          country:p.country||null,
-          bustPosition:p.bustPosition||null,
-          payoutAmount:payoutAmt,
-          payoutAmountDeal:(t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:null,
-          extraBagAmount:extraBag,
-          totalPrize:((t.dealMade&&payoutRow&&payoutRow.dealAmount!=null)?payoutRow.dealAmount:payoutAmt)+extraBag,
-          potyPoints:pts?pts.points:0,
-          reentryCount:0,
-        });
-        seenNames.add(p.name);
-      });
-
-      // Extra bag winners who didn't bust in this event (Day 1 carries)
-      (t.extraBagWinners||[]).forEach(w=>{
-        if(seenNames.has(w.name)) return;
-        const pts=pointsByName[w.name];
-        const extraAmt=(w.bags||0)*1500;
-        results.push({
-          memberId:memberIdByName[w.name.toLowerCase()]||null,
-          name:w.name,
-          country:w.country||null,
-          bustPosition:null,
-          payoutAmount:0,
-          extraBagAmount:extraAmt,
-          totalPrize:extraAmt,
-          potyPoints:pts?pts.points:0,
-          reentryCount:0,
-        });
-      });
-
-      const payload={
-        tournament:{
-          id:t.id,
-          name:t.name||t.eventType||'Event',
-          spc_series:t.spcSeries||null,
-          dealMade:t.dealMade||false,
-          eventType:t.eventType||null,
-          date:t.startedAt?new Date(t.startedAt).toISOString():new Date().toISOString(),
-          buyin:t.buyin||0,
-          prizePool:t.prizePool||0,
-          entries:(t.players||[]).length+(t.inheritedEntries||0),
-          guarantee:t.guarantee||0,
-          hitGuarantee:(t.prizePool||0)>=(t.guarantee||0),
-          structure:t.structure||null,
-        },
-        results,
-        device:window.electronAPI&&window.electronAPI.platform?window.electronAPI.platform:'browser',
-      };
+      // Single payload builder shared with the Payouts-tab commit, so both paths send identical data
+      // (bounties, unique/re-entries, fee, rounded prize pool). RPC replaces results on every call.
+      const payload=buildTournamentCommitPayload(t);
 
       const res=await fetch('https://spc-members.onrender.com/api/tournament',{
         method:'POST',
