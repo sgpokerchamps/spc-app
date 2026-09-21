@@ -385,9 +385,13 @@ function suggestMemberName(name,idx){
   return best;
 }
 
-// Pre-commit sanity checks on a built payload. Returns a list of human-readable problems (empty = clean).
-function validateCommitPayload(payload){
+// Pre-commit sanity checks on a built payload. Returns [{level:'error'|'warn', msg}] (empty = clean).
+// 'error' = would corrupt payouts/history if committed as-is; 'warn' = worth a look (unknown or similar names, missing Hendon Mob fields).
+// Pass the live tournament as `t` to enable the Main Event Day 2 flight-aggregate checks.
+function validateCommitPayload(payload,t){
   const errors=[];
+  const err=msg=>errors.push({level:'error',msg});
+  const warn=msg=>errors.push({level:'warn',msg});
   const results=payload.results||[];
   const idx=loadMemberIndex();
 
@@ -398,28 +402,35 @@ function validateCommitPayload(payload){
     (namesByPos[r.bust_position]=namesByPos[r.bust_position]||[]).push(r.player_name);
   });
   Object.entries(namesByPos).forEach(([pos,names])=>{
-    if(names.length>1) errors.push('Position '+pos+' is assigned to '+names.length+' players: '+names.join(', '));
+    if(names.length>1) err('Position '+pos+' is assigned to '+names.length+' players: '+names.join(', '));
   });
 
   // Placeholder / dummy entries ("001", "ab") that were never replaced with a real name.
   const uniqueNames=[...new Set(results.map(r=>r.player_name))];
   const isKnown=n=>!!idx.byLower[normalizeNameKey(n)];
   const placeholders=uniqueNames.filter(n=>/^\d+$/.test(n.trim())||(n.trim().length<=3&&!isKnown(n)));
-  placeholders.forEach(n=>errors.push('Placeholder name "'+n+'" - replace with a real name or remove the player'));
+  placeholders.forEach(n=>err('Placeholder name "'+n+'" - replace with a real name or remove the player'));
 
   // Names the members list does not recognise, with a suggestion when a close match exists.
   // Skipped when the members cache is empty (not synced), otherwise every player would be flagged.
   if(idx.size>0){
     const unknown=uniqueNames.filter(n=>placeholders.indexOf(n)<0&&!isKnown(n));
     const withHint=unknown.filter(n=>suggestMemberName(n,idx));
-    withHint.forEach(n=>errors.push('"'+n+'" is not a member - did you mean "'+suggestMemberName(n,idx)+'"?'));
+    withHint.forEach(n=>warn('"'+n+'" is not a member - did you mean "'+suggestMemberName(n,idx)+'"?'));
     const plain=unknown.filter(n=>withHint.indexOf(n)<0);
-    if(plain.length) errors.push(plain.length+' name(s) not in the members list (new players?): '+plain.slice(0,10).join(', ')+(plain.length>10?', +'+(plain.length-10)+' more':''));
+    if(plain.length) warn(plain.length+' name(s) not in the members list (new players?): '+plain.slice(0,10).join(', ')+(plain.length>10?', +'+(plain.length-10)+' more':''));
   }
 
   // Near-duplicate names inside this tournament (same person entered twice under different spellings).
   for(let i=0;i<uniqueNames.length;i++) for(let j=i+1;j<uniqueNames.length;j++){
-    if(namesLookRelated(uniqueNames[i],uniqueNames[j])) errors.push('Possible duplicate player: "'+uniqueNames[i]+'" and "'+uniqueNames[j]+'"');
+    if(namesLookRelated(uniqueNames[i],uniqueNames[j])) warn('Possible duplicate player: "'+uniqueNames[i]+'" and "'+uniqueNames[j]+'"');
+  }
+
+  // Main Event Day 2 commits only see the survivors, so unique/re-entry counts must be entered from the flights.
+  if(t&&t.eventType==='me_d2'){
+    const u=t.flightUniqueEntries, r=t.flightReentries, e=payload.tournament.entries;
+    if(u==null||r==null) warn('Main Event Day 2: flight unique entries / re-entries not filled in (needed for Hendon Mob) - the commit will store values derived from Day 2 alone');
+    else if(u+r!==e) warn('Main Event Day 2: unique entries ('+u+') + re-entries ('+r+') = '+(u+r)+', but total entries is '+e);
   }
   return errors;
 }
@@ -434,6 +445,8 @@ function buildTournamentCommitPayload(t) {
   const entries=t.players.length+(t.inheritedEntries||0);
   const totalReentries=(t.regLog||[]).filter(e=>e.isReentry).length;
   const uniqueEntries=entries-totalReentries;
+  // Day 2 only sees survivors; the TD enters flight-aggregated unique/re-entry counts on the Payouts tab.
+  const useFlightAgg=t.eventType==='me_d2'&&t.flightUniqueEntries!=null&&t.flightReentries!=null;
 
   let payouts=t.payoutTable||[];
   const payoutMap={};
@@ -515,8 +528,8 @@ function buildTournamentCommitPayload(t) {
     guarantee:t.guarantee||0,
     hit_guarantee:(t.prizePool||0)>=(t.guarantee||0),
     entries,
-    unique_entries:uniqueEntries,
-    reentries:totalReentries,
+    unique_entries:useFlightAgg?t.flightUniqueEntries:uniqueEntries,
+    reentries:useFlightAgg?t.flightReentries:totalReentries,
     structure:t.structure||null,
     deal_made:t.dealMade||false,
   };

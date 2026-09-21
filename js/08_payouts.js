@@ -167,8 +167,8 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   async function commitTournament(){
     const evName = tournament.name||getEventType(tournament.eventType)||'Event';
     const payload = buildTournamentCommitPayload(tournament);
-    const problems = validateCommitPayload(payload);
-    if(problems.length && !confirm('Problems found in this commit:\n\n- '+problems.join('\n- ')+'\n\nCommitting will write these to the cloud as-is. Commit anyway?')) return;
+    const problems = validateCommitPayload(payload, tournament);
+    if(problems.length && !confirm('Please review before committing:\n\n'+problems.map(p=>(p.level==='error'?'[!] ':'[?] ')+p.msg).join('\n')+'\n\nCommit anyway?')) return;
     let confirmMsg = `Commit ${evName} to cloud? Prize pool S$${(tournament.prizePool||0).toLocaleString()}, ${payload.results.length} players.`;
     if(hasBounty){
       const loggedTotal=Object.values(tournament.bounties||{}).reduce((s,v)=>s+(Number(v)||0),0);
@@ -232,6 +232,17 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             :<button className="btn-primary" style={{padding:'6px 16px',fontSize:12}} onClick={onPublish}>📢 Publish Payouts</button>
           }
           {hasBounty&&<button className="btn-sec" style={showBounties?{color:'#c8973a',borderColor:'#4a2c1a'}:{}} onClick={()=>setShowBounties(s=>!s)}>Log Bounties</button>}
+          {canCommit&&tournament.eventType==='me_d2'&&(
+            <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11,color:'#527a5c'}} title="Totals across flights 1A-1D (Day 2 only sees survivors). Needed for Hendon Mob.">
+              <span>Flights:</span>
+              <input type="number" min="0" className="form-input" placeholder="unique" style={{width:64,padding:'4px 6px',fontSize:12,textAlign:'center'}}
+                value={tournament.flightUniqueEntries!=null?tournament.flightUniqueEntries:''}
+                onChange={e=>onUpdate({flightUniqueEntries:e.target.value===''?null:Math.max(0,parseInt(e.target.value)||0)})}/>
+              <input type="number" min="0" className="form-input" placeholder="re-entries" style={{width:78,padding:'4px 6px',fontSize:12,textAlign:'center'}}
+                value={tournament.flightReentries!=null?tournament.flightReentries:''}
+                onChange={e=>onUpdate({flightReentries:e.target.value===''?null:Math.max(0,parseInt(e.target.value)||0)})}/>
+            </div>
+          )}
           {canCommit&&(
             isCommitting
               ?<button className="sf-btn" disabled style={{width:'auto',opacity:0.7,cursor:'wait'}}>⟳ Committing…</button>

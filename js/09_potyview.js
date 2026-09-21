@@ -113,7 +113,7 @@ function POTYView({tournament}) {
       // (bounties, unique/re-entries, fee, rounded prize pool). RPC replaces results on every call.
       const payload=buildTournamentCommitPayload(t);
       // Never silently write a known-bad payload; the Payouts tab commit asks the TD first.
-      if(validateCommitPayload(payload).length){console.warn('Cloud push skipped: payload failed validation');return;}
+      if(validateCommitPayload(payload,t).some(p=>p.level==='error')){console.warn('Cloud push skipped: payload failed validation');return;}
 
       const res=await fetch('https://spc-members.onrender.com/api/tournament',{
         method:'POST',
