@@ -173,7 +173,7 @@ function App() {
         seatingMode:tournament.seatingMode||'auto',
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
-        regLog:(tournament.regLog||[]).slice(0,50).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
+        regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
         members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
       });
     }
@@ -191,7 +191,7 @@ function App() {
           const isDup=!!existing;
           if(!existing){addPlayer(action.name, false, action.country||null);SoundEngine.register();}
           // Add to regLog so counter sees it
-          setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,100)};});
+          setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)};});
         } else {
           // find next unused number
           const used=new Set(tournament.players.map(p=>p.name));

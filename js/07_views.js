@@ -45,7 +45,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
   const displayLog = recentLog.filter(r=>Date.now()-r.ts<600000);
   function addToLog(entry){
     setRecentLog(prev=>{
-      const updated=[entry,...prev].slice(0,100);
+      const updated=[entry,...prev].slice(0,1000);
       // Sync back to tournament state for persistence
       if(window._spcUpdateRegLog) window._spcUpdateRegLog(updated);
       return updated;
