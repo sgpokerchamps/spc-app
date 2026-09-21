@@ -244,7 +244,7 @@ function generateTournamentReportHTML(t) {
     const active=t.players.filter(p=>p.status==='active').length;
     const standings=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
     let payouts=t.payoutTable||[];
-    const pp=t.prizePool||0;
+    const pp=commitPrizePool(t.prizePool);
     const extraBags=t.extraBagCount||0;
     const extraDed=extraBags*1500;
     const payoutPool=pp-extraDed;
@@ -252,8 +252,9 @@ function generateTournamentReportHTML(t) {
     if(payouts.length===0&&entries>0&&payoutPool>0){
       payouts=generatePayoutRows(entries,payoutPool,t.eventType==='mysteryBounty');
     }
-    // Always recalculate amounts from pct (saved amounts may be stale)
-    payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:Math.round(payoutPool*(p.pct||0)/100)}));
+    // Use the amounts actually paid - the same values buildTournamentCommitPayload sends (deal amount when a deal was made,
+    // otherwise the saved row amount). Only fall back to pct x pool for rows that have no amount at all.
+    payouts=payouts.map((p,i)=>({...p,position:p.position||i+1,amount:(t.dealMade&&p.dealAmount!=null)?p.dealAmount:(p.amount!=null?p.amount:Math.round(payoutPool*(p.pct||0)/100))}));
     // Build position→amount lookup for standings
     const payoutMap={};
     payouts.forEach(p=>{payoutMap[p.position]=p;});

@@ -62,9 +62,12 @@ function POTYView({tournament}) {
     setSearchFilter('');
     // syncFromCloud will be triggered by the useEffect on selectedYear change
   }
-  function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}const resolved=pts.map(p=>{const alias=poty.aliases[p.name];return{...p,potyName:alias||(poty.players[p.name]?p.name:null)};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
+  function startCommit(){if(activePlayers>0){if(!confirm('WARNING: Tournament still has '+activePlayers+' active players. Points will be incomplete.\n\nCommit now?'))return;}const pts=getPotyPoints(tournament);if(pts.length===0){alert('No POTY points — no payouts found.');return;}// Standings names are the members-table name in upper case. Match case-insensitively so 'Calvin Tan' finds 'CALVIN TAN' without a manual link.
+    // A saved alias only counts while its target still exists in the standings (stale aliases to renamed rows are ignored).
+    const _idx=loadMemberIndex();const _byUpper={};Object.keys(poty.players).forEach(k=>{_byUpper[k.toUpperCase()]=k;});
+    const resolved=pts.map(p=>{const alias=poty.aliases[p.name];const aliasOk=alias&&poty.players[alias]?alias:null;return{...p,potyName:aliasOk||(poty.players[p.name]?p.name:null)||_byUpper[canonicalPlayerName(p.name,_idx).toUpperCase()]||_byUpper[String(p.name).toUpperCase()]||null};});setPendingPoints(resolved);setShowCommit(true);setLinkingIdx(-1);}
   function resolveLink(idx,target){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:target};const newPoty={...poty,aliases:{...poty.aliases,[updated[idx].name]:target}};setPoty(newPoty);savePOTY(newPoty);setPendingPoints(updated);setLinkingIdx(-1);setLinkTarget('');}
-  function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:updated[idx].name};setPendingPoints(updated);setLinkingIdx(-1);}
+  function createNew(idx){const updated=[...pendingPoints];updated[idx]={...updated[idx],potyName:canonicalPlayerName(updated[idx].name,loadMemberIndex()).toUpperCase()};setPendingPoints(updated);setLinkingIdx(-1);}
   async function confirmCommit(){
     if(tournament.testMode){alert('This tournament is in TEST MODE - POTY commit is disabled so test data cannot reach the standings.');return;}
     const unlinked=pendingPoints.filter(p=>!p.potyName);
