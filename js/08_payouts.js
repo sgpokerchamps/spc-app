@@ -20,6 +20,16 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   const [extraBags,setExtraBags] = useState(tournament.extraBagCount||0);
   const [newWinnerName,setNewWinnerName] = useState('');
 
+  // Where a bag winner sits in this tournament: cashed / bag-only (busted without a paid place) / still in / not entered
+  function bagWinnerStatus(w){
+    const key=normalizeNameKey(w.name);
+    const pl=tournament.players.filter(p=>normalizeNameKey(p.name)===key);
+    if(!pl.length) return {text:'not in this tournament',color:'#c87a3a'};
+    const busted=pl.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999))[0];
+    if(!busted) return {text:'still in',color:'#527a5c'};
+    const paid=(tournament.payoutTable||[]).find(r=>(r.position||0)===busted.bustPosition&&(r.amount||0)>0);
+    return paid?{text:'cashed '+busted.bustPosition+' + bag',color:'#3dba6f'}:{text:'bag only \u00b7 busted '+busted.bustPosition,color:'#c8973a'};
+  }
   function syncBagTotal(winners){
     const total=winners.reduce((s,w)=>s+w.bags,0);
     setExtraBags(total);
@@ -322,6 +332,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                   {tournament.extraBagWinners.map((w,i)=>(
                     <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',background:'#1a1004',border:'1px solid #2a1c06',borderRadius:5,fontSize:12}}>
                       <span style={{color:'#e8d8a0',fontWeight:600,flex:1}}>{w.name}{w.country?' '+countryFlag(w.country):''}</span>
+                      {(()=>{const st=bagWinnerStatus(w);return <span style={{color:st.color,fontSize:10}}>{st.text}</span>;})()}
                       <span style={{color:'#527a5c',fontSize:10}}>({w.totalQualifications||'-'} flights)</span>
                       <button style={{background:'none',border:'1px solid #2a1c06',borderRadius:3,color:'#8a4040',cursor:'pointer',fontSize:13,padding:'1px 6px',lineHeight:'18px'}}
                         onClick={()=>adjustBag(i,-1)} title="Remove 1 bag">−</button>
@@ -335,7 +346,8 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                 </div>
               )}
               <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                <input type="text" placeholder="Player name" value={newWinnerName} onChange={e=>setNewWinnerName(e.target.value)}
+                <datalist id="bag-winner-names">{[...new Set(tournament.players.map(p=>p.name))].map(n=><option key={n} value={n}/>)}</datalist>
+                <input type="text" list="bag-winner-names" placeholder="Player name" value={newWinnerName} onChange={e=>setNewWinnerName(e.target.value)}
                   onKeyDown={e=>{if(e.key==='Enter'){addBagWinner(newWinnerName);}}}
                   style={{flex:1,maxWidth:200,padding:'5px 8px',background:'#060e09',border:'1px solid #2a1c06',borderRadius:4,color:'#e4f0e8',fontSize:12,outline:'none'}}/>
                 <button style={{padding:'5px 10px',background:'#0d1a0f',border:'1px solid #1a2e22',borderRadius:4,color:'#3dba6f',fontSize:11,fontWeight:600,cursor:'pointer'}}
