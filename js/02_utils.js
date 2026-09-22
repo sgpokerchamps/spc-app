@@ -37,7 +37,7 @@ function getFinishingPositions(players) {
     const busted = recs.filter(p=>p.status==='busted'&&p.bustPosition!=null);
     if (!busted.length) return;
     busted.sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
-    positions[name] = {position:busted[0].bustPosition, bustedAt:busted[0].bustedAt||0};
+    positions[name] = {position:busted[0].bustPosition, bustedAt:busted[0].bustedAt||0, id:busted[0].id};
   });
   return positions;
 }

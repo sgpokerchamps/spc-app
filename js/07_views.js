@@ -733,8 +733,10 @@ function RegistrationBoard({players, onRegister}) {
     </div>
   );
 }
-function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onRename,onRemove,modal,setModal}) {
+function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onSwapBust,onRename,onRemove,modal,setModal}) {
   const [search,setSearch]=useState('');
+  const [swapSearch,setSwapSearch]=useState('');
+  const [swapIntendedId,setSwapIntendedId]=useState(null);
   const [newName,setNewName]=useState('');
   const [bulkText,setBulkText]=useState('');
   const [bulkCount,setBulkCount]=useState('');
@@ -817,6 +819,19 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     return p.name.toLowerCase().includes(search.toLowerCase());
   });
   const posLabel=pos=>{if(pos===1)return'1st';if(pos===2)return'2nd';if(pos===3)return'3rd';return pos+'th';};
+  // Same amount rule as the Payouts tab / commit payload: deal amount over raw when a deal was made.
+  function payoutForPosition(pos){
+    const row=(tournament.payoutTable||[]).find(r=>r.position===pos);
+    if(!row)return 0;
+    return(tournament.dealMade&&row.dealAmount!=null)?row.dealAmount:(row.amount||0);
+  }
+  const swapWrong=modal&&modal.type==='swap'?tournament.players.find(p=>p.id===modal.wrongId):null;
+  const swapCandidates=swapWrong?tournament.players
+    .filter(p=>p.id!==swapWrong.id&&(p.status==='active'||p.status==='busted'))
+    .filter(p=>p.name.toLowerCase().includes(swapSearch.toLowerCase()))
+    .sort((a,b)=>a.status!==b.status?(a.status==='active'?-1:1):a.name.localeCompare(b.name))
+    .slice(0,30):[];
+  const swapIntended=swapWrong?tournament.players.find(p=>p.id===swapIntendedId):null;
 
   return(
     <div className="players-view">
@@ -897,6 +912,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
                 <td style={{color:'#527a5c',fontSize:11}}>{p.bustPosition?posLabel(p.bustPosition):p.status==='active'?'—':'1st'}</td>
                 <td style={{display:'flex',gap:6}}>
                   {p.status==='active'&&<button className="btn-danger-sm" onClick={()=>onBust(p.id)}>Bust out</button>}
+                  {p.status==='busted'&&onSwapBust&&<button className="btn-sec" style={{fontSize:11,padding:'4px 8px',borderColor:'#5a8ac8',color:'#5a8ac8'}} onClick={()=>{setSwapIntendedId(null);setSwapSearch('');setModal({type:'swap',wrongId:p.id});}} title="Floor busted the wrong player? Correct it here.">Wrong player?</button>}
                   {onRemove&&<button className="btn-danger-sm" style={{background:'transparent',borderColor:'#3a2020',color:'#8a4040',fontSize:11}} onClick={()=>{if(confirm(`Remove ${p.name} entirely from this tournament?`))onRemove(p.id);}}>Remove</button>}
                 </td>
               </tr>
@@ -914,6 +930,55 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
               <button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button>
               <button className="btn-primary" onClick={handleBulk}>Add {bulkText.split('\n').filter(s=>s.trim()).length} players</button>
             </div>
+          </div>
+        </div>
+      )}
+      {modal&&modal.type==='swap'&&swapWrong&&(
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">Correct a wrong bust</div>
+            <div className="modal-sub">{swapWrong.name} was recorded finishing {posLabel(swapWrong.bustPosition)}. Who should it have been?</div>
+            {!swapIntended?(
+              <>
+                <input className="qa-input" autoFocus placeholder="Search active or busted players..." value={swapSearch} onChange={e=>setSwapSearch(e.target.value)} style={{width:'100%',marginBottom:8}}/>
+                <div style={{maxHeight:260,overflowY:'auto',border:'1px solid #1a2e22',borderRadius:6}}>
+                  {swapCandidates.length===0&&<div style={{padding:12,color:'#3a5a42',fontSize:12}}>No matching players.</div>}
+                  {swapCandidates.map(p=>(
+                    <div key={p.id} onClick={()=>setSwapIntendedId(p.id)}
+                      style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',borderBottom:'1px solid #0e1a12',cursor:'pointer'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='#112016'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <span style={{color:'#e4f0e8',fontSize:13}}>{p.name}{pf(p)}</span>
+                      <span style={{fontSize:11,color:p.status==='active'?'#3dba6f':'#c87a3a'}}>{p.status==='active'?`Active · T${p.tableNum||'?'} S${p.seatNum||'?'}`:`Busted ${posLabel(p.bustPosition)}`}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="modal-actions"><button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button></div>
+              </>
+            ):(
+              <>
+                <div style={{background:'#0b1610',border:'1px solid #1a2e22',borderRadius:8,padding:14,fontSize:13,color:'#b2d4ba',lineHeight:1.6}}>
+                  {swapIntended.status==='active'?(
+                    <>
+                      <strong style={{color:'#e4f0e8'}}>{swapIntended.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapWrong.bustPosition)}</strong>
+                      {payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
+                      <br/><strong style={{color:'#e4f0e8'}}>{swapWrong.name}</strong> returns to play.
+                    </>
+                  ):(
+                    <>
+                      <strong style={{color:'#e4f0e8'}}>{swapIntended.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapWrong.bustPosition)}</strong>
+                      {payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
+                      <br/><strong style={{color:'#e4f0e8'}}>{swapWrong.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapIntended.bustPosition)}</strong>
+                      {payoutForPosition(swapIntended.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapIntended.bustPosition))}</strong></>}.
+                      <br/>Both stay busted - only their finishing positions trade.
+                    </>
+                  )}
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-sec" onClick={()=>setSwapIntendedId(null)}>Back</button>
+                  <button className="btn-primary" onClick={()=>{onSwapBust(swapWrong.id,swapIntended.id);setModal(null);}}>Confirm correction</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

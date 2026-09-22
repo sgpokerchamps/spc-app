@@ -224,6 +224,8 @@ function App() {
         }
       } else if(action.type==='undo-bust'){
         undoBust();
+      } else if(action.type==='swap-bust'){
+        swapBust(action.wrongId,action.intendedId);
       } else if(action.type==='clock-toggle'){
         toggleClock();
       } else if(action.type==='clock-action'){
@@ -531,6 +533,54 @@ Starting setup — you can adjust settings before launching.`);
         activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'undo-bust',detail:`${p.name} undo bust → T${tableNum||'?'} S${seatNum||'?'}`}]};
     });
   }
+  // Correct a wrong bust: floor busted `wrongId` when it should have been `intendedId`. A real
+  // elimination happened at that moment - only the NAME attached to it was wrong - so this relabels
+  // rather than undoes. intendedId inherits wrongId's exact bustPosition/bustedAt (payout is derived
+  // from position everywhere - Payouts tab, commit payload - so nothing else needs to move). If
+  // intended is currently active, wrongId takes intended's old seat (falling back to findSeat if that
+  // seat was since taken, e.g. by a table break). If intended is also busted (both wrong relative to
+  // each other), their positions simply trade - neither returns to play. Nobody else's bustPosition
+  // changes; only the name<->position mapping for these two.
+  function swapBust(wrongId,intendedId){
+    if(wrongId===intendedId)return;
+    setTournament(t=>{
+      const wrong=t.players.find(p=>p.id===wrongId);
+      const intended=t.players.find(p=>p.id===intendedId);
+      if(!wrong){alert('Player to correct not found.');return t;}
+      if(wrong.status!=='busted'){alert(`${wrong.name} is not currently busted - nothing to correct.`);return t;}
+      if(!intended){alert('Intended player not found.');return t;}
+      const pos=wrong.bustPosition, bustedAt=wrong.bustedAt;
+      let players, detail;
+      if(intended.status==='active'){
+        let tableNum=intended.tableNum, seatNum=intended.seatNum;
+        const seatTaken=tableNum&&seatNum&&t.players.some(p=>p.id!==intended.id&&p.status==='active'&&p.tableNum===tableNum&&p.seatNum===seatNum);
+        if(!tableNum||!seatNum||seatTaken){
+          const seat=findSeat(t.players.filter(p=>p.id!==wrong.id&&p.id!==intended.id),getTableNumbers(t),t.seatsPerTable,t.seatLocks||{});
+          tableNum=seat.tableNum;seatNum=seat.seatNum;
+        }
+        players=t.players.map(p=>{
+          if(p.id===wrong.id)return{...p,status:'active',bustPosition:undefined,bustedAt:undefined,tableNum,seatNum,prevTableNum:undefined,prevSeatNum:undefined};
+          if(p.id===intended.id)return{...p,status:'busted',bustPosition:pos,bustedAt,prevTableNum:intended.tableNum,prevSeatNum:intended.seatNum,tableNum:null,seatNum:null};
+          return p;
+        });
+        detail=`Correction: ${intended.name} recorded ${fmt.ordinal(pos)} (was ${wrong.name}); ${wrong.name} back in play`;
+      } else {
+        const intendedPos=intended.bustPosition, intendedBustedAt=intended.bustedAt;
+        players=t.players.map(p=>{
+          if(p.id===wrong.id)return{...p,bustPosition:intendedPos,bustedAt:intendedBustedAt};
+          if(p.id===intended.id)return{...p,bustPosition:pos,bustedAt};
+          return p;
+        });
+        detail=`Correction: ${intended.name} recorded ${fmt.ordinal(pos)}, ${wrong.name} recorded ${fmt.ordinal(intendedPos)} (positions swapped)`;
+      }
+      if(window.location&&window.location.hash.indexOf('dev')>=0){
+        const before=t.players.map(p=>p.bustPosition).filter(x=>x!=null).sort((a,b)=>a-b);
+        const after=players.map(p=>p.bustPosition).filter(x=>x!=null).sort((a,b)=>a-b);
+        console.assert(JSON.stringify(before)===JSON.stringify(after),'swapBust changed the position multiset',before,after);
+      }
+      return{...t,players,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'swap-bust',detail}]};
+    });
+  }
   function removePlayer(id){
     setTournament(t=>({...t,players:t.players.filter(p=>p.id!==id)}));
   }
@@ -766,7 +816,7 @@ Starting setup — you can adjust settings before launching.`);
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
-            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
+            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
