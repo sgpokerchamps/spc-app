@@ -173,6 +173,9 @@ function App() {
         seatingMode:tournament.seatingMode||'auto',
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
+        bustedPositions:getFinishingPositions(tournament.players),
+        payoutTable:tournament.payoutTable||[],
+        dealMade:tournament.dealMade||false,
         regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
         members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
       });

@@ -158,6 +158,13 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   const diff = prizePool - totalPaid;
   const posLabel = i => i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`;
   const posColor = i => i===0?'#f0c040':i===1?'#c8d0d8':i===2?'#c87a3a':'#b2d4ba';
+  // Which player finished in each place. 1st never has a bustPosition (the winner doesn't bust) -
+  // treated separately as the sole remaining active player. Re-entries can leave a stale busted
+  // record under the same name; getFinishingPositions already resolves to each name's final bust.
+  const finishPositions = getFinishingPositions(tournament.players);
+  const positionToName = {};
+  Object.keys(finishPositions).forEach(n=>{ positionToName[finishPositions[n].position]=n; });
+  const winnerName = getWinnerName(tournament.players);
 
   const [committedIds,setCommittedIds] = useState(()=>getCommittedTournamentIds());
   const [isCommitting,setIsCommitting] = useState(false);
@@ -409,18 +416,23 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             <table className="payout-table" style={{tableLayout:'fixed',width:'100%'}}>
               <thead>
                 <tr>
-                  <th style={{width:'12%'}}>Place</th>
-                  <th style={{width:'20%'}}>%</th>
-                  <th style={{width:tournament.dealMade?'26%':'53%'}}>Amount (S$)</th>
-                  {tournament.dealMade&&<th style={{width:'27%',color:'#c8973a'}}>Deal (S$)</th>}
-                  <th style={{width:'15%'}}></th>
+                  <th style={{width:tournament.dealMade?'8%':'10%'}}>Place</th>
+                  <th style={{width:tournament.dealMade?'18%':'20%'}}>Player</th>
+                  <th style={{width:tournament.dealMade?'12%':'16%'}}>%</th>
+                  <th style={{width:tournament.dealMade?'25%':'39%'}}>Amount (S$)</th>
+                  {tournament.dealMade&&<th style={{width:'25%',color:'#c8973a'}}>Deal (S$)</th>}
+                  <th style={{width:tournament.dealMade?'12%':'15%'}}></th>
                 </tr>
               </thead>
               <tbody>
 
-                {rows.map((r,i)=>(
+                {rows.map((r,i)=>{
+                  const pos=r.position||(i+1);
+                  const finishedName=pos===1?winnerName:positionToName[pos];
+                  return (
                   <tr key={i} style={{borderBottom:'1px solid #0a1412'}}>
                     <td style={{color:posColor(i),fontWeight:i<3?600:400,padding:'7px 14px'}}>{posLabel(i)}</td>
+                    <td style={{padding:'7px 14px',color:finishedName?'#b2d4ba':'#3a5a42',fontWeight:finishedName?600:400,fontSize:13}}>{finishedName||'—'}</td>
                     <td style={{padding:'4px 14px'}}>
                       <div style={{display:'flex',alignItems:'center',gap:4}}>
                         <input type="number" step="0.1" min="0" max="100"
@@ -465,7 +477,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                       <button className="del-row-btn" onClick={()=>removeRow(i)}>✕</button>
                     </td>
                   </tr>
-                ))}
+                  );})}
               </tbody>
             </table>
             <button className="add-row-btn" style={{marginTop:8,width:'fit-content',padding:'6px 18px'}} onClick={addRow}>

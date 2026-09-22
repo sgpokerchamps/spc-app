@@ -21,6 +21,33 @@ function getPayouts(entries, prizePool) {
   const key=keys.find(k=>k>=entries)||keys[keys.length-1];
   return PAYOUT_DATA[key].map((pct,i)=>({position:i+1,pct,amount:Math.floor((pct/100)*prizePool/100)*100}));
 }
+
+/* ---- Finishing position (bust order) helpers, shared by the Payouts tab and the floor broadcast ---- */
+// A player who busted, then re-entered, then busted again has TWO 'busted' records under the same
+// name (addPlayer creates a fresh record on re-entry and never touches the old one). Only the most
+// recent bust (by bustedAt, which every bust sets) is their real finishing position; a currently
+// active record for that name means they have not finished, even if an older busted record exists.
+function getFinishingPositions(players) {
+  const byName = {};
+  (players||[]).forEach(p=>{ (byName[p.name]=byName[p.name]||[]).push(p); });
+  const positions = {};
+  Object.keys(byName).forEach(name=>{
+    const recs = byName[name];
+    if (recs.some(p=>p.status==='active')) return;
+    const busted = recs.filter(p=>p.status==='busted'&&p.bustPosition!=null);
+    if (!busted.length) return;
+    busted.sort((a,b)=>(b.bustedAt||0)-(a.bustedAt||0));
+    positions[name] = {position:busted[0].bustPosition, bustedAt:busted[0].bustedAt||0};
+  });
+  return positions;
+}
+// The winner never busts, so there is no bustPosition/status marker for 1st place anywhere in the
+// data model - the only real signal is that exactly one active player remains.
+function getWinnerName(players) {
+  const active = (players||[]).filter(p=>p.status==='active');
+  return active.length===1 ? active[0].name : null;
+}
+
 function getTableNumbers(tournament) {
   if(tournament.tableNumbers && tournament.tableNumbers.length) return tournament.tableNumbers.slice();
   const startTable=tournament.startTable||1;
