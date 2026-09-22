@@ -161,9 +161,17 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   // Which player finished in each place. 1st never has a bustPosition (the winner doesn't bust) -
   // treated separately as the sole remaining active player. Re-entries can leave a stale busted
   // record under the same name; getFinishingPositions already resolves to each name's final bust.
+  // Two different players can still collide on the same bustPosition (a known historical bug -
+  // recovered events may still carry it locally even after the cloud copy was SQL-patched, and the
+  // commit-time validator's own duplicate-position check is the real backstop). Rather than silently
+  // keeping one name and dropping the other, list every name a position collides on so it's visibly
+  // wrong instead of quietly blank.
   const finishPositions = getFinishingPositions(tournament.players);
-  const positionToName = {};
-  Object.keys(finishPositions).forEach(n=>{ positionToName[finishPositions[n].position]=n; });
+  const positionNames = {};
+  Object.keys(finishPositions).forEach(n=>{
+    const pos=finishPositions[n].position;
+    (positionNames[pos]=positionNames[pos]||[]).push(n);
+  });
   const winnerName = getWinnerName(tournament.players);
 
   const [committedIds,setCommittedIds] = useState(()=>getCommittedTournamentIds());
@@ -428,11 +436,13 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
 
                 {rows.map((r,i)=>{
                   const pos=r.position||(i+1);
-                  const finishedName=pos===1?winnerName:positionToName[pos];
+                  const namesHere=pos===1?(winnerName?[winnerName]:[]):(positionNames[pos]||[]);
+                  const collision=namesHere.length>1;
+                  const finishedName=namesHere.length===1?namesHere[0]:null;
                   return (
                   <tr key={i} style={{borderBottom:'1px solid #0a1412'}}>
                     <td style={{color:posColor(i),fontWeight:i<3?600:400,padding:'7px 14px'}}>{posLabel(i)}</td>
-                    <td style={{padding:'7px 14px',color:finishedName?'#b2d4ba':'#3a5a42',fontWeight:finishedName?600:400,fontSize:13}}>{finishedName||'—'}</td>
+                    <td style={{padding:'7px 14px',color:collision?'#e05a5a':finishedName?'#b2d4ba':'#3a5a42',fontWeight:collision?700:finishedName?600:400,fontSize:13}} title={collision?namesHere.join(', '):undefined}>{collision?`${namesHere.length} players (!)`:(finishedName||'—')}</td>
                     <td style={{padding:'4px 14px'}}>
                       <div style={{display:'flex',alignItems:'center',gap:4}}>
                         <input type="number" step="0.1" min="0" max="100"
