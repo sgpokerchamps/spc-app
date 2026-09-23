@@ -733,7 +733,7 @@ function RegistrationBoard({players, onRegister}) {
     </div>
   );
 }
-function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onSwapBust,onRename,onRemove,modal,setModal}) {
+function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onBust,onBustMany,onUndoBust,onSwapBust,onRemovePhantomBust,onRename,onRemove,modal,setModal}) {
   const [search,setSearch]=useState('');
   const [swapSearch,setSwapSearch]=useState('');
   const [swapIntendedId,setSwapIntendedId]=useState(null);
@@ -833,6 +833,53 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     .slice(0,30):[];
   const swapIntended=swapWrong?tournament.players.find(p=>p.id===swapIntendedId):null;
 
+  // Phantom-bust removal preview. simulateRemovePhantomBust is the SAME function the reducer commits
+  // with (02_utils.js) - the preview can never show something different from what Confirm actually does.
+  const phantomTarget=modal&&modal.type==='phantom'?tournament.players.find(p=>p.id===modal.id):null;
+  const phantomSim=phantomTarget?simulateRemovePhantomBust(tournament.players,phantomTarget.id):null;
+  function phantomSeatPreview(x){
+    let tableNum=x.prevTableNum||null,seatNum=x.prevSeatNum||null;
+    const taken=tableNum&&seatNum&&tournament.players.some(p=>p.id!==x.id&&p.status==='active'&&p.tableNum===tableNum&&p.seatNum===seatNum);
+    if(!tableNum||!seatNum||taken){
+      return findSeat(tournament.players.filter(p=>p.id!==x.id),getTableNumbers(tournament),tournament.seatsPerTable,tournament.seatLocks||{});
+    }
+    return {tableNum,seatNum};
+  }
+  function positionNameGroups(players){
+    const fp=getFinishingPositions(players);
+    const groups={};
+    Object.keys(fp).forEach(n=>{(groups[fp[n].position]=groups[fp[n].position]||[]).push(n);});
+    return groups;
+  }
+  const phantomShiftRows=phantomTarget?tournament.players
+    .filter(p=>p.status==='busted'&&p.bustPosition!=null&&p.bustPosition<phantomTarget.bustPosition)
+    .sort((a,b)=>a.bustPosition-b.bustPosition)
+    .map(p=>({id:p.id,name:p.name,before:p.bustPosition,after:p.bustPosition+1})):[];
+  const phantomMoney=(()=>{
+    if(!phantomTarget||!phantomSim)return{rows:[],bubbleOut:[],bubbleIn:[]};
+    const beforeGroups=positionNameGroups(tournament.players);
+    const afterGroups=positionNameGroups(phantomSim);
+    const beforeWinner=getWinnerName(tournament.players);
+    const afterWinner=getWinnerName(phantomSim);
+    const label=names=>names.length>1?`${names.length} players (!)`:(names[0]||'Not yet determined');
+    const beforePaid=new Set(), afterPaid=new Set();
+    const rows=(tournament.payoutTable||[]).map(r=>{
+      const pos=r.position;
+      const amt=(tournament.dealMade&&r.dealAmount!=null)?r.dealAmount:(r.amount||0);
+      const beforeNames=pos===1?(beforeWinner?[beforeWinner]:[]):(beforeGroups[pos]||[]);
+      const afterNames=pos===1?(afterWinner?[afterWinner]:[]):(afterGroups[pos]||[]);
+      beforeNames.forEach(n=>beforePaid.add(n));
+      afterNames.forEach(n=>afterPaid.add(n));
+      const beforeLabel=label(beforeNames), afterLabel=label(afterNames);
+      return {pos,amt,beforeLabel,afterLabel,changed:beforeLabel!==afterLabel};
+    }).filter(r=>r.changed);
+    // Explicit bubble callout, separate from the per-position rows above - a player whose name simply
+    // no longer appears at ANY paid position (or newly appears at one) is easy to miss in the row diff.
+    const bubbleOut=[...beforePaid].filter(n=>!afterPaid.has(n));
+    const bubbleIn=[...afterPaid].filter(n=>!beforePaid.has(n));
+    return {rows,bubbleOut,bubbleIn};
+  })();
+
   return(
     <div className="players-view">
       <div className="view-head">
@@ -913,6 +960,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
                 <td style={{display:'flex',gap:6}}>
                   {p.status==='active'&&<button className="btn-danger-sm" onClick={()=>onBust(p.id)}>Bust out</button>}
                   {p.status==='busted'&&onSwapBust&&<button className="btn-sec" style={{fontSize:11,padding:'4px 8px',borderColor:'#5a8ac8',color:'#5a8ac8'}} onClick={()=>{setSwapIntendedId(null);setSwapSearch('');setModal({type:'swap',wrongId:p.id});}} title="Floor busted the wrong player? Correct it here.">Wrong player?</button>}
+                  {p.status==='busted'&&onRemovePhantomBust&&<button className="btn-sec" style={{fontSize:11,padding:'4px 8px',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={()=>setModal({type:'phantom',id:p.id})} title="No elimination actually happened - this player was never really out. Removes the bust and shifts every finer position to close the gap.">Bust didn't happen</button>}
                   {onRemove&&<button className="btn-danger-sm" style={{background:'transparent',borderColor:'#3a2020',color:'#8a4040',fontSize:11}} onClick={()=>{if(confirm(`Remove ${p.name} entirely from this tournament?`))onRemove(p.id);}}>Remove</button>}
                 </td>
               </tr>
@@ -982,6 +1030,59 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
           </div>
         </div>
       )}
+      {modal&&modal.type==='phantom'&&phantomTarget&&(()=>{
+        const seat=phantomSeatPreview(phantomTarget);
+        return(
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">Bust didn't happen</div>
+            <div className="modal-sub">Asserts no elimination occurred - {phantomTarget.name}'s {posLabel(phantomTarget.bustPosition)}-place bust is removed and every finer finish shifts down one place to close the gap. This is different from "Wrong player?", which just relabels a real elimination.</div>
+            <div style={{background:'#0b1610',border:'1px solid #1a2e22',borderRadius:8,padding:14,fontSize:13,color:'#b2d4ba',lineHeight:1.6,marginTop:10}}>
+              <strong style={{color:'#e4f0e8'}}>{phantomTarget.name}</strong> returns to play at <strong style={{color:'#e4f0e8'}}>{seat.tableNum?`Table ${seat.tableNum} Seat ${seat.seatNum}`:'the next open seat'}</strong>.
+            </div>
+            <div style={{marginTop:14,fontSize:11,letterSpacing:1,textTransform:'uppercase',color:'#7aaa82',fontWeight:600}}>
+              Position changes {phantomShiftRows.length>0?`(${phantomShiftRows.length})`:''}
+            </div>
+            {phantomShiftRows.length===0?(
+              <div style={{fontSize:12,color:'#3a5a42',marginTop:6}}>No one else's finish is affected.</div>
+            ):(
+              <div style={{maxHeight:220,overflowY:'auto',border:'1px solid #1a2e22',borderRadius:6,marginTop:6}}>
+                {phantomShiftRows.map(r=>(
+                  <div key={r.id} style={{display:'flex',justifyContent:'space-between',padding:'6px 12px',borderBottom:'1px solid #0e1a12',fontSize:12,color:'#b2d4ba'}}>
+                    <span>{r.name}</span>
+                    <span>{posLabel(r.before)} → {posLabel(r.after)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{marginTop:14,fontSize:11,letterSpacing:1,textTransform:'uppercase',color:'#c8973a',fontWeight:600}}>Money movement</div>
+            {phantomMoney.rows.length===0?(
+              <div style={{fontSize:12,color:'#3dba6f',marginTop:6}}>No payouts affected.</div>
+            ):(
+              <>
+                {phantomMoney.bubbleOut.map(name=>(
+                  <div key={'out-'+name} style={{marginTop:6,fontSize:13,color:'#e05a5a',fontWeight:700}}>⚠ {name} moves OUT of the money</div>
+                ))}
+                {phantomMoney.bubbleIn.map(name=>(
+                  <div key={'in-'+name} style={{marginTop:6,fontSize:13,color:'#3dba6f',fontWeight:700}}>⚠ {name} moves INTO the money</div>
+                ))}
+                <div style={{border:'1px solid #2a1c06',borderRadius:6,marginTop:8,background:'#0f0c04'}}>
+                  {phantomMoney.rows.map(r=>(
+                    <div key={r.pos} style={{padding:'8px 12px',borderBottom:'1px solid #1a1004',fontSize:12,color:'#e8d8a0'}}>
+                      <strong>{posLabel(r.pos)} · {fmt.currency(r.amt)}</strong> — was {r.beforeLabel}, now <strong style={{color:'#c8973a'}}>{r.afterLabel}</strong>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              <button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button>
+              <button className="btn-primary" onClick={()=>{onRemovePhantomBust(phantomTarget.id);setModal(null);}}>Confirm - remove this bust</button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }

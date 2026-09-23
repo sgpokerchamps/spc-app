@@ -581,6 +581,37 @@ Starting setup — you can adjust settings before launching.`);
       return{...t,players,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'swap-bust',detail}]};
     });
   }
+  // Remove a phantom bust: no elimination happened at all, floor busted someone still at the table.
+  // Unlike swapBust (a relabel - active count stays right), this asserts the elimination itself never
+  // occurred, so it un-busts X AND shifts every finer-positioned bust worse by one to close the gap -
+  // simulateRemovePhantomBust (02_utils.js) is the single source of truth for that shift, shared with
+  // the preview so they can never disagree. Desktop only - no floor dispatcher entry for this action.
+  function removePhantomBust(id){
+    setTournament(t=>{
+      const x=t.players.find(p=>p.id===id);
+      if(!x){alert('Player not found.');return t;}
+      if(x.status!=='busted'){alert(`${x.name} is not currently busted - nothing to remove.`);return t;}
+      if(x.bustPosition==null){alert(`${x.name} has no recorded finishing position.`);return t;}
+      const P=x.bustPosition;
+      const shifted=simulateRemovePhantomBust(t.players,id);
+      if(!shifted)return t;
+      let tableNum=x.prevTableNum||null,seatNum=x.prevSeatNum||null;
+      const seatTaken=tableNum&&seatNum&&t.players.some(p=>p.id!==x.id&&p.status==='active'&&p.tableNum===tableNum&&p.seatNum===seatNum);
+      if(!tableNum||!seatNum||seatTaken){
+        const seat=findSeat(t.players.filter(p=>p.id!==x.id),getTableNumbers(t),t.seatsPerTable,t.seatLocks||{});
+        tableNum=seat.tableNum;seatNum=seat.seatNum;
+      }
+      const players=shifted.map(p=>p.id===x.id?{...p,tableNum,seatNum,prevTableNum:undefined,prevSeatNum:undefined}:p);
+      const shiftedN=t.players.filter(p=>p.status==='busted'&&p.bustPosition!=null&&p.bustPosition<P).length;
+      if(window.location.hash.indexOf('dev')>=0){
+        const before=t.players.filter(p=>p.status==='busted'&&p.bustPosition!=null).map(p=>p.bustPosition).sort((a,b)=>a-b);
+        const beforeExpected=before.filter(v=>v!==P).map(v=>v<P?v+1:v).sort((a,b)=>a-b);
+        const after=players.filter(p=>p.status==='busted'&&p.bustPosition!=null).map(p=>p.bustPosition).sort((a,b)=>a-b);
+        console.assert(JSON.stringify(beforeExpected)===JSON.stringify(after),'removePhantomBust invariant violated',beforeExpected,after);
+      }
+      return{...t,players,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'remove-phantom-bust',detail:`${x.name}'s bust at ${fmt.ordinal(P)} removed (no elimination occurred) - ${shiftedN} position${shiftedN!==1?'s':''} shifted, ${x.name} back in play at T${tableNum||'?'} S${seatNum||'?'}`}]};
+    });
+  }
   function removePlayer(id){
     setTournament(t=>({...t,players:t.players.filter(p=>p.id!==id)}));
   }
@@ -816,7 +847,7 @@ Starting setup — you can adjust settings before launching.`);
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
-            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
+            {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRemovePhantomBust={removePhantomBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}

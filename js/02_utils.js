@@ -47,6 +47,21 @@ function getWinnerName(players) {
   const active = (players||[]).filter(p=>p.status==='active');
   return active.length===1 ? active[0].name : null;
 }
+// Phantom bust removal: no elimination actually happened at `id`'s recorded position P. Every OTHER
+// busted record (any name, any re-entry generation) with bustPosition < P is one place better than
+// recorded, since it was snapshotted against a field one player too small. Shared, single source of
+// truth for both the desktop preview (read-only) and the committing reducer, so they can never drift.
+// Returns null if `id` isn't a currently-busted player with a recorded position (nothing to remove).
+function simulateRemovePhantomBust(players, id) {
+  const x = (players||[]).find(p=>p.id===id);
+  if (!x || x.status!=='busted' || x.bustPosition==null) return null;
+  const P = x.bustPosition;
+  return players.map(p=>{
+    if (p.id===x.id) return {...p, status:'active', bustPosition:undefined, bustedAt:undefined};
+    if (p.status==='busted' && p.bustPosition!=null && p.bustPosition<P) return {...p, bustPosition:p.bustPosition+1};
+    return p;
+  });
+}
 
 function getTableNumbers(tournament) {
   if(tournament.tableNumbers && tournament.tableNumbers.length) return tournament.tableNumbers.slice();
