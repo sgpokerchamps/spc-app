@@ -1336,7 +1336,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
                         <td style={{padding:'7px 8px',color:'#3a5a42'}}>{p.seatNum||'—'}</td>
                         <td style={{padding:'7px 8px',color:hasCount?'#7aaa82':'#b2d4ba',fontWeight:500}}>{p.name}{pf(p)}</td>
                         <td style={{padding:'4px 12px',textAlign:'right'}}>
-                          <input type="number" defaultValue={p.chipCount||''} placeholder="—"
+                          <input key={p.id+':'+(p.chipCount||0)} type="number" defaultValue={p.chipCount||''} placeholder="—"
                             onBlur={e=>onUpdateChipCount(p.id,e.target.value)}
                             onKeyDown={e=>{if(e.key==='Enter'){e.target.blur();}}}
                             style={{width:100,padding:'5px 8px',background:hasCount?'#0d1a0f':'#060e09',border:'1px solid '+(hasCount?'#2a5a32':'#1a2e22'),borderRadius:4,color:hasCount?'#3dba6f':'#b2d4ba',fontSize:14,textAlign:'right',outline:'none',fontWeight:600}}/>
