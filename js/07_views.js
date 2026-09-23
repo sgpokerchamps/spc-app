@@ -1086,7 +1086,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     </div>
   );
 }
-function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onUpdateChipCount,onExportSeating}) {
+function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onRedrawFinal,onUpdateChipCount,onExportSeating}) {
   const [selectedPlayer,setSelectedPlayer] = useState(null);
   const [closeMode,setCloseMode] = useState(null);
   const [breakMode,setBreakMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
@@ -1207,6 +1207,7 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
           )}
           <button className="btn-sec" onClick={onBalance}>Auto-balance</button>
           {isMultiDay&&!closeMode&&<button className="btn-sec" style={{borderColor:'#5a8ac8',color:'#5a8ac8'}} onClick={()=>{if(confirm('Randomly redraw ALL player seats? This cannot be undone.'))onRedraw();}}>⇄ Redraw seats</button>}
+          {!closeMode&&onRedrawFinal&&<button className="btn-sec" style={{borderColor:'#c8973a',color:'#c8973a'}} onClick={onRedrawFinal} title="Consolidate everyone still playing onto a single random-drawn final table.">🏆 Redraw final table</button>}
           {!closeMode&&<button className="btn-sec" style={{borderColor:chipMode?'#3dba6f':'#2a5a32',color:chipMode?'#3dba6f':'#527a5c',background:chipMode?'#0d1a0f':'transparent'}} onClick={()=>setChipMode(!chipMode)}>📊 Chip counts</button>}
           {!closeMode&&<button className="btn-sec" style={{borderColor:'#2a5a32',color:'#527a5c'}} onClick={onExportSeating}>↓ Export seating</button>}
           <div style={{position:'relative',marginLeft:'auto'}}>

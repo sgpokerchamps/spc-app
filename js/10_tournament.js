@@ -249,6 +249,10 @@ function App() {
         if(action.assignments&&action.closingTable){
           closeTableConfirm(action.assignments, action.closingTable);
         }
+      } else if(action.type==='redraw-final-table'){
+        if(action.destTable&&action.assignments){
+          applyFinalTableRedraw(action.destTable, action.assignments);
+        }
       } else if(action.type==='break-table'){
         if(action.tableNum){
           const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const tableNumbers=getTableNumbers(tournament);const result=computeBreakAssignments({closingTable:tNumN,players:active,tableNumbers:tableNumbers,seatsPerTable:spt,seatLocks:lk});if(!result.ok)return;closeTableConfirm(result.assignments,tNumN);
@@ -792,6 +796,31 @@ Starting setup — you can adjust settings before launching.`);
       return{...t,players:[...reassigned,...t.players.filter(p=>!ids.has(p.id))]};
     });
   }
+  // Applies an already-computed final-table redraw (assignments from computeFinalTableRedraw, shared
+  // with the floor UI in 02_utils.js). Never recomputes the draw itself - a second random shuffle
+  // would disagree with whatever was already shown in a preview (desktop's own confirm, or the floor's
+  // preview screen before it dispatched this). Closes every other table down to just the destination.
+  function applyFinalTableRedraw(destTable,assignments){
+    setTournament(t=>{
+      const byId={};assignments.forEach(a=>{byId[a.playerId]={tableNum:a.tableNum,seatNum:a.seatNum};});
+      const players=t.players.map(p=>byId[p.id]?{...p,...byId[p.id]}:p);
+      return{...t,tableNumbers:[destTable],maxTables:1,players,
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'redraw-final',detail:`Final table redrawn - ${assignments.length} players seated at Table ${destTable}`}]};
+    });
+  }
+  // Desktop entry point: compute the draw, confirm with the TD, then apply. Destination table is the
+  // lowest-numbered table that currently has an active player on it (not just the lowest in the
+  // configured 1..15 range, which may include tables closed long ago).
+  function redrawFinalTable(){
+    const active=tournament.players.filter(p=>p.status==='active');
+    if(active.length===0){alert('No active players to redraw.');return;}
+    const occupied=[...new Set(active.map(p=>p.tableNum).filter(Boolean))].sort((a,b)=>a-b);
+    const destTable=occupied.length?occupied[0]:getTableNumbers(tournament)[0];
+    const result=computeFinalTableRedraw({players:active,destTable,seatsPerTable:tournament.seatsPerTable||9,seatLocks:tournament.seatLocks||{}});
+    if(!result.ok){alert(`Cannot redraw — ${result.neededCount} players but only ${result.availableCount} open seats at Table ${destTable}.`);return;}
+    if(!confirm(`Redraw ${result.assignments.length} players onto Table ${destTable} as the final table? Every other table closes. This cannot be undone.`))return;
+    applyFinalTableRedraw(destTable,result.assignments);
+  }
 
   function updatePayoutSettings(updates) {
     setTournament(t => {
@@ -848,7 +877,7 @@ Starting setup — you can adjust settings before launching.`);
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
             {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRemovePhantomBust={removePhantomBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
-            {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
+            {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
             {subview==='payouts'&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}

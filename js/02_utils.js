@@ -159,6 +159,46 @@ function computeBreakAssignments(opts) {
 
   return { ok: true, assignments: assignments, availableCount: avail.length, neededCount: displaced.length };
 }
+
+// Final-table consolidation: every active player, wherever currently seated, is randomly assigned
+// (Fisher-Yates - unbiased, unlike sort(() => Math.random())) to seats 1..N on a single destination
+// table. Unlike computeBreakAssignments above (which slots displaced players into whatever seats are
+// open elsewhere, keeping everyone else put), this is a fresh random draw - standard practice when a
+// field collapses to a redrawn final table. Same marker block, same reasons: plain ES5, read verbatim
+// by server.js into the floor UI's non-Babel <script> tag.
+// opts: { players, destTable, seatsPerTable, seatLocks }
+// players must already be filtered to active players by the caller, across ALL source tables.
+// returns: { ok, assignments, availableCount, neededCount }
+function computeFinalTableRedraw(opts) {
+  var players = opts.players || [];
+  var destTable = opts.destTable;
+  var seatsPerTable = opts.seatsPerTable;
+  var seatLocks = opts.seatLocks || {};
+
+  var seats = [];
+  for (var s = 1; s <= seatsPerTable; s++) {
+    var lockType = seatLocks[destTable + '-' + s] || 'none';
+    if (lockType === 'move' || lockType === 'all') continue;
+    seats.push(s);
+  }
+
+  if (seats.length < players.length) {
+    return { ok: false, assignments: [], availableCount: seats.length, neededCount: players.length };
+  }
+
+  for (var i = seats.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = seats[i]; seats[i] = seats[j]; seats[j] = tmp;
+  }
+
+  var assignments = [];
+  for (var k = 0; k < players.length; k++) {
+    var p = players[k];
+    assignments.push({ playerId: p.id, name: p.name, country: p.country || null, fromTable: p.tableNum, fromSeat: p.seatNum, tableNum: destTable, seatNum: seats[k] });
+  }
+
+  return { ok: true, assignments: assignments, availableCount: seats.length, neededCount: players.length };
+}
 // ---SHARED:computeBreakAssignments:END---
 
 // QR parser — boarding pass string is semicolon-delimited; name is at index 3
