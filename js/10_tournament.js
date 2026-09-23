@@ -175,6 +175,7 @@ function App() {
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
         bustedPositions:getFinishingPositions(tournament.players),
+        bustedCountries:(()=>{const m={};tournament.players.forEach(p=>{if(p.status==='busted'&&p.country)m[p.name]=p.country;});return m;})(),
         chipsInPlay:tournament.chipsInPlay||(cumE*(tournament.stack||0)),
         payoutTable:tournament.payoutTable||[],
         dealMade:tournament.dealMade||false,
