@@ -146,7 +146,7 @@ function App() {
       });
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);
       const _activePlayers=tournament.players.filter(p=>p.status==='active');
-      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null}));
+      const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null,chipCount:p.chipCount||0}));
       const _evCfg=EVENT_CONFIGS[tournament.eventType]||null;
       const _curLevel=cur&&!cur.isBreak?cur.level:null;
       const _reentryUntil=_evCfg?(_evCfg.reentryUntilLevel||0):0;
@@ -158,7 +158,7 @@ function App() {
       // Build table map with full player data per seat
       const _tableMap={};
       getTableNumbers(tournament).forEach(num=>{ _tableMap[num]={num:num,count:0,capacity:tournament.seatsPerTable||9,players:[]}; });
-      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null});}});
+      _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null,chipCount:p.chipCount||0});}});
       window.electronAPI.sendTournamentState({
         active:_activePlayers.length,
         players:tournament.players.length,
@@ -174,6 +174,7 @@ function App() {
         eventName:_evCfg?_evCfg.name:'',
         seatLocks:tournament.seatLocks||{},
         bustedPositions:getFinishingPositions(tournament.players),
+        chipsInPlay:tournament.chipsInPlay||(cumE*(tournament.stack||0)),
         payoutTable:tournament.payoutTable||[],
         dealMade:tournament.dealMade||false,
         regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
@@ -226,6 +227,8 @@ function App() {
         undoBust();
       } else if(action.type==='swap-bust'){
         swapBust(action.wrongId,action.intendedId);
+      } else if(action.type==='update-chip-count'){
+        if(action.playerId!=null) setChipCountFromFloor(action.playerId,action.chipCount);
       } else if(action.type==='clock-toggle'){
         toggleClock();
       } else if(action.type==='clock-action'){
@@ -674,6 +677,24 @@ Starting setup — you can adjust settings before launching.`);
   }
   function updateChipCount(playerId,chipCount){
     setTournament(t=>({...t,players:t.players.map(p=>p.id===playerId?{...p,chipCount:Number(chipCount)||0}:p)}));
+  }
+  // Floor-dispatched chip count ('update-chip-count'). Writes the same p.chipCount field the desktop input
+  // and the inheritance path (04_setup.js -> startTournament) read. Active players only; 0 means "cleared /
+  // not entered" (the floor UI never sends a typed 0, only an explicit Clear). Each call is a discrete
+  // update of ONE player inside a functional setTournament, so two devices entering different players'
+  // stacks at once cannot overwrite each other.
+  function setChipCountFromFloor(playerId,chipCount){
+    const n=Number(chipCount);
+    if(!isFinite(n)||n<0||n>1000000000)return;
+    const val=Math.round(n);
+    setTournament(t=>{
+      const target=t.players.find(p=>p.id===playerId);
+      if(!target||target.status!=='active')return t;
+      const was=target.chipCount||0;
+      if(was===val)return t;
+      return{...t,players:t.players.map(p=>p.id===playerId?{...p,chipCount:val}:p),
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'chips',detail:`${target.name} stack ${val>0?'set to '+val.toLocaleString():'cleared'}${was>0?' (was '+was.toLocaleString()+')':''} (floor)`}]};
+    });
   }
   function exportSeating(){
     const sorted=[...activePlayers].sort((a,b)=>(a.tableNum||0)-(b.tableNum||0)||(a.seatNum||0)-(b.seatNum||0));
