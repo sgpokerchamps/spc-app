@@ -69,7 +69,7 @@ function DisplayPage({id}) {
       )}
       {nxt&&(
         <div className="d-next">
-          Next: <strong>{nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?' · Ante '+fmt.chips(nxt.ante):''} · ${nxt.mins} min`}</strong>
+          Next: <strong>{formatNextEntry(nxt)}</strong>
         </div>
       )}
       <div className="d-stats">
@@ -142,6 +142,7 @@ function App() {
         isBreak:cur&&cur.isBreak,
         level:cur&&cur.level,
         sb:cur&&cur.sb,bb:cur&&cur.bb,ante:cur&&cur.ante,
+        nextText:nxt?formatNextEntry(nxt):'',
         eventName:EVENT_CONFIGS[tournament.eventType]?EVENT_CONFIGS[tournament.eventType].group:'SPC',
       });
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);

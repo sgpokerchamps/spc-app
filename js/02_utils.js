@@ -16,6 +16,11 @@ const fmt = {
   ago(ms) { const m=Math.round((Date.now()-ms)/60000); if(m<2)return'just now'; if(m<60)return`${m}m ago`; const h=Math.round(m/60); return`${h}h ago`; },
   ordinal(n) { const s=['th','st','nd','rd']; const v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); },
 };
+/* Single formatter for a schedule entry (level or break/colour-up). Used by the desktop Next lines and the floor clock broadcast. */
+function formatNextEntry(nxt) {
+  if(!nxt) return '';
+  return nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?' · Ante '+fmt.chips(nxt.ante):''} · ${nxt.mins} min`;
+}
 function getPayouts(entries, prizePool) {
   const keys=Object.keys(PAYOUT_DATA).map(Number).sort((a,b)=>a-b);
   const key=keys.find(k=>k>=entries)||keys[keys.length-1];

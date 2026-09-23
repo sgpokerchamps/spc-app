@@ -526,7 +526,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
       {nxt&&(
         <div className="fs-next">
           <span style={{color:'rgba(255,255,255,0.4)',fontSize:'1.2vw',letterSpacing:'.15em'}}>NEXT &nbsp;</span>
-          <span>{nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?` · Ante ${fmt.chips(nxt.ante)}`:''} · ${nxt.mins} min`}</span>
+          <span>{formatNextEntry(nxt)}</span>
         </div>
       )}
       {/* Stats row */}
@@ -632,7 +632,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
         )}
         {nxt&&(
           <div className="next-bar">
-            Next: <strong>{nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?' · Ante '+fmt.chips(nxt.ante):''} · ${nxt.mins} min`}</strong>
+            Next: <strong>{formatNextEntry(nxt)}</strong>
           </div>
         )}
         {!isComplete&&(
