@@ -159,6 +159,7 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .ptable td{padding:8px 11px;border-bottom:1px solid #0a1412;color:#b2d4ba;vertical-align:middle}
 .ptable tr:hover td{background:#09140b}
 .ptable tr.busted-row td{opacity:.38}
+.ptable tr.busted-row td:last-child{opacity:1}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .badge.active{background:rgba(61,186,111,.12);color:#3dba6f}
 .badge.busted{background:rgba(224,90,90,.12);color:#e05a5a}

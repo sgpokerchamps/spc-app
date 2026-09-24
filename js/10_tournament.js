@@ -674,6 +674,23 @@ Starting setup — you can adjust settings before launching.`);
       return{...t,structure};
     });
   }
+  /* Append-only: adds ONE entry after the last existing one. Only touches t.structure - never currentLevelIdx,
+     timeRemainingSeconds or status - so the running clock cannot move. Refused once the tournament is complete. */
+  function appendStructureEntry(entry){
+    setTournament(t=>{
+      if(!t||!t.structure||t.status==='complete') return t;
+      const e=entry.isBreak
+        ?{isBreak:true,mins:Math.max(1,Number(entry.mins)||10),note:entry.note||''}
+        :{level:t.structure.filter(r=>!r.isBreak).reduce((m,r)=>Math.max(m,r.level||0),0)+1,sb:Number(entry.sb)||0,bb:Number(entry.bb)||0,ante:Number(entry.ante)||0,mins:Math.max(1,Number(entry.mins)||1)};
+      return{...t,structure:[...t.structure,e]};
+    });
+  }
+  const _structLenRef=useRef(null);
+  useEffect(()=>{
+    const len=tournament&&tournament.structure?tournament.structure.length:null;
+    if(_structLenRef.current!==null&&len!==null&&len!==_structLenRef.current) saveT(tournament);
+    _structLenRef.current=len;
+  },[tournament&&tournament.structure&&tournament.structure.length]);
   function setChipsInPlay(val) {
     setTournament(t=>({...t,chipsInPlay:Number(val)||0}));
   }
@@ -902,7 +919,7 @@ Starting setup — you can adjust settings before launching.`);
             {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRemovePhantomBust={removePhantomBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
-            {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay}/>}
+            {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay} onAppend={appendStructureEntry}/>}
             {subview==='payouts'&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
             {subview==='poty'&&<POTYView tournament={tournament}/>}
           </div>

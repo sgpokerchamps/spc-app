@@ -328,8 +328,54 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
     </div>
   );
 }
+/* ==== APPEND LEVEL PANEL (append-only; never touches currentLevelIdx) ==== */
+function AddLevelPanel({structure,disabled,onAppend}) {
+  const levels=structure.filter(r=>!r.isBreak);
+  const last=levels[levels.length-1];
+  const prev=levels[levels.length-2];
+  function suggest(){
+    if(!last) return {sb:'',bb:'',ante:'',mins:'',note:''};
+    const dS=prev?last.sb-prev.sb:0, dB=prev?last.bb-prev.bb:0;
+    const ok=prev&&dS>0&&dB>0;
+    return {sb:String(ok?last.sb+dS:last.sb),bb:String(ok?last.bb+dB:last.bb),ante:String(last.ante||0),mins:String(last.mins),note:''};
+  }
+  const [kind,setKind]=useState('level');
+  const [f,setF]=useState(suggest);
+  useEffect(()=>{setKind('level');setF(suggest());},[structure.length]);
+  const set=(k,v)=>setF(x=>({...x,[k]:v}));
+  function pick(k){
+    setKind(k);
+    if(k==='level') setF(suggest());
+    else setF(x=>({...x,mins:'10',note:k==='colourup'?'Colour Up':''}));
+  }
+  const n=v=>Number(v);
+  const valid=kind==='level'?(n(f.sb)>0&&n(f.bb)>0&&n(f.ante)>=0&&n(f.mins)>0):n(f.mins)>0;
+  function add(){
+    if(!valid||disabled) return;
+    onAppend(kind==='level'?{sb:n(f.sb),bb:n(f.bb),ante:n(f.ante)||0,mins:n(f.mins)}:{isBreak:true,mins:n(f.mins),note:f.note});
+  }
+  const inp={width:84,padding:'4px 6px',background:'#060e09',border:'1px solid #1a2e22',borderRadius:4,color:'#b2d4ba',fontSize:12,outline:'none',textAlign:'right'};
+  const lbl={fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:'#3a5a42',fontWeight:600,marginBottom:3};
+  const kb=(k,t)=><button className="btn-sec" style={{fontSize:12,padding:'4px 10px',...(kind===k?{borderColor:'#3dba6f',color:'#3dba6f'}:{})}} onClick={()=>pick(k)}>{t}</button>;
+  return(
+    <div style={{borderTop:'1px solid #1a2e22',padding:'12px 24px',display:'flex',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
+      <div>
+        <div style={lbl}>Add to end of structure</div>
+        <div style={{display:'flex',gap:6}}>{kb('level','Level')}{kb('break','Break')}{kb('colourup','Colour up')}</div>
+      </div>
+      {kind==='level'&&<>
+        <div><div style={lbl}>SB</div><input style={inp} type="number" value={f.sb} onChange={e=>set('sb',e.target.value)}/></div>
+        <div><div style={lbl}>BB</div><input style={inp} type="number" value={f.bb} onChange={e=>set('bb',e.target.value)}/></div>
+        <div><div style={lbl}>Ante</div><input style={inp} type="number" value={f.ante} onChange={e=>set('ante',e.target.value)}/></div>
+      </>}
+      <div><div style={lbl}>Mins</div><input style={inp} type="number" value={f.mins} onChange={e=>set('mins',e.target.value)}/></div>
+      <button className="btn-primary" disabled={!valid||disabled} style={{opacity:(!valid||disabled)?0.4:1}} onClick={add}>+ Add {kind==='level'?'level':kind==='break'?'break':'colour up'}</button>
+      {disabled&&<span style={{fontSize:11,color:'#527a5c'}}>Tournament complete - cannot add levels</span>}
+    </div>
+  );
+}
 /* ==== BLIND EDIT VIEW ==== */
-function BlindEditView({tournament, onUpdate, onSetChips}) {
+function BlindEditView({tournament, onUpdate, onSetChips, onAppend}) {
   const structure = tournament.structure || [];
   const curIdx = tournament.currentLevelIdx || 0;
 
@@ -417,6 +463,7 @@ function BlindEditView({tournament, onUpdate, onSetChips}) {
           </tbody>
         </table>
       </div>
+      {onAppend&&<AddLevelPanel structure={structure} disabled={tournament.status==='complete'} onAppend={onAppend}/>}
     </div>
   );
 }
@@ -959,8 +1006,8 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
                 <td style={{color:'#527a5c',fontSize:11}}>{p.bustPosition?posLabel(p.bustPosition):p.status==='active'?'—':'1st'}</td>
                 <td style={{display:'flex',gap:6}}>
                   {p.status==='active'&&<button className="btn-danger-sm" onClick={()=>onBust(p.id)}>Bust out</button>}
-                  {p.status==='busted'&&onSwapBust&&<button className="btn-sec" style={{fontSize:11,padding:'4px 8px',borderColor:'#5a8ac8',color:'#5a8ac8'}} onClick={()=>{setSwapIntendedId(null);setSwapSearch('');setModal({type:'swap',wrongId:p.id});}} title="Floor busted the wrong player? Correct it here.">Wrong player?</button>}
-                  {p.status==='busted'&&onRemovePhantomBust&&<button className="btn-sec" style={{fontSize:11,padding:'4px 8px',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={()=>setModal({type:'phantom',id:p.id})} title="No elimination actually happened - this player was never really out. Removes the bust and shifts every finer position to close the gap.">Bust didn't happen</button>}
+                  {p.status==='busted'&&onSwapBust&&<button className="btn-sec" style={{fontSize:12,fontWeight:600,padding:'4px 9px',borderColor:'#5a8ac8',color:'#9dc0f0',background:'rgba(90,138,200,0.14)'}} onClick={()=>{setSwapIntendedId(null);setSwapSearch('');setModal({type:'swap',wrongId:p.id});}} title="Floor busted the wrong player? Correct it here.">Wrong player?</button>}
+                  {p.status==='busted'&&onRemovePhantomBust&&<button className="btn-sec" style={{fontSize:12,fontWeight:600,padding:'4px 9px',borderColor:'#c87a3a',color:'#eaa76c',background:'rgba(200,122,58,0.14)'}} onClick={()=>setModal({type:'phantom',id:p.id})} title="No elimination actually happened - this player was never really out. Removes the bust and shifts every finer position to close the gap.">Bust didn't happen</button>}
                   {onRemove&&<button className="btn-danger-sm" style={{background:'transparent',borderColor:'#3a2020',color:'#8a4040',fontSize:11}} onClick={()=>{if(confirm(`Remove ${p.name} entirely from this tournament?`))onRemove(p.id);}}>Remove</button>}
                 </td>
               </tr>
