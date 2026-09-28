@@ -17,9 +17,9 @@ const fmt = {
   ordinal(n) { const s=['th','st','nd','rd']; const v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); },
 };
 /* Single formatter for a schedule entry (level or break/colour-up). Used by the desktop Next lines and the floor clock broadcast. */
-function formatNextEntry(nxt) {
+function formatNextEntry(nxt, compact) {
   if(!nxt) return '';
-  return nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?' · Ante '+fmt.chips(nxt.ante):''} · ${nxt.mins} min`;
+  return nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?(compact?'/'+fmt.chips(nxt.ante):' · Ante '+fmt.chips(nxt.ante)):''} · ${nxt.mins} min`;
 }
 function getPayouts(entries, prizePool) {
   const keys=Object.keys(PAYOUT_DATA).map(Number).sort((a,b)=>a-b);
