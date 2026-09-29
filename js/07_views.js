@@ -787,6 +787,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
   const [newName,setNewName]=useState('');
   const [bulkText,setBulkText]=useState('');
   const [bulkCount,setBulkCount]=useState('');
+  const [testOpen,setTestOpen]=useState(false);
   const [rangeFrom,setRangeFrom]=useState('');
   const [rangeTo,setRangeTo]=useState('');
   const [bulkBustCount,setBulkBustCount]=useState('');
@@ -938,8 +939,10 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
           <button className="btn-sec" onClick={()=>setModal({type:'bulk'})}>Bulk add</button>
         </div>
       </div>
-      <RegistrationBoard players={tournament.players} onRegister={name=>onAdd(name)}/>
+      <div onClick={()=>setTestOpen(o=>!o)} style={{cursor:'pointer',padding:'8px 24px',fontSize:11,letterSpacing:2,textTransform:'uppercase',color:'#527a5c',borderBottom:'1px solid #0e1a12',userSelect:'none'}}>{testOpen?'▾':'▸'} Testing tools <span style={{letterSpacing:0,textTransform:'none',color:'#3a5a42'}}>(player board, bulk register / range / bulk bust)</span></div>
+      {testOpen&&<RegistrationBoard players={tournament.players} onRegister={name=>onAdd(name)}/>}
       <div className="quick-add">
+      {testOpen&&(<>
         <div style={{display:'flex',alignItems:'center',gap:7}}>
           <input
             className="qa-input"
@@ -984,6 +987,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
             Bulk bust{bulkBustCount&&parseInt(bulkBustCount)>0?` ${parseInt(bulkBustCount)}`:''}
           </button>
         </div>
+      </>)}
         <input className="qa-input" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{marginLeft:'auto',width:180}}/>
       </div>
       <div className="players-wrap">
