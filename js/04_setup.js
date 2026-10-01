@@ -15,6 +15,9 @@ function SetupScreen({eventType,onBack,onStart}) {
   const [guarantee,setGuarantee]=useState(_tpl?_tpl.guarantee:cfg.guarantee??0);
   const [itmPct,setItmPct]=useState(_tpl?_tpl.itmPercent:cfg.itmPercent??15);
   const [bountyAmt,setBountyAmt]=useState(cfg.bountyAmount??0);
+  const isSat=eventType==='satellite';
+  const [seatValue,setSeatValue]=useState(_tpl&&_tpl.seatValue?_tpl.seatValue:(cfg.seatValue??600));
+  const [guaranteedSeats,setGuaranteedSeats]=useState(_tpl&&_tpl.guaranteedSeats?_tpl.guaranteedSeats:(cfg.guaranteedSeats??10));
   const isMB=eventType==='mysteryBounty';
   const _netPerEntry=prizeComp*(1-adminFee/100); // e.g. 508.80
   const _prizePerEntry=_netPerEntry-(isMB?bountyAmt:0);
@@ -46,7 +49,7 @@ function SetupScreen({eventType,onBack,onStart}) {
           onClick={()=>{
             const tpl={_spcExport:'template',_version:1,name,spcSeries,eventType,buyin,prizeComponent:prizeComp,
               adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables,seatsPerTable:seats,
-              structure,bountyAmount:isMB?bountyAmt:0};
+              structure,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})};
             const blob=new Blob([JSON.stringify(tpl,null,2)],{type:'application/json'});
             const url=URL.createObjectURL(blob);
             const a=document.createElement('a');
@@ -93,7 +96,28 @@ function SetupScreen({eventType,onBack,onStart}) {
               <input className="form-input" type="number" value={bountyAmt} onChange={e=>setBountyAmt(+e.target.value)}/>
             </div>
           )}
-          <div className="grid-2">
+          {isSat&&(
+            <>
+              <div style={{fontSize:11,color:'#3a5a42',marginBottom:6}}>Rake-free by default: S$60 per entry goes to the prize pool. Prize component and admin fee stay editable above.</div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Main Event buy-in / seat value (S$)</label>
+                  <input className="form-input" type="number" value={seatValue} onChange={e=>setSeatValue(+e.target.value)}/>
+                  <div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>Value of one seat</div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Guaranteed seats</label>
+                  <input className="form-input" type="number" value={guaranteedSeats} onChange={e=>setGuaranteedSeats(+e.target.value)}/>
+                  <div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>Minimum seats awarded</div>
+                </div>
+              </div>
+              <div style={{background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,padding:'8px 12px',fontSize:11,color:'#3a5a42',marginBottom:10}}>
+                {guaranteedSeats} seats x S${(seatValue||0).toLocaleString()} = <strong style={{color:'#3dba6f'}}>S${((guaranteedSeats||0)*(seatValue||0)).toLocaleString()}</strong> guaranteed
+                {_prizePerEntry>0&&seatValue>0?<> &nbsp;·&nbsp; funded at <strong style={{color:'#c8973a'}}>{Math.ceil((guaranteedSeats||0)*(seatValue||0)/_prizePerEntry)}</strong> entries &nbsp;·&nbsp; 1 extra seat per <strong style={{color:'#c8973a'}}>{Math.ceil(seatValue/_prizePerEntry)}</strong> entries</>:null}
+              </div>
+            </>
+          )}
+          {!isSat&&<div className="grid-2">
             <div className="form-group">
               <label className="form-label">Guarantee (S$)</label>
               <input className="form-input" type="number" value={guarantee} onChange={e=>setGuarantee(+e.target.value)}/>
@@ -104,7 +128,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               <input className="form-input" type="number" value={itmPct} onChange={e=>setItmPct(+e.target.value)}/>
               <div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>% of field paid out</div>
             </div>
-          </div>
+          </div>}
           <div className="form-group"><label className="form-label">Seats / table</label><input className="form-input" type="number" style={{maxWidth:120}} value={seats} onChange={e=>setSeats(+e.target.value)}/></div>
           <div className="form-group">
             <label className="form-label">Tables in play — tap to toggle</label>
@@ -157,7 +181,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               </div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0});}}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>

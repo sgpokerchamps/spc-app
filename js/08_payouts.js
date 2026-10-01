@@ -550,3 +550,95 @@ function BountyPanel({tournament, bountyPool, onUpdate}) {
     </div>
   );
 }
+
+/* ==== SATELLITE PAYOUTS (seats, not cash) ==== */
+function SatellitePayoutsView({tournament, onUpdate, onPublish, onUnpublish}) {
+  const s=getSatelliteSeats(tournament);
+  const activeNames=[...new Set(tournament.players.filter(p=>p.status==='active').map(p=>p.name))];
+  const fp=getFinishingPositions(tournament.players);
+  const bustedSeat=Object.keys(fp).filter(n=>fp[n].position<=s.seats).sort((a,b)=>fp[a].position-fp[b].position);
+  const reached=activeNames.length>0&&activeNames.length<=s.seats;
+  const seatWinners=reached||bustedSeat.length>0?[...activeNames.filter(()=>reached),...bustedSeat]:[];
+  const bubbleName=s.bubblePos?Object.keys(fp).find(n=>fp[n].position===s.bubblePos):null;
+  const numStyle={width:90,padding:'4px 8px',fontSize:15};
+  return(
+    <div className="players-view" style={{display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <div className="view-head">
+        <div className="view-title">Payouts</div>
+        <div className="btn-row">
+          {tournament.payoutsPublished
+            ?<>
+              <div style={{display:'flex',alignItems:'center',gap:6,background:'#0b1f10',border:'1px solid #1a4a22',borderRadius:7,padding:'6px 14px'}}>
+                <span style={{color:'#3dba6f',fontSize:12}}>✓</span>
+                <span style={{color:'#3dba6f',fontSize:12,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,letterSpacing:1}}>Published</span>
+              </div>
+              <button className="btn-sec" style={{color:'#e05a5a',borderColor:'#4a1a1a'}} onClick={onUnpublish}>↩ Undo Publish</button>
+            </>
+            :<button className="btn-primary" style={{padding:'6px 16px',fontSize:12}} onClick={onPublish}>📢 Publish Payouts</button>
+          }
+        </div>
+      </div>
+      <div className="payouts-view">
+        <div className="payout-stats">
+          <div className="pstat">
+            <div className="pstat-lbl">Net prize pool</div>
+            <div className="pstat-val">{fmt.currency(s.pool)}</div>
+          </div>
+          <div className="pstat">
+            <div className="pstat-lbl">Entries</div>
+            <div className="pstat-val" style={{color:'#b2d4ba'}}>{s.entries}</div>
+          </div>
+          <div className="pstat">
+            <div className="pstat-lbl">Seat value</div>
+            <div style={{display:'flex',alignItems:'center',gap:5,marginTop:6}}>
+              <span style={{fontSize:13,color:'#3a5a42'}}>S$</span>
+              <input key={'sv'+s.seatValue} type="number" className="form-input" style={numStyle} defaultValue={s.seatValue}
+                onBlur={e=>{const v=Number(e.target.value);if(v>0)onUpdate({seatValue:v});}} onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}/>
+            </div>
+            <div style={{fontSize:10,color:'#2a4a35',marginTop:3}}>{s.perSeatEntries} entries per seat</div>
+          </div>
+          <div className="pstat">
+            <div className="pstat-lbl">Seats awarded</div>
+            <div className="pstat-val" style={{color:'#b2d4ba'}}>{s.seats}</div>
+            <div style={{fontSize:10,color:'#2a4a35',marginTop:3}}>{s.fromGuarantee?'guarantee':'field'} · guaranteed
+              <input key={'gs'+s.guaranteed} type="number" className="form-input" style={{width:54,marginLeft:6,padding:'2px 6px',fontSize:12}} defaultValue={s.guaranteed}
+                onBlur={e=>{const v=Math.floor(Number(e.target.value));if(v>0)onUpdate({guaranteedSeats:v});}} onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}/>
+            </div>
+          </div>
+        </div>
+        <div style={{background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,padding:'10px 14px',fontSize:13,color:'#b2d4ba',marginBottom:10}}>
+          Pool <strong>{fmt.currency(s.pool)}</strong> · {s.seats} seat{s.seats===1?'':'s'} x {fmt.currency(s.seatValue)} = <strong>{fmt.currency(s.seatsTotal)}</strong>
+          {s.overlay>0&&<> · <strong style={{color:'#e05a5a'}}>Overlay {fmt.currency(s.overlay)} (SPC-funded)</strong></>}
+          {s.leftover>0&&<> · <strong style={{color:'#3dba6f'}}>Leftover {fmt.currency(s.leftover)} to bubble</strong></>}
+        </div>
+        <div style={{fontSize:11,color:'#3a5a42',marginBottom:12}}>Seats are live: 1 extra seat per {s.perSeatEntries} entries, so the count can rise with re-entries.</div>
+        {s.allSeats&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>Entries are not more than the seats on offer - every player wins a seat.</div>}
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+          <thead><tr style={{borderBottom:'1px solid #1a2e22'}}>
+            <th style={{padding:'8px 10px',textAlign:'left',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42'}}>Place</th>
+            <th style={{padding:'8px 10px',textAlign:'left',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42'}}>Player</th>
+            <th style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#3a5a42'}}>Prize</th>
+          </tr></thead>
+          <tbody>
+            <tr style={{borderBottom:'1px solid #0e1a12'}}>
+              <td style={{padding:'10px',color:'#c8973a',fontWeight:700}}>{s.seats} seat winner{s.seats===1?'':'s'}</td>
+              <td style={{padding:'10px',color:'#b2d4ba'}}>
+                {seatWinners.length>0
+                  ?seatWinners.join(', ')
+                  :<span style={{color:'#527a5c'}}>{activeNames.length} players remaining, seats awarded when {s.seats} remain</span>}
+              </td>
+              <td style={{padding:'10px',textAlign:'right',color:'#3dba6f',fontWeight:700}}>Seat</td>
+            </tr>
+            {s.bubblePos&&(
+              <tr style={{borderBottom:'1px solid #0e1a12'}}>
+                <td style={{padding:'10px',color:'#b2d4ba'}}>{s.bubblePos}{(['th','st','nd','rd'][(s.bubblePos%100-20)%10]||['th','st','nd','rd'][s.bubblePos%100]||'th')} (bubble)</td>
+                <td style={{padding:'10px',color:'#b2d4ba'}}>{bubbleName||<span style={{color:'#527a5c'}}>not yet determined</span>}</td>
+                <td style={{padding:'10px',textAlign:'right',color:'#3dba6f',fontWeight:700}}>{fmt.currency(s.leftover)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

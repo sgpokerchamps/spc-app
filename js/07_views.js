@@ -510,6 +510,12 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
   const [_fsPage,_setFsPage]=useState(0);
   const _fsAllPayouts=(()=>{
     if(!tournament) return [];
+    if(isSatellite(tournament)){
+      const _fs=getSatelliteSeats(tournament);
+      const _r=[{label:_fs.seats+' seat'+(_fs.seats===1?'':'s'),seat:true,amount:0,top:-1}];
+      if(_fs.bubblePos)_r.push({label:fmt.ordinal(_fs.bubblePos)+' (bubble)',amount:_fs.leftover,top:-1});
+      return _r;
+    }
     let rows=[];
     if(tournament.payoutTable&&tournament.payoutTable.length) rows=tournament.payoutTable;
     else{
@@ -621,7 +627,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
           {_fsPayouts.map((p,i)=>(
             <div key={i} style={{textAlign:'right',display:'flex',alignItems:'baseline',justifyContent:'flex-end',gap:'0.6vw'}}>
               <span style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase'}}>{p.label}</span>
-              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'3vw':p.top===1?'2.5vw':p.top===2?'2.2vw':'1.9vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{fmt.currency(p.amount)}</span>
+              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'3vw':p.top===1?'2.5vw':p.top===2?'2.2vw':'1.9vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{p.seat?'Seat':fmt.currency(p.amount)}</span>
             </div>
           ))}
         </div>
@@ -869,10 +875,12 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
   const posLabel=pos=>{if(pos===1)return'1st';if(pos===2)return'2nd';if(pos===3)return'3rd';return pos+'th';};
   // Same amount rule as the Payouts tab / commit payload: deal amount over raw when a deal was made.
   function payoutForPosition(pos){
-    const row=(tournament.payoutTable||[]).find(r=>r.position===pos);
+    const row=effectivePayoutTable(tournament).find(r=>r.position===pos);
     if(!row)return 0;
     return(tournament.dealMade&&row.dealAmount!=null)?row.dealAmount:(row.amount||0);
   }
+  const _satInfo=isSatellite(tournament)?getSatelliteSeats(tournament):null;
+  const seatTag=pos=>(_satInfo&&pos!=null&&pos<=_satInfo.seats)?<> · <strong style={{color:'#3dba6f'}}>Seat</strong></>:null;
   const swapWrong=modal&&modal.type==='swap'?tournament.players.find(p=>p.id===modal.wrongId):null;
   const swapCandidates=swapWrong?tournament.players
     .filter(p=>p.id!==swapWrong.id&&(p.status==='active'||p.status==='busted'))
@@ -905,6 +913,19 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     .map(p=>({id:p.id,name:p.name,before:p.bustPosition,after:p.bustPosition+1})):[];
   const phantomMoney=(()=>{
     if(!phantomTarget||!phantomSim)return{rows:[],bubbleOut:[],bubbleIn:[]};
+    if(isSatellite(tournament)){
+      const _ss=getSatelliteSeats(tournament);
+      const _bg=positionNameGroups(tournament.players), _ag=positionNameGroups(phantomSim);
+      const _seatSet=g=>{const o=new Set();for(let k=1;k<=_ss.seats;k++)(g[k]||[]).forEach(n=>o.add(n));return o;};
+      const _actSeat=(pl,o)=>{const a=[...new Set(pl.filter(p=>p.status==='active').map(p=>p.name))];if(a.length>0&&a.length<=_ss.seats)a.forEach(n=>o.add(n));return o;};
+      const _bs=_actSeat(tournament.players,_seatSet(_bg)), _as=_actSeat(phantomSim,_seatSet(_ag));
+      const _rows=[];
+      if(_ss.bubblePos){
+        const _bl=(_bg[_ss.bubblePos]||[]).join(', ')||'Not yet determined', _al=(_ag[_ss.bubblePos]||[]).join(', ')||'Not yet determined';
+        if(_bl!==_al)_rows.push({pos:_ss.bubblePos,amt:_ss.leftover,beforeLabel:_bl,afterLabel:_al,changed:true,bubble:true});
+      }
+      return {rows:_rows,bubbleOut:[..._bs].filter(n=>!_as.has(n)),bubbleIn:[..._as].filter(n=>!_bs.has(n)),satellite:true};
+    }
     const beforeGroups=positionNameGroups(tournament.players);
     const afterGroups=positionNameGroups(phantomSim);
     const beforeWinner=getWinnerName(tournament.players);
@@ -1059,15 +1080,15 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
                   {swapIntended.status==='active'?(
                     <>
                       <strong style={{color:'#e4f0e8'}}>{swapIntended.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapWrong.bustPosition)}</strong>
-                      {payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
+                      {seatTag(swapWrong.bustPosition)}{payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
                       <br/><strong style={{color:'#e4f0e8'}}>{swapWrong.name}</strong> returns to play.
                     </>
                   ):(
                     <>
                       <strong style={{color:'#e4f0e8'}}>{swapIntended.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapWrong.bustPosition)}</strong>
-                      {payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
+                      {seatTag(swapWrong.bustPosition)}{payoutForPosition(swapWrong.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapWrong.bustPosition))}</strong></>}.
                       <br/><strong style={{color:'#e4f0e8'}}>{swapWrong.name}</strong> will be recorded as finishing <strong style={{color:'#e4f0e8'}}>{posLabel(swapIntended.bustPosition)}</strong>
-                      {payoutForPosition(swapIntended.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapIntended.bustPosition))}</strong></>}.
+                      {seatTag(swapIntended.bustPosition)}{payoutForPosition(swapIntended.bustPosition)>0&&<> · <strong style={{color:'#3dba6f'}}>{fmt.currency(payoutForPosition(swapIntended.bustPosition))}</strong></>}.
                       <br/>Both stay busted - only their finishing positions trade.
                     </>
                   )}
@@ -1107,20 +1128,20 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
               </div>
             )}
             <div style={{marginTop:14,fontSize:11,letterSpacing:1,textTransform:'uppercase',color:'#c8973a',fontWeight:600}}>Money movement</div>
-            {phantomMoney.rows.length===0?(
+            {phantomMoney.rows.length===0&&(!phantomMoney.satellite||(phantomMoney.bubbleOut.length===0&&phantomMoney.bubbleIn.length===0))?(
               <div style={{fontSize:12,color:'#3dba6f',marginTop:6}}>No payouts affected.</div>
             ):(
               <>
                 {phantomMoney.bubbleOut.map(name=>(
-                  <div key={'out-'+name} style={{marginTop:6,fontSize:13,color:'#e05a5a',fontWeight:700}}>⚠ {name} moves OUT of the money</div>
+                  <div key={'out-'+name} style={{marginTop:6,fontSize:13,color:'#e05a5a',fontWeight:700}}>⚠ {name} {phantomMoney.satellite?'moves out of a seat':'moves OUT of the money'}</div>
                 ))}
                 {phantomMoney.bubbleIn.map(name=>(
-                  <div key={'in-'+name} style={{marginTop:6,fontSize:13,color:'#3dba6f',fontWeight:700}}>⚠ {name} moves INTO the money</div>
+                  <div key={'in-'+name} style={{marginTop:6,fontSize:13,color:'#3dba6f',fontWeight:700}}>⚠ {name} {phantomMoney.satellite?'moves into a seat':'moves INTO the money'}</div>
                 ))}
                 <div style={{border:'1px solid #2a1c06',borderRadius:6,marginTop:8,background:'#0f0c04'}}>
                   {phantomMoney.rows.map(r=>(
                     <div key={r.pos} style={{padding:'8px 12px',borderBottom:'1px solid #1a1004',fontSize:12,color:'#e8d8a0'}}>
-                      <strong>{posLabel(r.pos)} · {fmt.currency(r.amt)}</strong> — was {r.beforeLabel}, now <strong style={{color:'#c8973a'}}>{r.afterLabel}</strong>
+                      <strong>{posLabel(r.pos)}{r.bubble?' (bubble payout)':''} · {fmt.currency(r.amt)}</strong> — was {r.beforeLabel}, now <strong style={{color:'#c8973a'}}>{r.afterLabel}</strong>
                     </div>
                   ))}
                 </div>

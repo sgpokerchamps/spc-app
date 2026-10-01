@@ -168,7 +168,7 @@ function POTYView({tournament}) {
     </div>
     {isCurrentYear&&activePlayers>0&&<div style={{background:'#2a1c06',border:'1px solid #c8973a',borderRadius:6,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#c8973a'}}>⚠ Tournament has {activePlayers} active players. Commit after event finishes.</div>}
     <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-      {isCurrentYear&&(!isCommitted?<button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>:<span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>)}
+      {isCurrentYear&&!isSatellite(tournament)&&(!isCommitted?<button className="sf-btn" style={{width:'auto',borderColor:'#c8973a',color:'#c8973a'}} onClick={startCommit}>🏆 Commit this event to POTY</button>:<span style={{fontSize:12,color:'#3dba6f',padding:'7px 10px'}}>✓ This event already committed</span>)}
       {isCurrentYear&&hasUndo&&<button className="sf-btn" style={{width:'auto',borderColor:'#c87a3a',color:'#c87a3a'}} onClick={undoLastCommit}>↩ Undo last commit</button>}
       <button className="sf-btn" style={{width:'auto'}} onClick={exportCSV}>↓ Export CSV</button>
     </div>

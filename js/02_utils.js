@@ -21,6 +21,36 @@ function formatNextEntry(nxt, compact) {
   if(!nxt) return '';
   return nxt.isBreak?`Break${nxt.note?' — '+nxt.note:''} (${nxt.mins} min)`:`Level ${nxt.level} — ${fmt.chips(nxt.sb)}/${fmt.chips(nxt.bb)}${nxt.ante?(compact?'/'+fmt.chips(nxt.ante):' · Ante '+fmt.chips(nxt.ante)):''} · ${nxt.mins} min`;
 }
+/* ==== SATELLITE (seat guarantee + seat-based payouts) ====
+   Satellite only. Everything is DERIVED from the live entry count on every call - nothing here is stored, so
+   re-entries can never leave a stale seat count. Seats are NEVER money: they are not ladder rows and never reach
+   payout_amount / payout_amount_deal / total_prize or POTY. The only S$ figure is the bubble leftover. */
+function isSatellite(t) { return !!t&&t.eventType==='satellite'; }
+function getSatelliteSeats(t) {
+  const entries=(t.players||[]).length+(t.inheritedEntries||0);
+  const ppe=(t.prizePerEntry>0)?t.prizePerEntry:(t.prizeComponent||0)*(1-(t.adminFeePercent||0)/100);
+  const pool=Math.round(entries*ppe*100)/100;
+  const seatValue=t.seatValue>0?t.seatValue:600;
+  const guaranteed=t.guaranteedSeats>0?Math.floor(t.guaranteedSeats):10;
+  const fromPool=Math.floor(pool/seatValue);
+  const wanted=Math.max(guaranteed,fromPool);
+  const seats=entries>0?Math.min(wanted,entries):wanted;
+  const seatsTotal=seats*seatValue;
+  const overlay=seatsTotal>pool?Math.round((seatsTotal-pool)*100)/100:0;
+  const leftover=(entries>seats&&!overlay)?Math.round((pool-seatsTotal)*100)/100:0;
+  return {entries,pool,seatValue,guaranteed,seats,seatsTotal,fromGuarantee:guaranteed>=fromPool,overlay,leftover,
+    bubblePos:leftover>0?seats+1:null,allSeats:entries>0&&entries<=wanted,perSeatEntries:Math.max(1,Math.ceil(seatValue/(ppe||1)))};
+}
+function getSatelliteLadder(t) {
+  const s=getSatelliteSeats(t);
+  return s.bubblePos?[{position:s.bubblePos,pct:0,amount:s.leftover,bubble:true}]:[];
+}
+function effectivePayoutTable(t) { return isSatellite(t)?getSatelliteLadder(t):(t.payoutTable||[]); }
+function satelliteBroadcast(t) {
+  if(!isSatellite(t)) return null;
+  const s=getSatelliteSeats(t);
+  return {seats:s.seats,seatValue:s.seatValue,leftover:s.leftover,overlay:s.overlay,bubblePos:s.bubblePos,allSeats:s.allSeats,pool:s.pool,entries:s.entries,fromGuarantee:s.fromGuarantee};
+}
 function getPayouts(entries, prizePool) {
   const keys=Object.keys(PAYOUT_DATA).map(Number).sort((a,b)=>a-b);
   const key=keys.find(k=>k>=entries)||keys[keys.length-1];
@@ -330,13 +360,14 @@ function generateTournamentReportHTML(t) {
     const busted=t.players.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
     const active=t.players.filter(p=>p.status==='active').length;
     const standings=t.players.filter(p=>p.status==='busted').sort((a,b)=>(a.bustPosition||9999)-(b.bustPosition||9999));
-    let payouts=t.payoutTable||[];
+    const _sat=isSatellite(t)?getSatelliteSeats(t):null;
+    let payouts=isSatellite(t)?getSatelliteLadder(t):(t.payoutTable||[]);
     const pp=commitPrizePool(t.prizePool);
     const extraBags=t.extraBagCount||0;
     const extraDed=extraBags*1500;
     const payoutPool=pp-extraDed;
     // If no saved payout table, generate one
-    if(payouts.length===0&&entries>0&&payoutPool>0){
+    if(!_sat&&payouts.length===0&&entries>0&&payoutPool>0){
       payouts=generatePayoutRows(entries,payoutPool,t.eventType==='mysteryBounty');
     }
     // Use the amounts actually paid - the same values buildTournamentCommitPayload sends (deal amount when a deal was made,
@@ -362,11 +393,11 @@ td{padding:6px 10px;border-bottom:1px solid #eee}.r{text-align:right}
 <div class="stat"><div class="stat-label">Prize pool</div><div class="stat-val">S$${pp.toLocaleString()}</div></div>
 <div class="stat"><div class="stat-label">Extra bags</div><div class="stat-val">${extraBags} (−S$${extraDed.toLocaleString()})</div></div>
 <div class="stat"><div class="stat-label">Payout pool</div><div class="stat-val">S$${payoutPool.toLocaleString()}</div></div>
-</div>
+</div>${_sat?`<div class="sub">${_sat.seats} seat${_sat.seats===1?'':'s'} awarded (S$${_sat.seatValue.toLocaleString()} each)${_sat.leftover>0?' · Bubble (position '+_sat.bubblePos+') S$'+_sat.leftover.toLocaleString():''}${_sat.overlay>0?' · Overlay S$'+_sat.overlay.toLocaleString()+' (SPC-funded)':''}</div>`:''}
 ${t.extraBagWinners&&t.extraBagWinners.length>0?`<h2>Extra Bag Winners</h2><table><tr><th>Player</th><th>Country</th><th>Bags</th><th class="r">Amount</th></tr>${t.extraBagWinners.map(w=>`<tr><td>${w.name}</td><td>${w.country||'—'}</td><td>×${w.bags} (${w.totalQualifications} flights)</td><td class="r amt">S$${(w.bags*1500).toLocaleString()}</td></tr>`).join('')}</table>`:''}
 <h2>Final Standings</h2><table><tr><th>#</th><th>Player</th><th>Country</th><th>Status</th><th class="r">Payout (S$)</th></tr>
-${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Active</td><td class="r"></td></tr>`;}).join(''):''}
-${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Eliminated</td><td class="r${po?' amt':''}">${po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
+${active>0?t.players.filter(p=>p.status==='active').map(p=>{const po=payouts.find(x=>(x.position||0)===1);return`<tr><td>—</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Active</td><td class="r">${_sat&&active<=_sat.seats?'Seat':''}</td></tr>`;}).join(''):''}
+${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;return`<tr><td>${p.bustPosition||'—'}</td><td>${p.name}</td><td>${p.country||'—'}</td><td>Eliminated</td><td class="r${po?' amt':''}">${_sat&&p.bustPosition&&p.bustPosition<=_sat.seats?'Seat':po?'S$'+amt.toLocaleString():''}</td></tr>`;}).join('')}
 </table></body></html>`;
     return html;
 }
@@ -536,7 +567,7 @@ function buildTournamentCommitPayload(t) {
   // Day 2 only sees survivors; the TD enters flight-aggregated unique/re-entry counts on the Payouts tab.
   const useFlightAgg=t.eventType==='me_d2'&&t.flightUniqueEntries!=null&&t.flightReentries!=null;
 
-  let payouts=t.payoutTable||[];
+  let payouts=isSatellite(t)?[]:(t.payoutTable||[]);
   const payoutMap={};
   payouts.forEach((p,i)=>{payoutMap[p.position||i+1]=p;});
 
@@ -674,6 +705,7 @@ function markTournamentUncommitted(id) {
 function writeLive(t, cur, nxt, active, tables) {
   try {
     const _payouts=(()=>{
+      if(isSatellite(t)) return getSatelliteLadder(t);
       if(t.payoutTable&&t.payoutTable.length) return t.payoutTable.slice(0,10);
       const _e=t.players.length+(t.inheritedEntries||0);
       const _pp=t.prizePool||0;
@@ -688,7 +720,7 @@ function writeLive(t, cur, nxt, active, tables) {
       activePlayers:active.length, tablesInUse:tables, prizePool:t.prizePool, bountyPool:t.bountyPool||0,
       totalEntries:_cumEntries, totalBusted:_cumBusted,
       avgStack:active.length>0?Math.round(((t.chipsInPlay||_cumEntries*t.stack))/active.length):0,
-      payouts:_payouts, payoutsPublished:t.payoutsPublished||false, ts:Date.now()
+      payouts:_payouts, satellite:satelliteBroadcast(t), payoutsPublished:t.payoutsPublished||false, ts:Date.now()
     }));
   } catch(e){}
 }

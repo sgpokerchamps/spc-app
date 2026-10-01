@@ -22,7 +22,7 @@ const EVENT_CONFIGS = {
   me_d2: { name:'Main Event — Day 2',     short:'ME D2', group:'Main Event', subtitle:'Day 2',     isMainEvent:true,  bgDeep:'#4a2c08', buyin:600, prizeComponent:530,   adminFeePercent:4, itmPercent:13, guarantee:100000, stack:0,     color:'#c8973a', suit:'♠', levelMins:30, reentryUntilLevel:0, maxReentries:0 },
   miniRoller:    { name:'Mini Roller',    short:'Mini Roller',    group:'Mini Roller',    subtitle:'',         isMainEvent:false, bgDeep:'#0a3018', buyin:1000, prizeComponent:883, adminFeePercent:4, itmPercent:15, guarantee:30000,  stack:30000, color:'#3dba6f', suit:'♥', levelMins:40 },
   mysteryBounty: { name:'Mystery Bounty', short:'Mystery Bounty', group:'Mystery Bounty', subtitle:'',         isMainEvent:false, bgDeep:'#2a1c4a', buyin:400,  prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0,      stack:15000, color:'#9b7bce', suit:'◆', levelMins:20, bountyAmount:90 },
-  satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#0a2240', buyin:60,   prizeComponent:52,  adminFeePercent:0, itmPercent:0,  guarantee:0,      stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10 },
+  satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#0a2240', buyin:60,   prizeComponent:60,  adminFeePercent:0, itmPercent:0,  guarantee:0,      seatValue:600, guaranteedSeats:10, stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10 },
 };
 
 const EVENT_THEMES = {
@@ -46,7 +46,7 @@ const EVENT_TYPE_LABELS = {
   satellite: 'Satellite',
 };
 function getEventType(eventKey){ return EVENT_TYPE_LABELS[eventKey] || (EVENT_CONFIGS[eventKey]||{}).name || eventKey; }
-function canCommitTournament(eventKey){ return !['me_1a','me_1b','me_1c','me_1d'].includes(eventKey); }
+function canCommitTournament(eventKey){ return !['me_1a','me_1b','me_1c','me_1d','satellite'].includes(eventKey); }
 
 /* ==== BLIND STRUCTURES ==== */
 function makeMED1(mins) {

@@ -38,7 +38,7 @@ function DisplayPage({id}) {
     </div>
   );
 
-  const {name, cur, nxt, secs, status, activePlayers, tablesInUse, prizePool, bountyPool, avgStack, eventType, totalEntries, payouts, payoutsPublished} = d;
+  const {name, cur, nxt, secs, status, activePlayers, tablesInUse, prizePool, bountyPool, avgStack, eventType, totalEntries, payouts, payoutsPublished, satellite} = d;
   const _dCfg = EVENT_CONFIGS[eventType]||null;
   const _dAccent = _dCfg ? _dCfg.color : '#3dba6f';
   const _dIsMe = _dCfg && _dCfg.isMainEvent;
@@ -80,7 +80,21 @@ function DisplayPage({id}) {
         <div className="d-stat"><div className="d-stat-lbl">Prize pool</div><div className="d-stat-val" style={{color:bountyPool>0?'#9b7bce':_dAccent}}>{fmt.currency(prizePool)}</div></div>
         {(tournament.chipsInPlay>0||(totalEntries>0&&tournament.stack>0))&&<div className="d-stat"><div className="d-stat-lbl">Total chips</div><div className="d-stat-val" style={{color:'#3a5a42'}}>{fmt.chips(tournament.chipsInPlay||(totalEntries*tournament.stack))}</div></div>}
       </div>
-      {payoutsPublished&&payouts&&payouts.length>0&&(
+      {payoutsPublished&&satellite&&(
+        <div style={{display:'flex',gap:28,marginTop:14,flexWrap:'wrap',justifyContent:'center',maxWidth:'80vw'}}>
+          <div style={{textAlign:'center',minWidth:70}}>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>Seats awarded</div>
+            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:'#f0c040'}}>{satellite.seats}</div>
+          </div>
+          {satellite.bubblePos&&(
+            <div style={{textAlign:'center',minWidth:70}}>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{fmt.ordinal(satellite.bubblePos)} (bubble)</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:'#b2d4ba'}}>{fmt.currency(satellite.leftover)}</div>
+            </div>
+          )}
+        </div>
+      )}
+      {payoutsPublished&&!satellite&&payouts&&payouts.length>0&&(
         <div style={{display:'flex',gap:20,marginTop:14,flexWrap:'wrap',justifyContent:'center',maxWidth:'80vw'}}>
           {payouts.map((p,i)=>{
             const posColors=['#f0c040','#c8d0d8','#c87a3a'];
@@ -179,7 +193,8 @@ function App() {
         structureRows:(tournament.structure||[]).map(e=>({text:formatNextEntry(e,true),isBreak:!!e.isBreak})),
         bustedCountries:(()=>{const m={};tournament.players.forEach(p=>{if(p.status==='busted'&&p.country)m[p.name]=p.country;});return m;})(),
         chipsInPlay:tournament.chipsInPlay||(cumE*(tournament.stack||0)),
-        payoutTable:tournament.payoutTable||[],
+        payoutTable:effectivePayoutTable(tournament),
+        satellite:satelliteBroadcast(tournament),
         dealMade:tournament.dealMade||false,
         regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
         members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
@@ -383,6 +398,7 @@ function App() {
     const t={id:uid(),name:config.name,spcSeries:config.spcSeries||null,eventType:config.eventType,buyin:config.buyin,
       prizeComponent:config.prizeComponent,adminFeePercent:config.adminFeePercent,
       itmPercent:config.itmPercent||15,guarantee,
+      ...(config.eventType==='satellite'?{seatValue:config.seatValue>0?config.seatValue:600,guaranteedSeats:config.guaranteedSeats>0?config.guaranteedSeats:10}:{}),
       inheritedEntries:adjustedInheritedEntries,inheritedBusted:adjustedInheritedBusted,inheritedPrizePool,
       bountyAmount,prizePerEntry,bountyPool:Math.max(Math.round(inheritedEntries*bountyAmount),0),
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
@@ -922,7 +938,8 @@ Starting setup — you can adjust settings before launching.`);
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay} onAppend={appendStructureEntry}/>}
-            {subview==='payouts'&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
+            {subview==='payouts'&&isSatellite(tournament)&&<SatellitePayoutsView tournament={tournament} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
+            {subview==='payouts'&&!isSatellite(tournament)&&<PayoutsView tournament={tournament} activePlayers={activePlayers} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}
             {subview==='poty'&&<POTYView tournament={tournament}/>}
           </div>
         </div>);
