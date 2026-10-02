@@ -604,6 +604,7 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
             <div className="fs-stat"><div className="fs-stat-lbl">Players</div><div className="fs-stat-val" style={{color:_fsAccent}}>{activePlayers.length}{_cumE>0?`/${_cumE}`:''}</div></div>
             <div className="fs-stat"><div className="fs-stat-lbl">Tables</div><div className="fs-stat-val">{tablesInUse||'—'}</div></div>
             {avgStack>0&&<div className="fs-stat"><div className="fs-stat-lbl">Avg stack</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
+            {isSatellite(tournament)&&(()=>{const _sx=getSatelliteSeats(tournament);return <div className="fs-stat"><div className="fs-stat-lbl">Seats</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{_sx.seats}</div><div style={{fontSize:'0.9vw',color:'rgba(255,255,255,0.4)',marginTop:'0.3vh'}}>{fmt.currency(_sx.seatValue)} each</div></div>;})()}
             {tournament.bountyPool>0&&<div className="fs-stat"><div className="fs-stat-lbl">Bounty pool</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{fmt.currency(tournament.bountyPool)}</div></div>}
             {(()=>{
               const _extraTotal=(tournament.extraBagCount||0)*1500;
