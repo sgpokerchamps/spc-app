@@ -698,7 +698,8 @@ function saveT(t) {
     const entry={id:t.id,name:t.name,eventType:t.eventType,status:t.status,modified:Date.now()};
     if(i>=0)idx[i]=entry; else idx.unshift(entry);
     localStorage.setItem('spc_index',JSON.stringify(idx));
-  } catch(e){}
+    return true;
+  } catch(e){ console.error('saveT failed for',t&&t.id,e&&e.message); return false; }
 }
 function loadT(id) { try{return JSON.parse(localStorage.getItem(`spc_t_${id}`)||'null');}catch(e){return null;} }
 function deleteT(id) {

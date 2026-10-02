@@ -5,7 +5,7 @@
    ============================================================ */
 
 /* ==== HOME ==== */
-function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport}) {
+function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport,liveRows,onFocusLive}) {
   const others=[
     {key:'miniRoller',    suit:'♥',color:'#3dba6f',sub:'40-min levels · 27 levels'},
     {key:'mysteryBounty', suit:'◆',color:'#9b7bce',sub:'20-min levels · 18 levels'},
@@ -28,6 +28,20 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
           </div>
           <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
         </div>
+        {liveRows&&liveRows.length>0&&(
+          <div className="lv-strip">
+            <div className="home-section">Running now</div>
+            <div className="lv-strip-row">
+              {liveRows.map(r=>(
+                <button key={r.id} className="lv-strip-btn" style={{'--ac':r.color}} onClick={()=>onFocusLive(r.id)}>
+                  <span className="lv-short" style={{color:r.color}}>{r.short}</span>
+                  <span className="lv-clock">{fmt.time(r.secs)}</span>
+                  <span className={'lv-status '+r.status}>{r.status.toUpperCase()}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* ME */}
         <div className="home-section">Main Event</div>
         <div className="event-grid" style={{marginBottom:12}}>

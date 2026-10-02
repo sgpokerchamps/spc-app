@@ -111,63 +111,24 @@ function DisplayPage({id}) {
   );
 }
 
-/* ==== APP ==== */
-function App() {
-  if(DISPLAY_ID) return <DisplayPage id={DISPLAY_ID}/>;
-
-  const [view,setView] = useState('home');
-  const [selEvent,setSelEvent] = useState(null);
-  const [tournament,setTournament] = useState(null);
-  const [subview,setSubview] = useState('clock');
-  // Global callback for RegisterView to persist regLog
-  window._spcUpdateRegLog = function(log){ setTournament(t=>({...t,regLog:log})); };
-  const [modal,setModal] = useState(null);
-  const [savedIndex,setSavedIndex] = useState(getIndex);
-  const tournamentRef = useRef(null);
-  tournamentRef.current = tournament;
-  const [clockSecs,setClockSecs] = useState(0);
-  const secs = clockRemainingSecs(tournament, Date.now());
-
-  /* Clock tick: one interval for the life of App. Level changes come from levelEndsAt; re-render only when the displayed second changes. */
-  useEffect(()=>{
-    const iv=setInterval(()=>{
-      const t=tournamentRef.current;
-      if(!t) return;
-      const now=Date.now();
-      if(t.status==='running'&&typeof t.levelEndsAt==='number'&&t.levelEndsAt<=now) setTournament(prev=>catchUpClock(prev,Date.now()));
-      setClockSecs(clockRemainingSecs(catchUpClock(t,now),now));
-    },250);
-    return()=>clearInterval(iv);
-  },[]);
-
-  /* Live display + floor clock sync */
-  useEffect(()=>{
-    if(!tournament) return;
-    const cur=tournament.structure[tournament.currentLevelIdx];
-    const nxt=tournament.structure[tournament.currentLevelIdx+1];
-    const active=tournament.players.filter(p=>p.status==='active');
-    const tables=[...new Set(active.map(p=>p.tableNum).filter(Boolean))].length;
-    writeLive(tournament,cur,nxt,active.length,tables);
-    // Sync to floor UI via Electron
-    if(typeof window.electronAPI!=='undefined'&&tournament){
-      window.electronAPI.sendClockState({
-        eventId:tournament.id,
-        secs:secs,
-        running:tournament.status==='running',
-        isBreak:cur&&cur.isBreak,
-        level:cur&&cur.level,
-        sb:cur&&cur.sb,bb:cur&&cur.bb,ante:cur&&cur.ante,
-        nextText:nxt?formatNextEntry(nxt):'',
-        eventName:EVENT_CONFIGS[tournament.eventType]?EVENT_CONFIGS[tournament.eventType].group:'SPC',
-      });
-    }
-  },[tournament,secs]);
-
-  /* Tournament state sync - heavy payload, only when the tournament itself changes */
-  useEffect(()=>{
-    if(!tournament) return;
-    const cur=tournament.structure[tournament.currentLevelIdx];
-    if(typeof window.electronAPI!=='undefined'){
+/* ==== BROADCAST PAYLOADS (one per live event) ==== */
+function buildClockPayload(t, now) {
+  const cur=t.structure[t.currentLevelIdx];
+  const nxt=t.structure[t.currentLevelIdx+1];
+  return {
+    eventId:t.id,
+    secs:clockRemainingSecs(t,now),
+    running:t.status==='running',
+    status:t.status,
+    isBreak:cur&&cur.isBreak,
+    level:cur&&cur.level,
+    sb:cur&&cur.sb,bb:cur&&cur.bb,ante:cur&&cur.ante,
+    nextText:nxt?formatNextEntry(nxt):'',
+    eventName:EVENT_CONFIGS[t.eventType]?EVENT_CONFIGS[t.eventType].group:'SPC',
+  };
+}
+function buildTournamentPayload(tournament) {
+  const cur=tournament.structure[tournament.currentLevelIdx];
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);
       const _activePlayers=tournament.players.filter(p=>p.status==='active');
       const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null,chipCount:p.chipCount||0}));
@@ -183,9 +144,12 @@ function App() {
       const _tableMap={};
       getTableNumbers(tournament).forEach(num=>{ _tableMap[num]={num:num,count:0,capacity:tournament.seatsPerTable||9,players:[]}; });
       _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null,chipCount:p.chipCount||0});}});
-      window.electronAPI.sendTournamentState({
+  return({
         eventId:tournament.id,
         eventType:tournament.eventType,
+        eventShort:_evCfg?_evCfg.short:(tournament.name||''),
+        eventColor:_evCfg?_evCfg.color:'#c8973a',
+        buyin:tournament.buyin||0,
         active:_activePlayers.length,
         players:tournament.players.length,
         inheritedEntries:tournament.inheritedEntries||0,
@@ -209,95 +173,241 @@ function App() {
         dealMade:tournament.dealMade||false,
         regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
         members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
-      });
-    }
-  },[tournament]);
+  });
+}
 
-  /* Floor action handler (from phones via Electron) */
-  useEffect(()=>{
-    function handleFloorAction(e){
-      const action=e.detail;
-      if(!action||!tournament)return;
-      if(action.event!==tournament.id){console.warn('floor action ignored: event mismatch',action.type,action.event,tournament.id);return;}
-      if(action.type==='register'||action.type==='register-next'){
-        // register by name if given, otherwise register next available number
-        if(action.name){
-          const existing=tournament.players.find(p=>p.name===action.name&&p.status==='active');
-          const isDup=!!existing;
-          if(!existing){addPlayer(action.name, false, action.country||null);SoundEngine.register();}
-          // Add to regLog so counter sees it
-          setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)};});
-        } else {
-          // find next unused number
-          const used=new Set(tournament.players.map(p=>p.name));
-          let next=1;
-          while(used.has(String(next).padStart(3,'0')))next++;
-          addPlayer(String(next).padStart(3,'0'));SoundEngine.register();
-        }
-      } else if(action.type==='undo-register'){
-        // remove the most recently registered active player
-        setTournament(t=>{
-          const active=[...t.players].filter(p=>p.status==='active').sort((a,b)=>b.registeredAt-a.registeredAt);
-          if(active.length===0)return t;
-          const remove=active[0].id;
-          return {...t, players:t.players.filter(p=>p.id!==remove)};
-        });
-      } else if(action.type==='bust'||action.type==='bust-random'){
-        if(action.name){
-          const p=tournament.players.find(pl=>pl.name===action.name&&pl.status==='active');
-          if(p){bustPlayer(p.id);SoundEngine.bust();}
-        } else {
-          // bust a random active player
-          const active=tournament.players.filter(p=>p.status==='active');
-          if(active.length>0){
-            const p=active[Math.floor(Math.random()*active.length)];
-            bustPlayer(p.id);SoundEngine.bust();
-          }
-        }
-      } else if(action.type==='undo-bust'){
-        undoBust();
-      } else if(action.type==='swap-bust'){
-        swapBust(action.wrongId,action.intendedId);
-      } else if(action.type==='update-chip-count'){
-        if(action.playerId!=null) setChipCountFromFloor(action.playerId,action.chipCount);
-      } else if(action.type==='clock-toggle'){
-        toggleClock();
-      } else if(action.type==='clock-action'){
-        if(action.action==='prev')prevLevel();
-        else if(action.action==='next')nextLevel();
-        else if(action.action==='minus1')adjustTime(-60);
-        else if(action.action==='plus1')adjustTime(60);
-      } else if(action.type==='assign-seat'){
-        if(action.playerId) assignSeat(action.playerId, action.tableNum, action.seatNum);
-      } else if(action.type==='bust-player'){
-        if(action.playerId){ bustPlayer(action.playerId); SoundEngine.bust(); }
-      } else if(action.type==='move-player'){
-        if(action.playerId&&action.tableNum&&action.seatNum){
-          movePlayerSeat(action.playerId, action.tableNum, action.seatNum);
-        }
-      } else if(action.type==='open-table'){
-        openTable(action.tableNum);
-      } else if(action.type==='set-seating-mode'){
-        if(action.mode) setSeatingMode(action.mode);
-      } else if(action.type==='close-table-confirm'){
-        if(action.assignments&&action.closingTable){
-          closeTableConfirm(action.assignments, action.closingTable);
-        }
-      } else if(action.type==='redraw-final-table'){
-        if(action.destTable&&action.assignments){
-          applyFinalTableRedraw(action.destTable, action.assignments);
-        }
-      } else if(action.type==='break-table'){
-        if(action.tableNum){
-          const tNumN=Number(action.tableNum);const spt=tournament.seatsPerTable||9;const active=tournament.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=tournament.seatLocks||{};const tableNumbers=getTableNumbers(tournament);const result=computeBreakAssignments({closingTable:tNumN,players:active,tableNumbers:tableNumbers,seatsPerTable:spt,seatLocks:lk});if(!result.ok)return;closeTableConfirm(result.assignments,tNumN);
-        }
-      } else if(action.type==='set-seat-lock'){
-        if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
-      }
+/* Shared by Resume and by auto-resume on relaunch: legacy migration, then catch the clock up to the wall clock.
+   Over 10 minutes since the level should have ended: ask, naming the event. */
+function prepareResumed(t, now) {
+  if(t.status!=='running') return t;
+  if(typeof t.levelEndsAt!=='number') t={...t,levelEndsAt:now+(t.timeRemainingSeconds||0)*1000};
+  if(now-t.levelEndsAt>600000){
+    const hm=ms=>new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+    const savedAt=typeof t.savedAt==='number'?t.savedAt:null;
+    const cfg=EVENT_CONFIGS[t.eventType]||null;
+    const nm=cfg?cfg.short:(t.name||'This event');
+    if(confirm(nm+"'s clock was running when it was last saved at "+hm(savedAt||t.levelEndsAt)+". It is now "+hm(now)+". OK = catch up to where the clock would be now. Cancel = open it paused at the time shown when it was saved.")) return catchUpClock(t,now);
+    return {...t,status:'paused',timeRemainingSeconds:savedAt?Math.max(0,Math.ceil((t.levelEndsAt-savedAt)/1000)):Math.max(0,t.timeRemainingSeconds||0),levelEndsAt:null};
+  }
+  return catchUpClock(t,now);
+}
+
+/* ==== APP ==== */
+function App() {
+  if(DISPLAY_ID) return <DisplayPage id={DISPLAY_ID}/>;
+
+  const [view,setView] = useState('home');
+  const [selEvent,setSelEvent] = useState(null);
+  /* Live event registry. live = every event loaded in memory (keyed by id); focusedId = the event the desk is showing.
+     tournament (below) is the focused event, derived. setTournament(u) keeps the old call-site shape but now targets
+     scopeRef (floor actions, via withEvent) or else the focused event (desk clicks). It NEVER falls back to focus when a
+     scope is set, and updateEvent never targets an event that is not live. Action functions called through withEvent must
+     call setTournament synchronously (no timers, promises or awaits before it). */
+  const [live,setLive] = useState({});
+  const [focusedId,setFocusedId] = useState(null);
+  const tournament = focusedId ? (live[focusedId]||null) : null;
+  const liveRef = useRef({});
+  liveRef.current = live;
+  const focusedIdRef = useRef(null);
+  focusedIdRef.current = focusedId;
+  const scopeRef = useRef(null);
+  const updateEvent = useCallback((id,updater)=>{
+    setLive(prev=>{
+      const cur=prev[id];
+      if(!cur){console.warn('updateEvent: event not live, update dropped',id);return prev;}
+      const next=typeof updater==='function'?updater(cur):updater;
+      if(!next||next===cur) return prev;
+      return {...prev,[id]:next};
+    });
+  },[]);
+  const setTournament = useCallback(u=>{
+    const id=scopeRef.current||focusedIdRef.current;
+    if(!id){console.warn('setTournament: no target event');return;}
+    updateEvent(id,u);
+  },[updateEvent]);
+  function withEvent(id,fn){
+    const prev=scopeRef.current;
+    scopeRef.current=id;
+    try{ return fn(); } finally { scopeRef.current=prev; }
+  }
+  function addLiveEvent(t){
+    if(Object.keys(liveRef.current).length>=3&&!confirm('3 events are already running. The design limit is 3. Add another anyway?')) return false;
+    liveRef.current={...liveRef.current,[t.id]:t};
+    setLive(prev=>({...prev,[t.id]:t}));
+    focusedIdRef.current=t.id;
+    setFocusedId(t.id);
+    return true;
+  }
+  function focusEvent(id){
+    if(!liveRef.current[id]) return;
+    focusedIdRef.current=id;
+    setFocusedId(id);
+    setModal(null);
+  }
+  function removeLiveEvent(id){
+    const rest={...liveRef.current}; delete rest[id];
+    liveRef.current=rest;
+    setLive(prev=>{const n={...prev}; delete n[id]; return n;});
+    if(focusedIdRef.current===id){
+      const nextId=Object.keys(rest)[0]||null;
+      focusedIdRef.current=nextId;
+      setFocusedId(nextId);
     }
-    window.addEventListener('spc-floor-action',handleFloorAction);
-    return()=>window.removeEventListener('spc-floor-action',handleFloorAction);
-  },[tournament,addPlayer,bustPlayer,toggleClock,prevLevel,nextLevel,adjustTime,assignSeat,movePlayerSeat,openTable,setSeatLock]);
+    return Object.keys(rest).length;
+  }
+  const [subview,setSubview] = useState('clock');
+  // Global callback for RegisterView to persist regLog
+  window._spcUpdateRegLog = function(log){ setTournament(t=>({...t,regLog:log})); };
+  const [modal,setModal] = useState(null);
+  const [savedIndex,setSavedIndex] = useState(getIndex);
+  const [tickSecond,setTickSecond] = useState(0);
+  const lastSecsRef = useRef({});
+  const lastSentRef = useRef({});
+  const lastClockRef = useRef({});
+  const lastLiveWriteRef = useRef({});
+  const secs = clockRemainingSecs(tournament, Date.now());
+
+  /* Clock tick: one interval for the life of App, covering EVERY live event. Level changes come from levelEndsAt.
+     Re-render only when some event's displayed second changed (tickSecond is just the re-render trigger). */
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      const now=Date.now();
+      const cur=liveRef.current;
+      const ids=Object.keys(cur);
+      const due=ids.filter(id=>{const t=cur[id];return t.status==='running'&&typeof t.levelEndsAt==='number'&&t.levelEndsAt<=now;});
+      due.forEach(id=>updateEvent(id,prev=>catchUpClock(prev,Date.now())));
+      let changed=false;
+      ids.forEach(id=>{const sx=clockRemainingSecs(cur[id],now); if(lastSecsRef.current[id]!==sx){lastSecsRef.current[id]=sx;changed=true;}});
+      if(changed) setTickSecond(n=>n+1);
+    },250);
+    return()=>clearInterval(iv);
+  },[]);
+
+  /* Live display + floor clock sync, for every live event, every displayed second */
+  useEffect(()=>{
+    const now=Date.now();
+    Object.keys(live).forEach(id=>{
+      const t=live[id];
+      const cur=t.structure[t.currentLevelIdx];
+      const nxt=t.structure[t.currentLevelIdx+1];
+      const active=t.players.filter(p=>p.status==='active');
+      const tables=[...new Set(active.map(p=>p.tableNum).filter(Boolean))].length;
+      if(t.status==='running'||lastLiveWriteRef.current[id]!==t){ lastLiveWriteRef.current[id]=t; writeLive(t,cur,nxt,active.length,tables); }
+      if(typeof window.electronAPI!=='undefined'){
+        const p=buildClockPayload(t,now); const key=JSON.stringify(p);
+        if(lastClockRef.current[id]!==key){ lastClockRef.current[id]=key; window.electronAPI.sendClockState(p); }
+      }
+    });
+  },[live,tickSecond]);
+
+  /* Tournament state sync - heavy payload, only for events whose object changed since last sent */
+  useEffect(()=>{
+    if(typeof window.electronAPI==='undefined') return;
+    const sent=lastSentRef.current;
+    Object.keys(live).forEach(id=>{
+      if(sent[id]!==live[id]){ sent[id]=live[id]; window.electronAPI.sendTournamentState(buildTournamentPayload(live[id])); }
+    });
+    Object.keys(sent).forEach(id=>{ if(!live[id]) delete sent[id]; });
+  },[live]);
+
+  /* Tell the server which events are live (reuses the tournament-state IPC channel: no preload.js change needed) */
+  const liveIdsKey=Object.keys(live).join(',');
+  useEffect(()=>{
+    if(typeof window.electronAPI!=='undefined') window.electronAPI.sendTournamentState({_liveList:liveIdsKey?liveIdsKey.split(','):[]});
+  },[liveIdsKey]);
+
+  /* Floor action handler (from phones via Electron). Routes by action.event: the action lands in THAT live event and never
+     in the desk's focused event (invariant 2). The listener is registered once; floorHandlerRef always holds the latest closure. */
+  const floorHandlerRef = useRef(null);
+  floorHandlerRef.current = function handleFloorAction(e){
+    const action=e.detail;
+    if(!action)return;
+    const id=action.event;
+    const ev=(typeof id==='string'&&Object.prototype.hasOwnProperty.call(liveRef.current,id))?liveRef.current[id]:null;
+    if(!ev){console.warn('floor action ignored: event not live',action.type,id);return;}
+    withEvent(id,()=>{
+        if(action.type==='register'||action.type==='register-next'){
+          // register by name if given, otherwise register next available number
+          if(action.name){
+            const existing=ev.players.find(p=>p.name===action.name&&p.status==='active');
+            const isDup=!!existing;
+            if(!existing){addPlayer(action.name, false, action.country||null);SoundEngine.register();}
+            // Add to regLog so counter sees it
+            setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)};});
+          } else {
+            // find next unused number
+            const used=new Set(ev.players.map(p=>p.name));
+            let next=1;
+            while(used.has(String(next).padStart(3,'0')))next++;
+            addPlayer(String(next).padStart(3,'0'));SoundEngine.register();
+          }
+        } else if(action.type==='undo-register'){
+          // remove the most recently registered active player
+          setTournament(t=>{
+            const active=[...t.players].filter(p=>p.status==='active').sort((a,b)=>b.registeredAt-a.registeredAt);
+            if(active.length===0)return t;
+            const remove=active[0].id;
+            return {...t, players:t.players.filter(p=>p.id!==remove)};
+          });
+        } else if(action.type==='bust'||action.type==='bust-random'){
+          if(action.name){
+            const p=ev.players.find(pl=>pl.name===action.name&&pl.status==='active');
+            if(p){bustPlayer(p.id);SoundEngine.bust();}
+          } else {
+            // bust a random active player
+            const active=ev.players.filter(p=>p.status==='active');
+            if(active.length>0){
+              const p=active[Math.floor(Math.random()*active.length)];
+              bustPlayer(p.id);SoundEngine.bust();
+            }
+          }
+        } else if(action.type==='undo-bust'){
+          undoBust();
+        } else if(action.type==='swap-bust'){
+          swapBust(action.wrongId,action.intendedId);
+        } else if(action.type==='update-chip-count'){
+          if(action.playerId!=null) setChipCountFromFloor(action.playerId,action.chipCount);
+        } else if(action.type==='clock-toggle'){
+          toggleClock();
+        } else if(action.type==='clock-action'){
+          if(action.action==='prev')prevLevel();
+          else if(action.action==='next')nextLevel();
+          else if(action.action==='minus1')adjustTime(-60);
+          else if(action.action==='plus1')adjustTime(60);
+        } else if(action.type==='assign-seat'){
+          if(action.playerId) assignSeat(action.playerId, action.tableNum, action.seatNum);
+        } else if(action.type==='bust-player'){
+          if(action.playerId){ bustPlayer(action.playerId); SoundEngine.bust(); }
+        } else if(action.type==='move-player'){
+          if(action.playerId&&action.tableNum&&action.seatNum){
+            movePlayerSeat(action.playerId, action.tableNum, action.seatNum);
+          }
+        } else if(action.type==='open-table'){
+          openTable(action.tableNum);
+        } else if(action.type==='set-seating-mode'){
+          if(action.mode) setSeatingMode(action.mode);
+        } else if(action.type==='close-table-confirm'){
+          if(action.assignments&&action.closingTable){
+            closeTableConfirm(action.assignments, action.closingTable);
+          }
+        } else if(action.type==='redraw-final-table'){
+          if(action.destTable&&action.assignments){
+            applyFinalTableRedraw(action.destTable, action.assignments);
+          }
+        } else if(action.type==='break-table'){
+          if(action.tableNum){
+            const tNumN=Number(action.tableNum);const spt=ev.seatsPerTable||9;const active=ev.players.filter(p=>p.status==='active');const displaced=active.filter(p=>p.tableNum===tNumN);if(displaced.length===0){closeTableConfirm([],tNumN);return;}const lk=ev.seatLocks||{};const tableNumbers=getTableNumbers(ev);const result=computeBreakAssignments({closingTable:tNumN,players:active,tableNumbers:tableNumbers,seatsPerTable:spt,seatLocks:lk});if(!result.ok)return;closeTableConfirm(result.assignments,tNumN);
+          }
+        } else if(action.type==='set-seat-lock'){
+          if(action.tableNum&&action.seatNum) setSeatLock(action.tableNum,action.seatNum,action.lockType||'none');
+        }
+    });
+  };
+  useEffect(()=>{
+    function onFloorAction(e){ if(floorHandlerRef.current) floorHandlerRef.current(e); }
+    window.addEventListener('spc-floor-action',onFloorAction);
+    return()=>window.removeEventListener('spc-floor-action',onFloorAction);
+  },[]);
 
   /* Floor URL overlay */
   const [serverInfo,setServerInfo]=useState(null);
@@ -325,16 +435,61 @@ function App() {
     return()=>window.removeEventListener('spc-server-ready',onServer);
   },[]);
 
-  /* Auto-save every 30s */
+  /* Save EVERY live event on EVERY change (saveT returns false on failure; failures raise a banner and are retried). */
+  const lastSavedRef = useRef({});
+  const saveFailuresRef = useRef({});
+  const [saveFailures,setSaveFailures] = useState({});
+  function saveLiveEvent(id,t){
+    let prev=null; try{ prev=getIndex().find(x=>x.id===id)||null; }catch(e){}
+    const ok=saveT(t);
+    if(ok){
+      lastSavedRef.current[id]=t;
+      if(!prev||prev.status!==t.status||prev.name!==t.name) setSavedIndex(getIndex());
+      if(saveFailuresRef.current[id]){ const n={...saveFailuresRef.current}; delete n[id]; saveFailuresRef.current=n; setSaveFailures(n); }
+    } else if(!saveFailuresRef.current[id]){
+      const n={...saveFailuresRef.current,[id]:true}; saveFailuresRef.current=n; setSaveFailures(n);
+    }
+    return ok;
+  }
   useEffect(()=>{
-    const iv=setInterval(()=>{const t=tournamentRef.current;if(t){saveT(t);setSavedIndex(getIndex());}},30000);
+    Object.keys(live).forEach(id=>{ if(lastSavedRef.current[id]!==live[id]) saveLiveEvent(id,live[id]); });
+    Object.keys(lastSavedRef.current).forEach(id=>{ if(!live[id]) delete lastSavedRef.current[id]; });
+    const stale=Object.keys(saveFailuresRef.current).filter(id=>!live[id]);
+    if(stale.length){ const n={...saveFailuresRef.current}; stale.forEach(id=>delete n[id]); saveFailuresRef.current=n; setSaveFailures(n); }
+  },[live]);
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      const cur=liveRef.current;
+      Object.keys(saveFailuresRef.current).forEach(id=>{ if(cur[id]) saveLiveEvent(id,cur[id]); });
+    },10000);
     return()=>clearInterval(iv);
   },[]);
 
-  /* Save whenever the clock changes (start/pause/level/adjust); timeRemainingSeconds no longer changes every second */
+  /* Auto-resume on launch: every event that was live comes back (crash, Cmd-Q, update restart). */
+  const [restored,setRestored] = useState(false);
   useEffect(()=>{
-    if(tournament){saveT(tournament);setSavedIndex(getIndex());}
-  },[tournament&&tournament.id, tournament&&tournament.status, tournament&&tournament.currentLevelIdx, tournament&&tournament.levelEndsAt, tournament&&tournament.timeRemainingSeconds]);
+    let ids=[]; let focus='';
+    try{ ids=JSON.parse(localStorage.getItem('spc_live_ids')||'[]'); focus=localStorage.getItem('spc_focused_id')||''; }catch(e){}
+    const now=Date.now(); const obj={}; let firstId=null;
+    (Array.isArray(ids)?ids:[]).forEach(id=>{
+      const raw=loadT(id); if(!raw) return;
+      const t=prepareResumed(raw,now);
+      obj[t.id]={...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)};
+      if(!firstId) firstId=t.id;
+    });
+    if(firstId){
+      const fid=obj[focus]?focus:firstId;
+      liveRef.current=obj; setLive(obj);
+      focusedIdRef.current=fid; setFocusedId(fid);
+      setSubview('clock'); setView('tournament');
+    }
+    setRestored(true);
+  },[]);
+  /* Remember which events are live and which is focused (only after the restore above, or it would overwrite what it reads). */
+  useEffect(()=>{
+    if(!restored) return;
+    try{ localStorage.setItem('spc_live_ids',JSON.stringify(Object.keys(live))); localStorage.setItem('spc_focused_id',focusedId||''); }catch(e){}
+  },[liveIdsKey,focusedId,restored]);
 
   function startTournament(config) {
     const structure=[...config.structure];
@@ -427,7 +582,7 @@ function App() {
         :(config.stack===0&&inheritedEntries>0&&config.inheritedStack>0
         ? inheritedEntries*(config.inheritedStack)
         : 0)};
-    setTournament({...t, payoutsPublished:false}); setSubview('register'); setView('tournament');
+    if(!addLiveEvent({...t, payoutsPublished:false})) return; setSubview('register'); setView('tournament');
   }
 
   function resetTournament() {
@@ -476,32 +631,29 @@ Starting setup — you can adjust settings before launching.`);
   }
 
   function resumeTournament(id) {
+    // Already live: just focus it. Never reload from storage (that would discard the in-memory state).
+    if(liveRef.current[id]){ focusEvent(id); setSubview('clock'); setView('tournament'); return; }
     let t=loadT(id);
     if(!t) return;
-    if(t.status==='running'){
-      const now=Date.now();
-      if(typeof t.levelEndsAt!=='number') t={...t,levelEndsAt:now+(t.timeRemainingSeconds||0)*1000};
-      if(now-t.levelEndsAt>600000){
-        const hm=ms=>new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
-        const savedAt=typeof t.savedAt==='number'?t.savedAt:null;
-        if(confirm("This event's clock was running when it was last saved at "+hm(savedAt||t.levelEndsAt)+". It is now "+hm(now)+". OK = catch up to where the clock would be now. Cancel = open it paused at the time shown when it was saved.")){
-          t=catchUpClock(t,now);
-        } else {
-          t={...t,status:'paused',timeRemainingSeconds:savedAt?Math.max(0,Math.ceil((t.levelEndsAt-savedAt)/1000)):Math.max(0,t.timeRemainingSeconds||0),levelEndsAt:null};
-        }
-      } else t=catchUpClock(t,now);
-    }
-    setTournament({...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)});setSubview('clock');setView('tournament');
+    t=prepareResumed(t,Date.now());
+    if(!addLiveEvent({...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)})) return; setSubview('clock');setView('tournament');
   }
 
   function deleteTournament(id) {
     deleteT(id); setSavedIndex(getIndex());
-    if(tournament&&tournament.id===id){setTournament(null);setView('home');}
+    if(liveRef.current[id]){ if(removeLiveEvent(id)===0) setView('home'); }
+  }
+
+  function closeFocusedEvent() {
+    if(!tournament) return;
+    if(tournament.status==='running'){ alert('Pause the clock first, then close the event.'); return; }
+    saveT(tournament); setSavedIndex(getIndex());
+    if(removeLiveEvent(tournament.id)===0) setView('home');
   }
 
   function saveTournamentNow() {
     if(!tournament) return;
-    saveT(tournament); setSavedIndex(getIndex()); alert('Saved!');
+    if(saveT(tournament)){ setSavedIndex(getIndex()); alert('Saved!'); } else alert('SAVE FAILED. Storage may be full. Export a backup now.');
   }
 
   function toggleClock(){setTournament(t=>{
@@ -559,7 +711,6 @@ Starting setup — you can adjust settings before launching.`);
     });
   }
   function bustPlayer(id){
-    const player=tournament.players.find(p=>p.id===id);
     setTournament(t=>{
       // Guard: a player who is already busted must not be re-busted (would reassign them the next position and tie with another player)
       const target=t.players.find(p=>p.id===id);
@@ -567,7 +718,7 @@ Starting setup — you can adjust settings before launching.`);
       const active=t.players.filter(p=>p.status==='active');
       const position=active.length;
       return{...t,players:t.players.map(p=>p.id===id?{...p,status:'busted',bustPosition:position,prevTableNum:p.tableNum,prevSeatNum:p.seatNum,tableNum:null,seatNum:null,bustedAt:Date.now()}:p),
-        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'bust',detail:`${player?player.name:'?'} busted ${fmt.ordinal(position)} (T${player?player.tableNum:''} S${player?player.seatNum:''})`}]};
+        activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'bust',detail:`${target.name} busted ${fmt.ordinal(position)} (T${target.tableNum} S${target.seatNum})`}]};
     });
   }
   function updatePlayerName(id,name){setTournament(t=>({...t,players:t.players.map(p=>p.id===id?{...p,name}:p)}));}
@@ -739,12 +890,6 @@ Starting setup — you can adjust settings before launching.`);
       return{...t,structure:[...t.structure,e]};
     });
   }
-  const _structLenRef=useRef(null);
-  useEffect(()=>{
-    const len=tournament&&tournament.structure?tournament.structure.length:null;
-    if(_structLenRef.current!==null&&len!==null&&len!==_structLenRef.current) saveT(tournament);
-    _structLenRef.current=len;
-  },[tournament&&tournament.structure&&tournament.structure.length]);
   function setChipsInPlay(val) {
     setTournament(t=>({...t,chipsInPlay:Number(val)||0}));
   }
@@ -934,10 +1079,13 @@ Starting setup — you can adjust settings before launching.`);
   const bustedPlayers=tournament?tournament.players.filter(p=>p.status==='busted'):[];
   const tablesInUse=[...new Set(activePlayers.map(p=>p.tableNum).filter(Boolean))].length;
   const clockCls=secs<=60?'danger':secs<=300?'warn':'';
+  const _rowsNow=Date.now();
+  const liveRows=Object.keys(live).map(id=>{const t=live[id];const c=EVENT_CONFIGS[t.eventType]||null;return{id:id,short:c?c.short:(t.name||'Event'),color:c?c.color:'#c8973a',status:t.status,secs:clockRemainingSecs(t,_rowsNow)};});
 
   return(
     <div className="app">
-      {view==='home'&&<HomeScreen onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
+      {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
+      {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
       {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament}/>}
       {/* Floor staff connection modal */}
       {showFloorModal&&(
@@ -960,8 +1108,8 @@ Starting setup — you can adjust settings before launching.`);
       )}
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
-        return(<div className="tour-layout" style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
-          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview}
+        return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
+          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}

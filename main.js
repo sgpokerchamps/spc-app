@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage, powerSaveBlocker } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -125,6 +125,9 @@ function startSyncServer() {
   }
 }
 
+let powerBlockerId = null;
+let storageFlushTimer = null;
+
 // ── Create main window ────────────────────────────────────────────────────────
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -139,10 +142,31 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      // Multi-event rebuild: every live event's clock must keep ticking and broadcasting while the
+      // window is minimised or hidden, so timers are not throttled when the window is in the background.
+      backgroundThrottling: false,
     },
     icon: path.join(assetsPath, 'icons', 'spc.png'),
     show: false,
   });
+
+  // Stop macOS App Nap from suspending the app while events are running.
+  try {
+    if (powerBlockerId === null || !powerSaveBlocker.isStarted(powerBlockerId)) {
+      powerBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+    }
+    console.log('[SPC] backgroundThrottling=false, powerSaveBlocker id=' + powerBlockerId);
+  } catch (e) {
+    console.error('powerSaveBlocker failed: ' + e.message);
+  }
+
+  // Chromium batches localStorage writes and only commits them to disk seconds to a minute later, so a crash
+  // (kill -9, power loss of the app) could lose the latest busts and registrations. Flush pending storage often.
+  if (storageFlushTimer === null) {
+    storageFlushTimer = setInterval(() => {
+      try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.session.flushStorageData(); } catch (e) {}
+    }, 2000);
+  }
 
   var updateDir = getUpdateDir();
   var updatedHtml = path.join(updateDir, 'app.html');

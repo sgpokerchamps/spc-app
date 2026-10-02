@@ -4,7 +4,7 @@
    Tables/Payouts/Blinds/Log/POTY subviews during a running event.
    ============================================================ */
 
-function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor}) {
+function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor,liveRows,focusedId,onFocus,onCloseEvent}) {
   const _cfg=EVENT_CONFIGS[tournament.eventType]||null;
   const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'},{key:'poty',label:'POTY',icon:'🏆'}];
   const status=tournament.status;
@@ -15,6 +15,18 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
         {_cfg&&_cfg.subtitle&&<div style={{fontSize:14,color:'#b2d4ba',letterSpacing:1.5,marginTop:3,textTransform:'uppercase',fontWeight:500}}>{_cfg.subtitle}</div>}
         <div className={`brand-status ${status}`} style={{marginTop:4}}>{status.toUpperCase()}</div>
       </div>
+      {liveRows&&liveRows.length>0&&(
+        <div className="lv-switch">
+          {liveRows.map(r=>(
+            <button key={r.id} className={'lv-row'+(r.id===focusedId?' active':'')} onClick={()=>onFocus(r.id)}>
+              <span className="lv-bar" style={{background:r.color}}></span>
+              <span className="lv-main"><span className="lv-short">{r.short}</span><span className={'lv-status '+r.status}>{r.status.toUpperCase()}</span></span>
+              <span className="lv-clock">{fmt.time(r.secs)}</span>
+            </button>
+          ))}
+          <button className="lv-add" onClick={onHome}>+ Add event</button>
+        </div>
+      )}
       <div className="sidebar-nav">
         {nav.map(n=>(
           <button key={n.key} className={`nav-btn ${subview===n.key?'active':''}`} onClick={()=>setSubview(n.key)}>
@@ -36,6 +48,7 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
             }).catch(e=>{alert('Update error: '+e.message);btn.textContent='🔄 Check for updates';btn.disabled=false;});
           }else{btn.textContent='🔄 Check for updates';btn.disabled=false;}
         }}>🔄 Check for updates</button>
+        <button className="sf-btn" onClick={onCloseEvent} title="Save this event and remove it from the live set">Close event (keep saved)</button>
         <button className="sf-btn" onClick={onHome}>← Back to home</button>
         <button className="sf-btn" style={{borderColor:'#3a2020',color:'#8a4040',marginTop:4}} onClick={onReset}
           onMouseEnter={e=>{e.target.style.borderColor='#e05a5a';e.target.style.color='#e05a5a';}}
