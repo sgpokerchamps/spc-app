@@ -285,10 +285,25 @@ function memberCountryLookup(name) {
     return null;
   } catch(e) { return null; }
 }
-function advanceLevelFn(t) {
+/* Clock model: running -> levelEndsAt (epoch ms) is the source of truth; paused/complete -> timeRemainingSeconds. */
+function clockRemainingSecs(t, now) {
+  if(!t) return 0;
+  if(t.status==='running'&&typeof t.levelEndsAt==='number') return Math.max(0,Math.ceil((t.levelEndsAt-now)/1000));
+  return Math.max(0,t.timeRemainingSeconds||0);
+}
+/* baseMs: when the NEW level starts. Manual advance -> now. Automatic advance -> the old levelEndsAt, so the schedule never drifts. */
+function advanceLevelFn(t, baseMs) {
+  const base=typeof baseMs==='number'?baseMs:Date.now();
   const ni=t.currentLevelIdx+1;
-  if(ni>=t.structure.length) return{...t,status:'complete',timeRemainingSeconds:0};
-  return{...t,currentLevelIdx:ni,timeRemainingSeconds:t.structure[ni].mins*60};
+  if(ni>=t.structure.length) return{...t,status:'complete',timeRemainingSeconds:0,levelEndsAt:null};
+  const secs=t.structure[ni].mins*60;
+  return{...t,currentLevelIdx:ni,timeRemainingSeconds:secs,levelEndsAt:t.status==='running'?base+secs*1000:null};
+}
+/* Advance through every level whose end time has passed. Used by the tick and by resume. */
+function catchUpClock(t, now) {
+  let x=t, guard=0;
+  while(x&&x.status==='running'&&typeof x.levelEndsAt==='number'&&x.levelEndsAt<=now&&guard<1000){ x=advanceLevelFn(x,x.levelEndsAt); guard++; }
+  return x;
 }
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 
@@ -678,7 +693,7 @@ function importFromFile(file, onSuccess, onError) {
 function getIndex() { try{return JSON.parse(localStorage.getItem('spc_index')||'[]');}catch(e){return[];} }
 function saveT(t) {
   try {
-    localStorage.setItem(`spc_t_${t.id}`, JSON.stringify(t));
+    localStorage.setItem(`spc_t_${t.id}`, JSON.stringify({...t,savedAt:Date.now()}));
     const idx=getIndex(); const i=idx.findIndex(x=>x.id===t.id);
     const entry={id:t.id,name:t.name,eventType:t.eventType,status:t.status,modified:Date.now()};
     if(i>=0)idx[i]=entry; else idx.unshift(entry);
@@ -716,7 +731,7 @@ function writeLive(t, cur, nxt, active, tables) {
     const _cumBusted=t.players.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
     localStorage.setItem(`spc_live_${t.id}`, JSON.stringify({
       name:t.name, eventType:t.eventType, cur, nxt,
-      secs:t.timeRemainingSeconds, status:t.status,
+      secs:clockRemainingSecs(t,Date.now()), status:t.status,
       activePlayers:active.length, tablesInUse:tables, prizePool:t.prizePool, bountyPool:t.bountyPool||0,
       totalEntries:_cumEntries, totalBusted:_cumBusted,
       avgStack:active.length>0?Math.round(((t.chipsInPlay||_cumEntries*t.stack))/active.length):0,

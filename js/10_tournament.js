@@ -123,24 +123,24 @@ function App() {
   window._spcUpdateRegLog = function(log){ setTournament(t=>({...t,regLog:log})); };
   const [modal,setModal] = useState(null);
   const [savedIndex,setSavedIndex] = useState(getIndex);
-  const timerRef = useRef(null);
+  const tournamentRef = useRef(null);
+  tournamentRef.current = tournament;
+  const [clockSecs,setClockSecs] = useState(0);
+  const secs = clockRemainingSecs(tournament, Date.now());
 
-  /* Timer */
+  /* Clock tick: one interval for the life of App. Level changes come from levelEndsAt; re-render only when the displayed second changes. */
   useEffect(()=>{
-    if(tournament&&tournament.status==='running'){
-      clearInterval(timerRef.current);
-      timerRef.current=setInterval(()=>{
-        setTournament(prev=>{
-          if(!prev||prev.status!=='running')return prev;
-          const t=prev.timeRemainingSeconds-1;
-          return t<=0?advanceLevelFn(prev):{...prev,timeRemainingSeconds:t};
-        });
-      },1000);
-    } else clearInterval(timerRef.current);
-    return()=>clearInterval(timerRef.current);
-  },[tournament&&tournament.status, tournament&&tournament.currentLevelIdx]);
+    const iv=setInterval(()=>{
+      const t=tournamentRef.current;
+      if(!t) return;
+      const now=Date.now();
+      if(t.status==='running'&&typeof t.levelEndsAt==='number'&&t.levelEndsAt<=now) setTournament(prev=>catchUpClock(prev,Date.now()));
+      setClockSecs(clockRemainingSecs(catchUpClock(t,now),now));
+    },250);
+    return()=>clearInterval(iv);
+  },[]);
 
-  /* Live display sync — write on every tournament state change */
+  /* Live display + floor clock sync */
   useEffect(()=>{
     if(!tournament) return;
     const cur=tournament.structure[tournament.currentLevelIdx];
@@ -151,7 +151,7 @@ function App() {
     // Sync to floor UI via Electron
     if(typeof window.electronAPI!=='undefined'&&tournament){
       window.electronAPI.sendClockState({
-        secs:tournament.timeRemainingSeconds,
+        secs:secs,
         running:tournament.status==='running',
         isBreak:cur&&cur.isBreak,
         level:cur&&cur.level,
@@ -159,6 +159,14 @@ function App() {
         nextText:nxt?formatNextEntry(nxt):'',
         eventName:EVENT_CONFIGS[tournament.eventType]?EVENT_CONFIGS[tournament.eventType].group:'SPC',
       });
+    }
+  },[tournament,secs]);
+
+  /* Tournament state sync - heavy payload, only when the tournament itself changes */
+  useEffect(()=>{
+    if(!tournament) return;
+    const cur=tournament.structure[tournament.currentLevelIdx];
+    if(typeof window.electronAPI!=='undefined'){
       const cumE=tournament.players.length+(tournament.inheritedEntries||0);
       const _activePlayers=tournament.players.filter(p=>p.status==='active');
       const _unseated=_activePlayers.filter(p=>!p.tableNum).map(p=>({id:p.id,name:p.name,country:p.country||null,chipCount:p.chipCount||0}));
@@ -315,10 +323,14 @@ function App() {
 
   /* Auto-save every 30s */
   useEffect(()=>{
-    if(!tournament) return;
-    const iv=setInterval(()=>{saveT(tournament);setSavedIndex(getIndex());},30000);
+    const iv=setInterval(()=>{const t=tournamentRef.current;if(t){saveT(t);setSavedIndex(getIndex());}},30000);
     return()=>clearInterval(iv);
-  },[tournament]);
+  },[]);
+
+  /* Save whenever the clock changes (start/pause/level/adjust); timeRemainingSeconds no longer changes every second */
+  useEffect(()=>{
+    if(tournament){saveT(tournament);setSavedIndex(getIndex());}
+  },[tournament&&tournament.id, tournament&&tournament.status, tournament&&tournament.currentLevelIdx, tournament&&tournament.levelEndsAt, tournament&&tournament.timeRemainingSeconds]);
 
   function startTournament(config) {
     const structure=[...config.structure];
@@ -403,7 +415,7 @@ function App() {
       bountyAmount,prizePerEntry,bountyPool:Math.max(Math.round(inheritedEntries*bountyAmount),0),
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
       tableNumbers:(config.tableNumbers&&config.tableNumbers.length)?[...config.tableNumbers].sort((a,b)=>a-b):getTableNumbers({startTable:config.startTable||1,maxTables:config.maxTables}),
-      players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,
+      players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,levelEndsAt:null,
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
       extraBagWinners:_extraBagWinners,extraBagCount:_totalExtraBags>0?_totalExtraBags:(config.extraBagCount||0),
@@ -422,6 +434,7 @@ function App() {
       players: [],
       currentLevelIdx: 0,
       timeRemainingSeconds: t.structure[0].mins * 60,
+      levelEndsAt: null,
       status: 'paused',
       prizePool: t.guarantee || 0,
       bountyPool: 0,
@@ -459,8 +472,22 @@ Starting setup — you can adjust settings before launching.`);
   }
 
   function resumeTournament(id) {
-    const t=loadT(id);
-    if(t){setTournament({...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)});setSubview('clock');setView('tournament');}
+    let t=loadT(id);
+    if(!t) return;
+    if(t.status==='running'){
+      const now=Date.now();
+      if(typeof t.levelEndsAt!=='number') t={...t,levelEndsAt:now+(t.timeRemainingSeconds||0)*1000};
+      if(now-t.levelEndsAt>600000){
+        const hm=ms=>new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+        const savedAt=typeof t.savedAt==='number'?t.savedAt:null;
+        if(confirm("This event's clock was running when it was last saved at "+hm(savedAt||t.levelEndsAt)+". It is now "+hm(now)+". OK = catch up to where the clock would be now. Cancel = open it paused at the time shown when it was saved.")){
+          t=catchUpClock(t,now);
+        } else {
+          t={...t,status:'paused',timeRemainingSeconds:savedAt?Math.max(0,Math.ceil((t.levelEndsAt-savedAt)/1000)):Math.max(0,t.timeRemainingSeconds||0),levelEndsAt:null};
+        }
+      } else t=catchUpClock(t,now);
+    }
+    setTournament({...t, payoutsPublished:t.payoutsPublished||false, tableNumbers:getTableNumbers(t)});setSubview('clock');setView('tournament');
   }
 
   function deleteTournament(id) {
@@ -474,14 +501,19 @@ Starting setup — you can adjust settings before launching.`);
   }
 
   function toggleClock(){setTournament(t=>{
-    const newStatus=t.status==='running'?'paused':'running';
-    return{...t,status:newStatus,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'clock',detail:newStatus==='running'?'Clock started':'Clock paused'}]};
+    const now=Date.now();
+    const wasRunning=t.status==='running';
+    const newStatus=wasRunning?'paused':'running';
+    return{...t,status:newStatus,timeRemainingSeconds:wasRunning?clockRemainingSecs(t,now):t.timeRemainingSeconds,levelEndsAt:wasRunning?null:now+(t.timeRemainingSeconds||0)*1000,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'clock',detail:newStatus==='running'?'Clock started':'Clock paused'}]};
   });}
   function publishPayouts(){setTournament(t=>({...t,payoutsPublished:true}));}
   function unpublishPayouts(){setTournament(t=>({...t,payoutsPublished:false}));}
-  function prevLevel(){setTournament(t=>{const i=Math.max(0,t.currentLevelIdx-1);return{...t,currentLevelIdx:i,timeRemainingSeconds:t.structure[i].mins*60};});}
+  function prevLevel(){setTournament(t=>{const i=Math.max(0,t.currentLevelIdx-1);const s=t.structure[i].mins*60;return{...t,currentLevelIdx:i,timeRemainingSeconds:s,levelEndsAt:t.status==='running'?Date.now()+s*1000:null};});}
   function nextLevel(){setTournament(advanceLevelFn);}
-  function adjustTime(s){setTournament(t=>({...t,timeRemainingSeconds:Math.max(0,t.timeRemainingSeconds+s)}));}
+  function adjustTime(s){setTournament(t=>{
+    if(t.status==='running'&&typeof t.levelEndsAt==='number') return{...t,levelEndsAt:Math.max(Date.now(),t.levelEndsAt+s*1000)};
+    return{...t,timeRemainingSeconds:Math.max(0,t.timeRemainingSeconds+s)};
+  });}
 
   function addPlayer(name, forceAuto=false, country=null){
     setTournament(t=>{
@@ -897,7 +929,6 @@ Starting setup — you can adjust settings before launching.`);
   const activePlayers=tournament?tournament.players.filter(p=>p.status==='active'):[];
   const bustedPlayers=tournament?tournament.players.filter(p=>p.status==='busted'):[];
   const tablesInUse=[...new Set(activePlayers.map(p=>p.tableNum).filter(Boolean))].length;
-  const secs=tournament?tournament.timeRemainingSeconds:0;
   const clockCls=secs<=60?'danger':secs<=300?'warn':'';
 
   return(
@@ -930,7 +961,7 @@ Starting setup — you can adjust settings before launching.`);
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
-            onHome={()=>{clearInterval(timerRef.current);saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
+            onHome={()=>{saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
