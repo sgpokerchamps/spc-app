@@ -151,6 +151,7 @@ function App() {
     // Sync to floor UI via Electron
     if(typeof window.electronAPI!=='undefined'&&tournament){
       window.electronAPI.sendClockState({
+        eventId:tournament.id,
         secs:secs,
         running:tournament.status==='running',
         isBreak:cur&&cur.isBreak,
@@ -183,6 +184,8 @@ function App() {
       getTableNumbers(tournament).forEach(num=>{ _tableMap[num]={num:num,count:0,capacity:tournament.seatsPerTable||9,players:[]}; });
       _activePlayers.forEach(p=>{if(p.tableNum&&_tableMap[p.tableNum]){_tableMap[p.tableNum].count++;_tableMap[p.tableNum].players.push({id:p.id,name:p.name,seatNum:p.seatNum,country:p.country||null,chipCount:p.chipCount||0});}});
       window.electronAPI.sendTournamentState({
+        eventId:tournament.id,
+        eventType:tournament.eventType,
         active:_activePlayers.length,
         players:tournament.players.length,
         inheritedEntries:tournament.inheritedEntries||0,
@@ -215,6 +218,7 @@ function App() {
     function handleFloorAction(e){
       const action=e.detail;
       if(!action||!tournament)return;
+      if(action.event!==tournament.id){console.warn('floor action ignored: event mismatch',action.type,action.event,tournament.id);return;}
       if(action.type==='register'||action.type==='register-next'){
         // register by name if given, otherwise register next available number
         if(action.name){
