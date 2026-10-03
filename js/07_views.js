@@ -8,7 +8,7 @@
    ============================================================ */
 
 /* ==== REGISTER VIEW ==== */
-function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverInfo}) {
+function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverInfo, onRegAction}) {
   const inputRef = useRef(null);
   const [lastScanned, setLastScanned] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -107,13 +107,15 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
     const wasActive = !!tournament.players.find(p=>p.name===name&&p.status==='busted');
     const isReentry = wasActive && !isDup;
 
-    // 1B: check max re-entries
-    if(isReentry && maxR === 1) {
-      const prevReentries = recentLog.filter(l=>l.name===name&&l.isReentry).length;
-      if(prevReentries >= 1) {
-        alert(`${name} has already used their 1 re-entry (Flight 1B rule).`);
-        return;
-      }
+    // Shared rule (same function the server uses): re-entry limit, Day 2 no-entries
+    const chk = checkRegistration(buildTournamentPayload(tournament), name);
+    if(chk.blocked) { alert(chk.blocked.message); return; }
+    // The counter stops at a manual Close; the desk can still override, with a confirm and a log entry
+    const rw0 = regWindow(tournament.reg, lateRegEndsAtOf(tournament), Date.now());
+    if(!rw0.accepting) {
+      const nm0 = evCfg ? evCfg.short : tournament.name;
+      if(!confirm(nm0+' registration is closed. Register anyway?')) return;
+      if(onRegAction) onRegAction('override', name);
     }
 
     onRegister(name, false, country);
@@ -191,6 +193,31 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
           </div>
         </div>
       )}
+
+      {tournament.reg&&(()=>{
+        const reg=tournament.reg; const now0=Date.now(); const rw=regWindow(reg,lateRegEndsAtOf(tournament),now0);
+        const noEnt=!!(evCfg&&evCfg.noEntries);
+        const labels={notOpen:'NOT OPEN',open:'OPEN',lateGrace:'LATE REG GRACE',lateOver:'LATE REG OVER',closingGrace:'CLOSING',closed:'CLOSED'};
+        const hm=ms=>new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+        const lateText=noEnt?'Closed to entries and re-entries.':reg.lateRegLevel==null?'No late-registration level set.':('Late reg until end of Level '+reg.lateRegLevel+' (+'+reg.graceMins+' min)'+(rw.adviceEndsAt?(' - advisory window ends '+hm(rw.adviceEndsAt)):''));
+        return(
+          <div className="reg-panel" onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,letterSpacing:2,color:'#5a9a6a',fontWeight:700}}>COUNTER REGISTRATION</span>
+              <span className={'reg-state '+rw.state}>{labels[rw.state]}</span>
+              <span style={{fontSize:12,color:'#7aaa82'}}>{lateText}</span>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:10,flexWrap:'wrap',alignItems:'center'}}>
+              <button className="reg-btn" disabled={noEnt||reg.status==='open'} onClick={()=>onRegAction('open')}>Open</button>
+              <button className="reg-btn" disabled={reg.status!=='open'} onClick={()=>onRegAction('close')}>Close (grace {reg.graceMins} min)</button>
+              <button className="reg-btn danger" disabled={reg.status==='notOpen'||(reg.status==='closed'&&!rw.accepting)} onClick={()=>onRegAction('closeNow')}>Close immediately</button>
+              <button className="reg-btn" disabled={noEnt||reg.lateRegLevel==null} onClick={()=>onRegAction('extend')}>Extend +1 level</button>
+              {!noEnt&&<label style={{fontSize:12,color:'#7aaa82'}}>Late reg level <input key={'l'+reg.lateRegLevel} type="number" defaultValue={reg.lateRegLevel==null?'':reg.lateRegLevel} style={{width:56}} onBlur={e=>onRegAction('setLevel',e.target.value===''?null:+e.target.value)}/></label>}
+              {!noEnt&&<label style={{fontSize:12,color:'#7aaa82'}}>Grace (min) <input key={'g'+reg.graceMins} type="number" defaultValue={reg.graceMins} style={{width:56}} onBlur={e=>onRegAction('setGrace',+e.target.value)}/></label>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Member sync */}
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'#0a0812',border:'1px solid #2a1c3a',borderRadius:8,padding:'10px 14px'}}>

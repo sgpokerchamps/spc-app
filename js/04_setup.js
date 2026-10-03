@@ -13,6 +13,7 @@ function SetupScreen({eventType,onBack,onStart}) {
   const [prizeComp,setPrizeComp]=useState(_tpl?_tpl.prizeComponent:cfg.prizeComponent??cfg.buyin);
   const [adminFee,setAdminFee]=useState(_tpl?_tpl.adminFeePercent:cfg.adminFeePercent??4);
   const [guarantee,setGuarantee]=useState(_tpl?_tpl.guarantee:cfg.guarantee??0);
+  const [lateReg,setLateReg]=useState(_tpl&&_tpl.lateRegLevel!==undefined?(_tpl.lateRegLevel==null?'':_tpl.lateRegLevel):(cfg.lateRegLevel==null?'':cfg.lateRegLevel));
   const [itmPct,setItmPct]=useState(_tpl?_tpl.itmPercent:cfg.itmPercent??15);
   const [bountyAmt,setBountyAmt]=useState(cfg.bountyAmount??0);
   const isSat=eventType==='satellite';
@@ -49,7 +50,7 @@ function SetupScreen({eventType,onBack,onStart}) {
           onClick={()=>{
             const tpl={_spcExport:'template',_version:1,name,spcSeries,eventType,buyin,prizeComponent:prizeComp,
               adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables,seatsPerTable:seats,
-              structure,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})};
+              structure,lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})};
             const blob=new Blob([JSON.stringify(tpl,null,2)],{type:'application/json'});
             const url=URL.createObjectURL(blob);
             const a=document.createElement('a');
@@ -129,6 +130,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               <div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>% of field paid out</div>
             </div>
           </div>}
+          {!cfg.noEntries&&<div className="form-group"><label className="form-label">Late registration ends after level</label><input className="form-input" type="number" style={{maxWidth:120}} value={lateReg} onChange={e=>setLateReg(e.target.value)}/><div style={{fontSize:10,color:'#2a4a35',marginTop:4}}>Advisory: the counter keeps accepting after it; only Close at the desk stops it. Empty = none.</div></div>}
           <div className="form-group"><label className="form-label">Seats / table</label><input className="form-input" type="number" style={{maxWidth:120}} value={seats} onChange={e=>setSeats(+e.target.value)}/></div>
           <div className="form-group">
             <label className="form-label">Tables in play — tap to toggle</label>
@@ -181,7 +183,7 @@ function SetupScreen({eventType,onBack,onStart}) {
               </div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>

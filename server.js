@@ -35,6 +35,36 @@ const SHARED_JS = (function() {
   }
 })();
 
+// Registration rules (regWindow / checkRegistration) are shared with the desk the same way: read from js/02_utils.js.
+// If they cannot be loaded the guard is skipped (the desk still rejects duplicates) and the problem is logged loudly.
+const REG = (function() {
+  try {
+    var src = fs.readFileSync(path.join(__dirname, 'js', '02_utils.js'), 'utf8');
+    var si = src.indexOf('// ---SHARED:regWindow:START---');
+    var ei = src.indexOf('// ---SHARED:regWindow:END---');
+    if (si === -1 || ei === -1) throw new Error('regWindow block not found');
+    return new Function(src.substring(si, ei) + '\nreturn {regWindow: regWindow, lateRegEndsAtOf: lateRegEndsAtOf, checkRegistration: checkRegistration};')();
+  } catch (e) {
+    console.error('REGISTRATION GUARD DISABLED: ' + e.message);
+    return null;
+  }
+})();
+
+var pendingRegs = {};   // eventId -> [{name, isReentry, ts}]: registrations accepted a moment ago, not yet in the desk's broadcast
+var PENDING_TTL = 3000;
+function hm(ms) { var d = new Date(ms); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); }
+function pendingFor(id, now) {
+  var list = (pendingRegs[id] || []).filter(function(p) { return now - p.ts < PENDING_TTL; });
+  pendingRegs[id] = list;
+  return list;
+}
+function regSummary(t, now) {
+  if (!REG || !t || !t.reg) return null;
+  var w = REG.regWindow(t.reg, t.lateRegEndsAt, now);
+  w.lateRegLevel = t.reg.lateRegLevel; w.graceMins = t.reg.graceMins; w.status = t.reg.status; w.lateRegEndsAt = (typeof t.lateRegEndsAt === 'number') ? t.lateRegEndsAt : null;
+  return w;
+}
+
 const CLOSE_TABLE_JS = `
 var closeTableMode=null;
 function startCloseTable(){
@@ -233,7 +263,7 @@ function showSuggest(q){
   var matches=memberList.filter(function(m){return m.name.toLowerCase().indexOf(ql)>=0;}).slice(0,8);
   if(!matches.length){sl.className="suggest-list";return;}
   sl.innerHTML=matches.map(function(m){
-    return '<div class="suggest-item" onmousedown="selectSuggest(this)" data-name="'+m.name.replace(/"/g,'')+'">'+m.name+'<span class="suggest-id">'+m.id+'</span></div>';
+    return '<div class="suggest-item" onmousedown="selectSuggest(this)" data-name="'+m.name.replace(/"/g,'')+'">'+m.name+'<span class="suggest-id">'+(m.member_id||'')+'</span></div>';
   }).join("");
   sl.className="suggest-list show";
 }
@@ -253,8 +283,386 @@ function getFloorHTML() {
 }
 
 
+const COUNTER_CSS = '*{box-sizing:border-box;margin:0;padding:0}html,body{background:#06090a;color:#e4f0e8;font-family:-apple-system,BlinkMacSystemFont,sans-serif;height:100%;overflow-x:hidden}.reg-header{background:#08120a;border-bottom:1px solid #152018;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}.reg-brand{font-size:14px;font-weight:700;letter-spacing:2px;color:#c8973a;text-transform:uppercase}.reg-dot{width:8px;height:8px;border-radius:50%;background:#e05a5a;transition:.3s}.reg-dot.on{background:#3dba6f}.reg-stats{display:flex;border-bottom:1px solid #152018}.rs{flex:1;padding:10px 8px;text-align:center;border-right:1px solid #152018}.rs:last-child{border-right:none}.rs-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px;font-weight:600}.rs-val{font-size:18px;font-weight:700;color:#e4f0e8}.rs-val.green{color:#3dba6f}.reentry-strip{padding:8px 20px;font-size:11px;border-bottom:1px solid #152018;display:none;align-items:center;justify-content:space-between}.reentry-strip.open{display:flex;background:#0a1f0d}.reentry-strip.closed{display:flex;background:#1a0a0a}.re-lbl{font-weight:700}.reentry-strip.open .re-lbl{color:#3dba6f}.reentry-strip.closed .re-lbl{color:#e05a5a}.re-desc{color:rgba(255,255,255,.4);font-size:10px}.scan-area{padding:20px;max-width:600px;margin:0 auto}.scan-box{background:#060e09;border:2px solid #1a2e22;border-radius:12px;padding:18px 20px;margin-bottom:16px;transition:.15s}.scan-box:focus-within{border-color:#c8973a}.scan-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7aaa82;margin-bottom:8px;font-weight:600}.scan-input{width:100%;background:transparent;border:none;outline:none;font-size:20px;color:#e8f0ea;caret-color:#c8973a;font-weight:500}.scan-input::placeholder{color:#2a4a35}.scan-hint{font-size:12px;color:#527a5c;margin-top:6px}.last-reg{background:#0b1610;border:1px solid #1a2e22;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:none}.last-reg.show{display:block}.last-reg.dup{background:#1a1004;border-color:#2a1c06}.lr-name{font-size:22px;font-weight:700;color:#b2d4ba;margin-bottom:4px}.lr-seat{font-size:14px;color:#3dba6f;font-weight:600}.lr-seat.pending{color:#c8973a}.lr-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-left:8px}.lr-badge.dup{background:#1a0a0a;color:#c87a40;border:1px solid #3a2010}.lr-badge.reentry{background:#0d0816;color:#9b7bce;border:1px solid #2a1a40}.reg-log{background:#060e09;border:1px solid #1a2e22;border-radius:12px;overflow:hidden}.rl-hdr{padding:10px 16px;border-bottom:1px solid #1a2e22;display:flex;justify-content:space-between}.rl-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7aaa82;font-weight:600}.rl-count{font-size:12px;color:#7aaa82}.rl-list{max-height:400px;overflow-y:auto}.rl-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #0e1a12}.rl-row:last-child{border-bottom:none}.rl-row.dup-row{background:#0f0c04}.rl-num{font-size:12px;color:#7aaa82;width:24px;text-align:right;font-weight:500}.rl-name{flex:1;font-size:14px;color:#b2d4ba;font-weight:500}.rl-seat{font-size:13px;color:#3dba6f;font-weight:600}.rl-time{font-size:11px;color:#7aaa82;font-weight:500}.rl-empty{padding:24px;text-align:center;color:#3a5a42;font-size:13px}.toast{z-index:2000;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3dba6f;color:#04080a;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:999}.toast.show{opacity:1}.toast.error{background:#e05a5a;color:#fff;top:64px;bottom:auto}.suggest-list{position:absolute;left:0;right:0;top:100%;background:#0b1610;border:1px solid #1a2e22;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:20;display:none}.suggest-list.show{display:block}.suggest-item{padding:10px 16px;font-size:15px;color:#b2d4ba;cursor:pointer;border-bottom:1px solid #0e1a12}.suggest-item:active,.suggest-item:hover{background:#112016;color:#3dba6f}.suggest-id{font-size:11px;color:#527a5c;margin-left:8px}.member-sync-bar{padding:8px 20px;border-bottom:1px solid #152018;background:#0a0a18;display:flex;align-items:center;gap:10px}.member-count{font-size:11px;color:#7a7aaa;font-weight:500}.rl-search{display:flex;gap:8px;padding:8px 16px;border-bottom:1px solid #1a2e22}.rl-search-input{flex:1;min-width:0;background:#08120a;border:1px solid #1a2e22;border-radius:8px;outline:none;font-size:16px;color:#e8f0ea;padding:8px 12px}.rl-search-input:focus{border-color:#c8973a}.rl-search-clear{display:none;background:#0d1a0f;border:1px solid #1a2e22;border-radius:8px;color:#7aaa82;font-size:13px;padding:0 14px}.rl-search-clear.show{display:block}';
+const COUNTER_CSS_NEW = `.hdr{padding:16px 20px;border-bottom:1px solid #152018}
+.hdr-big{font-size:28px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;line-height:1.1}
+.hdr-sub{font-size:14px;opacity:.85;margin-top:4px}
+.hdr-strip{margin-top:8px;font-size:15px;font-weight:700;padding:5px 10px;border-radius:6px;background:rgba(0,0,0,.18);display:inline-block}
+.hdr-strip.red{background:#7a1010;color:#fff}
+.hdr-chips{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.hdr-chip{border:2px solid;border-radius:16px;padding:3px 10px;font-size:13px;font-weight:700}
+.hdr-chip i{font-style:normal;font-weight:600;opacity:.8}
+.now-reg{padding:12px 20px;font-size:16px;font-weight:800;text-align:center;letter-spacing:.5px;cursor:pointer}
+.pick{background:#0b1610;border:2px solid #c8973a;border-radius:12px;padding:14px;margin-bottom:16px}
+.pick-title{font-size:15px;font-weight:700;margin-bottom:10px}
+.pick-btn{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;background:#08120a;border:1px solid #1a2e22;border-radius:8px;color:#e4f0e8;cursor:pointer}
+.pick-btn.off{opacity:.35}
+.pick-name{display:block;font-size:22px;font-weight:800;text-transform:uppercase}
+.pick-sub{display:block;font-size:14px;color:#9ab8a2;margin-top:2px}
+.pick-sub .late{color:#ff7070;font-weight:700}
+.pick-sub .amber{color:#f0c040;font-weight:700}
+.pick-cancel{width:100%;padding:10px;background:none;border:1px solid #3a4a40;color:#9ab8a2;border-radius:8px;font-size:14px}
+.lr-event{display:inline-block;padding:3px 10px;border-radius:5px;color:#04080a;font-weight:800;font-size:13px;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase}
+.lr-warn{margin-top:8px;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600}
+.lr-warn.late{background:#4a1010;color:#ffb0b0;border:1px solid #e05a5a}
+.lr-warn.else{background:#3a2a06;color:#f0c040;border:1px solid #c8973a}
+.lr-badge.late{background:#4a1010;color:#ffb0b0;border:1px solid #e05a5a}
+.rl-tabs{display:flex;overflow-x:auto;border-bottom:1px solid #1a2e22}
+.rl-tab{flex:none;padding:8px 12px;background:none;border:0;border-bottom:3px solid transparent;color:#7aaa82;font-size:12px;font-weight:700}
+.rl-tab.on{color:#e4f0e8;border-bottom-color:#e4f0e8 !important}
+.rl-tag{flex:none;min-width:70px;text-align:center;padding:2px 6px;border-radius:4px;color:#04080a;font-size:11px;font-weight:800;text-transform:uppercase}
+.sm-row{display:flex;gap:14px;align-items:center;padding:8px 14px;border-bottom:1px solid #152018;font-size:13px;color:#9ab8a2}
+.sm-name{font-weight:800;color:#e4f0e8;min-width:90px;text-transform:uppercase}
+.sm-mode{margin-left:auto;color:#3dba6f;font-weight:700}
+`;
+const COUNTER_BODY = `<div class="reg-header"><div class="reg-brand">SPC Registration</div><div class="reg-dot" id="dot"></div></div>
+<div class="hdr" id="hdr"><div class="hdr-big">Connecting...</div></div>
+<div class="now-reg" id="now-reg" style="display:none" onclick="this.style.display='none'"></div>
+<div class="reg-stats" id="stats-one"><div class="rs"><div class="rs-lbl">Active</div><div class="rs-val" id="s-active">-</div></div><div class="rs"><div class="rs-lbl">Entries</div><div class="rs-val" id="s-entries">-</div></div><div class="rs"><div class="rs-lbl">Tables</div><div class="rs-val" id="s-tables">-</div></div><div class="rs"><div class="rs-lbl">Mode</div><div class="rs-val green" id="s-mode">-</div></div></div>
+<div id="stats-multi" style="display:none"></div>
+<div class="reentry-strip" id="re-strip"><span class="re-lbl" id="re-lbl2"></span><span class="re-desc" id="re-desc2"></span></div>
+<div class="scan-area"><div class="member-sync-bar"><span class="member-count" id="member-count">Members: syncing...</span></div>
+<div class="scan-box" style="position:relative"><div class="scan-label">Scan SPC card / boarding pass / type name + Enter</div><input class="scan-input" id="scan" placeholder="Ready to scan..." autocomplete="off" autocorrect="off" spellcheck="false"><div class="suggest-list" id="suggest-list"></div></div>
+<div class="pick" id="pick" style="display:none"></div>
+<div class="last-reg" id="last-reg"><div class="lr-event" id="lr-event"></div><div class="lr-name" id="lr-name"></div><div class="lr-seat" id="lr-seat"></div><div id="lr-warn"></div></div>
+<div class="reg-log"><div class="rl-hdr"><span class="rl-title">Registrations</span><span class="rl-count" id="rl-count">0</span></div><div class="rl-tabs" id="rl-tabs"></div><div class="rl-search"><input class="rl-search-input" id="rl-search" type="search" placeholder="Search name (all events)..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="rl-search-clear" id="rl-search-clear" type="button">Clear</button></div><div class="rl-list" id="rl-list"><div class="rl-empty">No registrations yet</div></div></div></div>
+<div class="toast" id="toast"></div>`;
+
+/* The counter page's browser code is written as a real function so Node syntax-checks it on load; its source is injected
+   (body only, so declarations stay global for COUNTER_SUGGEST_JS). Do not reference server-side names inside it. */
+function counterClient() {
+  /* Runs in the browser (injected as page source). Top-level var/function declarations are intentionally global:
+     COUNTER_SUGGEST_JS (member suggestions) reads memberList, scanInput and calls doScan. */
+  var events = [];            // live events from /api/events (with registration state)
+  var states = {};            // eventId -> lite /api/state response
+  var memberList = [];
+  var serverOffset = 0;       // server clock minus this device's clock
+  var pendingScan = null;     // {name, country, raw}: a scan waiting for the staff to choose an event
+  var lastAcceptKey = null;
+  var bannerTimer = null;
+  var rlFilter = '';
+  var rlTab = 'open';         // 'open' | 'all' | event id
+  var rlSearchTimer = null;
+  var scanInput = document.getElementById('scan');
+  scanInput.focus();
+  document.addEventListener('click', function(e) { if (e.target && e.target.id === 'rl-search') return; scanInput.focus(); });
+  window.addEventListener('unhandledrejection', function(e) { e.preventDefault(); });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function nowSrv() { return Date.now() + serverOffset; }
+  function mmss(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
+  function money(n) { return 'S$' + Math.round(n || 0).toLocaleString(); }
+  function countryFlag(cc) {
+    if (!cc) return '';
+    try { return String.fromCodePoint.apply(null, cc.toUpperCase().split('').filter(Boolean).map(function(c) { return 0x1F1E6 + c.charCodeAt(0) - 65; })); } catch (e) { return ''; }
+  }
+  function parseQR(raw) {
+    if (!raw || !raw.trim()) return null;
+    var trimmed = raw.trim();
+    var spcMatch = trimmed.match(/^(SPC-\d{5})(\/([A-Z]{2}))?$/i);
+    if (spcMatch) {
+      var mid = spcMatch[1].toUpperCase();
+      var cc = spcMatch[3] ? spcMatch[3].toUpperCase() : null;
+      for (var i = 0; i < memberList.length; i++) { if (memberList[i].member_id === mid) return { name: memberList[i].name, country: cc || memberList[i].country || null }; }
+      return { unsynced: true, memberId: mid };
+    }
+    var parts = trimmed.split(';');
+    if (parts.length >= 4) { var n = parts[3] ? parts[3].trim() : ''; if (n) return { name: n, country: null }; }
+    if (trimmed) {
+      var cc2 = null;
+      for (var k = 0; k < memberList.length; k++) { if (memberList[k].name && memberList[k].name.toLowerCase() === trimmed.toLowerCase()) { cc2 = memberList[k].country || null; break; } }
+      return { name: trimmed, country: cc2 };
+    }
+    return null;
+  }
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(window._toastT);
+    window._toastT = setTimeout(function() { t.className = 'toast'; }, type === 'error' ? 5000 : 2500);
+  }
+
+  /* ---- which events accept registration right now (the server decides; this is display only) ---- */
+  function evAccepting(e) { return !e.reg || e.reg.accepting; }
+  function acceptingEvents() { return events.filter(evAccepting); }
+  function evStatusText(e) {
+    var r = e.reg; if (!r) return '';
+    var now = nowSrv();
+    if (r.state === 'lateGrace') return 'late reg grace' + (r.adviceEndsAt ? ' ' + mmss(r.adviceEndsAt - now) : '');
+    if (r.state === 'lateOver') return 'late reg over';
+    if (r.state === 'closingGrace') return 'closing ' + (r.graceEndsAt ? mmss(r.graceEndsAt - now) : '');
+    if (r.state === 'open' && r.lateRegEndsAt && r.lateRegEndsAt - now <= 900000 && r.lateRegEndsAt - now > 0) return 'late reg ends ' + mmss(r.lateRegEndsAt - now);
+    return '';
+  }
+  function evById(id) { for (var i = 0; i < events.length; i++) if (events[i].id === id) return events[i]; return null; }
+
+  /* ---- header ---- */
+  function renderHeader() {
+    var h = document.getElementById('hdr');
+    var acc = acceptingEvents();
+    var html = '';
+    h.style.background = '#2a2f2c'; h.style.color = '#e4f0e8';
+    if (!events.length) {
+      html = '<div class="hdr-big">No events live</div><div class="hdr-sub">Waiting for the desk</div>';
+    } else if (!acc.length) {
+      html = '<div class="hdr-big">Registration closed</div>' + events.map(function(e) {
+        var r = e.reg; var why = !r ? '' : (r.status === 'closed' && r.closedAt ? 'closed' : 'not open');
+        return '<div class="hdr-sub"><b>' + esc(e.short) + '</b> ' + esc(why) + '</div>';
+      }).join('');
+    } else if (acc.length === 1) {
+      var e = acc[0];
+      h.style.background = e.color || '#c8973a'; h.style.color = '#04080a';
+      var st = evStatusText(e);
+      var lateOver = e.reg && e.reg.state === 'lateOver';
+      html = '<div class="hdr-big">' + esc(e.short) + ' · ' + money(e.buyin) + '</div>' + (st ? '<div class="hdr-strip' + (lateOver ? ' red' : '') + '">' + esc(st) + '</div>' : '');
+    } else {
+      h.style.background = '#16241b';
+      html = '<div class="hdr-big">' + acc.length + ' events open: choose after scan</div><div class="hdr-chips">' + acc.map(function(e) {
+        var st = evStatusText(e);
+        return '<span class="hdr-chip" style="border-color:' + esc(e.color) + '">' + esc(e.short) + (st ? ' <i>' + esc(st) + '</i>' : '') + '</span>';
+      }).join('') + '</div>';
+    }
+    h.innerHTML = html;
+    document.getElementById('dot').className = 'reg-dot' + (events.length || lastOk ? ' on' : '');
+  }
+  var lastOk = false;
+
+  function checkAcceptChange() {
+    var acc = acceptingEvents();
+    var key = acc.map(function(e) { return e.id; }).sort().join(',');
+    if (lastAcceptKey !== null && key !== lastAcceptKey && acc.length > 0) {
+      var b = document.getElementById('now-reg');
+      var one = acc.length === 1;
+      b.style.background = one ? (acc[0].color || '#c8973a') : '#16241b';
+      b.style.color = one ? '#04080a' : '#e4f0e8';
+      b.textContent = 'Now registering: ' + acc.map(function(e) { return e.short; }).join(' + ');
+      b.style.display = 'block';
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(function() { b.style.display = 'none'; }, 10000);
+    }
+    if (!acc.length) document.getElementById('now-reg').style.display = 'none';
+    lastAcceptKey = key;
+  }
+
+  /* ---- pick-after-scan (two or more events accepting) ---- */
+  function renderPick() {
+    var box = document.getElementById('pick');
+    if (!pendingScan) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'block';
+    var h = '<div class="pick-title">Register ' + esc(pendingScan.name) + (pendingScan.country ? ' ' + countryFlag(pendingScan.country) : '') + ' into:</div>';
+    events.forEach(function(e) {
+      var ok = evAccepting(e);
+      var st = evStatusText(e);
+      var late = e.reg && e.reg.state === 'lateOver';
+      h += '<button class="pick-btn' + (ok ? '' : ' off') + '" ' + (ok ? '' : 'disabled ') + 'data-ev="' + esc(e.id) + '" style="border-left:10px solid ' + esc(e.color || '#888') + '"><span class="pick-name">' + esc(e.short) + '</span><span class="pick-sub">' + money(e.buyin) + (st ? ' · <span class="' + (late ? 'late' : 'amber') + '">' + esc(st) + '</span>' : '') + (ok ? '' : ' · closed') + '</span></button>';
+    });
+    h += '<button class="pick-cancel" id="pick-cancel">Cancel</button>';
+    box.innerHTML = h;
+    var btns = box.querySelectorAll('.pick-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].addEventListener('click', function(ev) { pickEvent(ev.currentTarget.getAttribute('data-ev')); });
+    document.getElementById('pick-cancel').addEventListener('click', function() { pendingScan = null; renderPick(); scanInput.focus(); });
+  }
+  function pickEvent(id) {
+    if (!pendingScan) return;
+    var e = evById(id); if (!e || !evAccepting(e)) { showToast('That event is not accepting registrations', 'error'); renderPick(); return; }
+    var p = pendingScan;
+    registerInto(e, p.name, p.country, true);
+  }
+
+  /* ---- sending ---- */
+  function sendAction(obj, evId) {
+    if (!evId) { showToast('No event chosen', 'error'); return Promise.reject(new Error('no_event')); }
+    var body = {}; for (var k in obj) body[k] = obj[k]; body.event = evId;
+    var ac = window.AbortController ? new AbortController() : null;
+    var tm = setTimeout(function() { if (ac) ac.abort(); }, 6000);
+    return fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ac ? ac.signal : undefined }).then(function(r) {
+      clearTimeout(tm);
+      if (r.ok) return r.json();
+      return r.json().catch(function() { return {}; }).then(function(j) { showToast(j.message || 'Action refused', 'error'); setTimeout(poll, 100); throw new Error(j.error || 'refused'); });
+    }, function(e) {
+      clearTimeout(tm);
+      showToast(e && e.name === 'AbortError' ? 'No response. Check Wi-Fi and the desk before retrying.' : 'Not sent. Check Wi-Fi and try again.', 'error');
+      throw e;
+    });
+  }
+
+  function doScan() {
+    var raw = scanInput.value;
+    if (!raw.trim()) return;
+    document.getElementById('suggest-list').className = 'suggest-list';
+    var parsed = parseQR(raw);
+    if (!parsed) { showToast('Could not parse scan', 'error'); scanInput.value = ''; return; }
+    if (parsed.unsynced) { showToast(parsed.memberId + ' not synced — please type player name manually', 'error'); scanInput.value = ''; return; }
+    var acc = acceptingEvents();
+    if (!acc.length) { showToast(events.length ? 'Registration closed' : 'No events live', 'error'); return; }   // nothing sent; the text stays for a retry
+    if (acc.length === 1) {
+      registerInto(acc[0], parsed.name, parsed.country, false, raw);
+      scanInput.value = ''; scanInput.focus();
+    } else {
+      pendingScan = { name: parsed.name, country: parsed.country, raw: raw };
+      scanInput.value = ''; scanInput.focus();
+      renderPick();
+    }
+  }
+
+  function registerInto(e, name, country, fromPick, raw) {
+    sendAction({ type: 'register', name: name, country: country }, e.id).then(function(res) {
+      if (fromPick) { pendingScan = null; renderPick(); }
+      showResult(e, name, country, res || {});
+      showToast((res && res.isDup) ? name + ' (DUPLICATE - registered anyway)' : name + ' registered');
+      setTimeout(poll, 600);
+    }, function() {
+      if (!fromPick) { if (raw && !scanInput.value) scanInput.value = raw; scanInput.focus(); }   // refused: keep the text, and keep the pick card so staff can choose again
+    });
+  }
+
+  function showResult(e, name, country, res) {
+    var lr = document.getElementById('last-reg');
+    lr.className = 'last-reg show' + (res.isDup ? ' dup' : '');
+    var ev = document.getElementById('lr-event');
+    ev.style.background = e.color || '#c8973a'; ev.textContent = e.short + ' · ' + money(e.buyin);
+    document.getElementById('lr-name').innerHTML = esc(name) + (country ? ' ' + countryFlag(country) : '') + (res.isDup ? '<span class="lr-badge dup">DUPLICATE</span>' : '') + (res.isReentry && !res.isDup ? '<span class="lr-badge reentry">RE-ENTRY</span>' : '');
+    var seat = document.getElementById('lr-seat'); seat.textContent = 'Assigning seat...'; seat.className = 'lr-seat pending';
+    document.getElementById('lr-warn').innerHTML = (res.warnings || []).map(function(w) { return '<div class="lr-warn ' + (w.kind === 'late' ? 'late' : 'else') + '">' + esc(w.text) + '</div>'; }).join('');
+    setTimeout(function() {
+      fetch('/api/state?event=' + encodeURIComponent(e.id) + '&lite=1').then(function(r) { return r.json(); }).then(function(data) {
+        if (!data || !data.tournament) { seat.textContent = 'Registered'; seat.className = 'lr-seat'; return; }
+        states[e.id] = data;
+        var s = findSeat(data, name);
+        seat.className = 'lr-seat';
+        seat.textContent = s ? ('Table ' + s.table + ' Seat ' + s.seat) : (data.tournament.seatingMode === 'manual' ? 'Added to queue (manual mode)' : 'Seated');
+        renderLog();
+      }).catch(function() { seat.textContent = 'Registered'; seat.className = 'lr-seat'; });
+    }, 800);
+  }
+  function findSeat(data, name) {
+    var tm = (data.tournament && data.tournament.tableMap) || [];
+    for (var i = 0; i < tm.length; i++) for (var j = 0; j < tm[i].players.length; j++) if (tm[i].players[j].name === name) return { table: tm[i].num, seat: tm[i].players[j].seatNum };
+    return null;
+  }
+
+  /* ---- stats ---- */
+  function renderStats() {
+    var acc = acceptingEvents();
+    var shown = acc.length ? acc : events;
+    var one = document.getElementById('stats-one'), multi = document.getElementById('stats-multi'), rs = document.getElementById('re-strip');
+    if (shown.length === 1) {
+      var st = states[shown[0].id]; var d = st && st.tournament;
+      one.style.display = 'flex'; multi.style.display = 'none';
+      if (d) {
+        var cumE = (d.players || 0) + (d.inheritedEntries || 0);
+        document.getElementById('s-active').textContent = d.active || '-';
+        document.getElementById('s-entries').textContent = cumE || '-';
+        document.getElementById('s-tables').textContent = d.tables || '-';
+        document.getElementById('s-mode').textContent = (d.seatingMode || 'auto').toUpperCase();
+        if (d.reentryUntil > 0) {
+          rs.style.display = 'flex'; rs.className = 'reentry-strip ' + (d.reentryOpen ? 'open' : 'closed');
+          document.getElementById('re-lbl2').textContent = d.reentryOpen ? 'Re-entries OPEN' : 'Re-entries CLOSED';
+          document.getElementById('re-desc2').textContent = d.reentryDesc || '';
+        } else rs.style.display = 'none';
+      }
+    } else {
+      one.style.display = 'none'; rs.style.display = 'none';
+      multi.style.display = shown.length ? 'block' : 'none';
+      multi.innerHTML = shown.map(function(e) {
+        var st = states[e.id]; var d = st && st.tournament;
+        var cumE = d ? (d.players || 0) + (d.inheritedEntries || 0) : '-';
+        return '<div class="sm-row" style="border-left:6px solid ' + esc(e.color || '#888') + '"><span class="sm-name">' + esc(e.short) + '</span><span>Active <b>' + (d ? d.active : '-') + '</b></span><span>Entries <b>' + cumE + '</b></span><span>Tables <b>' + (d ? d.tables : '-') + '</b></span><span class="sm-mode">' + esc(d ? (d.seatingMode || 'auto').toUpperCase() : '') + '</span></div>';
+      }).join('');
+    }
+  }
+
+  /* ---- log ---- */
+  function logRows() {
+    var q = rlFilter.toLowerCase();
+    var evs = events;
+    if (!q) {
+      if (rlTab === 'open') { var a = acceptingEvents(); evs = a.length ? a : events; }
+      else if (rlTab !== 'all') evs = events.filter(function(e) { return e.id === rlTab; });
+    }
+    var rows = [];
+    evs.forEach(function(e) {
+      var st = states[e.id]; var lg = st && st.tournament && st.tournament.regLog || [];
+      lg.forEach(function(r, i) {
+        if (q && (r.name || '').toLowerCase().indexOf(q) < 0) return;
+        rows.push({ ev: e, num: lg.length - i, name: r.name, country: r.country, isDup: r.isDup, isReentry: !!r.isReentry, late: !!r.late, time: new Date(r.ts || Date.now()), table: r.tableNum, seat: r.seatNum });
+      });
+    });
+    rows.sort(function(a, b) { return b.time - a.time; });
+    return { rows: rows, multi: evs.length > 1 };
+  }
+  function renderTabs() {
+    var t = document.getElementById('rl-tabs');
+    var tabs = [{ id: 'open', label: 'Open now' }, { id: 'all', label: 'All events' }].concat(events.map(function(e) { return { id: e.id, label: e.short, color: e.color }; }));
+    t.innerHTML = tabs.map(function(x) { return '<button class="rl-tab' + (rlTab === x.id ? ' on' : '') + '" data-tab="' + esc(x.id) + '"' + (x.color ? ' style="border-bottom-color:' + esc(x.color) + '"' : '') + '>' + esc(x.label) + '</button>'; }).join('');
+    var bs = t.querySelectorAll('.rl-tab');
+    for (var i = 0; i < bs.length; i++) bs[i].addEventListener('click', function(ev) { rlTab = ev.currentTarget.getAttribute('data-tab'); renderTabs(); renderLog(); });
+  }
+  function renderLog() {
+    var res = logRows(); var rows = res.rows; var lst = document.getElementById('rl-list');
+    document.getElementById('rl-count').textContent = rows.length;
+    if (!rows.length) { lst.innerHTML = '<div class="rl-empty">' + (rlFilter ? 'No names match' : 'No registrations yet') + '</div>'; return; }
+    var scroll = lst.scrollTop;
+    lst.innerHTML = rows.map(function(r) {
+      var seatStr = r.table ? 'T' + r.table + ' S' + r.seat : '...';
+      var ts = pad2(r.time.getHours()) + ':' + pad2(r.time.getMinutes()) + ':' + pad2(r.time.getSeconds());
+      return '<div class="rl-row' + (r.isDup ? ' dup-row' : '') + '">' + (res.multi || rlFilter ? '<span class="rl-tag" style="background:' + esc(r.ev.color || '#888') + '">' + esc(r.ev.short) + '</span>' : '<span class="rl-num">' + r.num + '</span>') +
+        '<span class="rl-name">' + esc(r.name) + (r.country ? ' ' + countryFlag(r.country) : '') + (r.isDup ? ' <span class="lr-badge dup">DUP</span>' : '') + (r.isReentry && !r.isDup ? ' <span class="lr-badge reentry">RE-ENTRY</span>' : '') + (r.late ? ' <span class="lr-badge late">LATE</span>' : '') + '</span>' +
+        '<span class="rl-seat">' + seatStr + '</span><span class="rl-time">' + ts + '</span></div>';
+    }).join('');
+    lst.scrollTop = scroll;
+  }
+
+  /* ---- search box ---- */
+  var rlSearch = document.getElementById('rl-search'); var rlClear = document.getElementById('rl-search-clear');
+  function setRlFilter(v) { rlFilter = v; rlClear.className = 'rl-search-clear' + (v ? ' show' : ''); renderLog(); }
+  function armRlTimer() { clearTimeout(rlSearchTimer); rlSearchTimer = setTimeout(function() { rlSearch.blur(); scanInput.focus(); }, 15000); }
+  rlSearch.addEventListener('input', function() { setRlFilter(rlSearch.value.trim()); armRlTimer(); });
+  rlSearch.addEventListener('focus', armRlTimer);
+  rlSearch.addEventListener('blur', function() { clearTimeout(rlSearchTimer); });
+  rlSearch.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); rlSearch.blur(); scanInput.focus(); } });
+  rlClear.addEventListener('click', function() { rlSearch.value = ''; setRlFilter(''); });
+  scanInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doScan(); } });
+  scanInput.addEventListener('input', function() { showSuggest(scanInput.value); });
+  scanInput.addEventListener('blur', function() { setTimeout(function() { document.getElementById('suggest-list').className = 'suggest-list'; }, 200); });
+
+  /* ---- polling ---- */
+  function getJson(url, ms) {
+    var ac = window.AbortController ? new AbortController() : null;
+    var tm = setTimeout(function() { if (ac) ac.abort(); }, ms || 4000);
+    return fetch(url, { signal: ac ? ac.signal : undefined }).then(function(r) { clearTimeout(tm); if (!r.ok) throw new Error('http ' + r.status); return r.json(); }, function(e) { clearTimeout(tm); throw e; });
+  }
+  function poll() {
+    getJson('/api/events').then(function(d) {
+      events = d.events || [];
+      if (typeof d.serverNow === 'number') serverOffset = d.serverNow - Date.now();
+      lastOk = true;
+      checkAcceptChange(); renderHeader(); renderPick(); renderTabs();
+      var seen = {};
+      events.forEach(function(e) {
+        seen[e.id] = true;
+        getJson('/api/state?event=' + encodeURIComponent(e.id) + '&lite=1').then(function(data) { if (data && data.tournament) { states[e.id] = data; renderStats(); renderLog(); } }).catch(function() {});
+      });
+      Object.keys(states).forEach(function(id) { if (!seen[id]) delete states[id]; });
+      renderStats(); renderLog();
+    }).catch(function() { lastOk = false; document.getElementById('dot').className = 'reg-dot'; });
+  }
+  function loadMembers() {
+    getJson('/api/members', 8000).then(function(d) {
+      if (d && d.members && d.members.length) { memberList = d.members; document.getElementById('member-count').textContent = 'Members: ' + d.members.length + ' loaded'; }
+    }).catch(function() {});
+  }
+  loadMembers(); setInterval(loadMembers, 30000);
+  poll(); setInterval(poll, 2000);
+  setInterval(function() { renderHeader(); renderPick(); }, 1000);   // countdowns tick every second
+}
+
 function getRegisterHTML() {
-  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SPC Registration</title><style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#06090a;color:#e4f0e8;font-family:-apple-system,BlinkMacSystemFont,sans-serif;height:100%;overflow-x:hidden}.reg-header{background:#08120a;border-bottom:1px solid #152018;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}.reg-brand{font-size:14px;font-weight:700;letter-spacing:2px;color:#c8973a;text-transform:uppercase}.reg-dot{width:8px;height:8px;border-radius:50%;background:#e05a5a;transition:.3s}.reg-dot.on{background:#3dba6f}.reg-stats{display:flex;border-bottom:1px solid #152018}.rs{flex:1;padding:10px 8px;text-align:center;border-right:1px solid #152018}.rs:last-child{border-right:none}.rs-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px;font-weight:600}.rs-val{font-size:18px;font-weight:700;color:#e4f0e8}.rs-val.green{color:#3dba6f}.reentry-strip{padding:8px 20px;font-size:11px;border-bottom:1px solid #152018;display:none;align-items:center;justify-content:space-between}.reentry-strip.open{display:flex;background:#0a1f0d}.reentry-strip.closed{display:flex;background:#1a0a0a}.re-lbl{font-weight:700}.reentry-strip.open .re-lbl{color:#3dba6f}.reentry-strip.closed .re-lbl{color:#e05a5a}.re-desc{color:rgba(255,255,255,.4);font-size:10px}.scan-area{padding:20px;max-width:600px;margin:0 auto}.scan-box{background:#060e09;border:2px solid #1a2e22;border-radius:12px;padding:18px 20px;margin-bottom:16px;transition:.15s}.scan-box:focus-within{border-color:#c8973a}.scan-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7aaa82;margin-bottom:8px;font-weight:600}.scan-input{width:100%;background:transparent;border:none;outline:none;font-size:20px;color:#e8f0ea;caret-color:#c8973a;font-weight:500}.scan-input::placeholder{color:#2a4a35}.scan-hint{font-size:12px;color:#527a5c;margin-top:6px}.last-reg{background:#0b1610;border:1px solid #1a2e22;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:none}.last-reg.show{display:block}.last-reg.dup{background:#1a1004;border-color:#2a1c06}.lr-name{font-size:22px;font-weight:700;color:#b2d4ba;margin-bottom:4px}.lr-seat{font-size:14px;color:#3dba6f;font-weight:600}.lr-seat.pending{color:#c8973a}.lr-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-left:8px}.lr-badge.dup{background:#1a0a0a;color:#c87a40;border:1px solid #3a2010}.lr-badge.reentry{background:#0d0816;color:#9b7bce;border:1px solid #2a1a40}.reg-log{background:#060e09;border:1px solid #1a2e22;border-radius:12px;overflow:hidden}.rl-hdr{padding:10px 16px;border-bottom:1px solid #1a2e22;display:flex;justify-content:space-between}.rl-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7aaa82;font-weight:600}.rl-count{font-size:12px;color:#7aaa82}.rl-list{max-height:400px;overflow-y:auto}.rl-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #0e1a12}.rl-row:last-child{border-bottom:none}.rl-row.dup-row{background:#0f0c04}.rl-num{font-size:12px;color:#7aaa82;width:24px;text-align:right;font-weight:500}.rl-name{flex:1;font-size:14px;color:#b2d4ba;font-weight:500}.rl-seat{font-size:13px;color:#3dba6f;font-weight:600}.rl-time{font-size:11px;color:#7aaa82;font-weight:500}.rl-empty{padding:24px;text-align:center;color:#3a5a42;font-size:13px}.toast{z-index:2000;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3dba6f;color:#04080a;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:999}.toast.show{opacity:1}.toast.error{background:#e05a5a;color:#fff;top:64px;bottom:auto}.suggest-list{position:absolute;left:0;right:0;top:100%;background:#0b1610;border:1px solid #1a2e22;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:20;display:none}.suggest-list.show{display:block}.suggest-item{padding:10px 16px;font-size:15px;color:#b2d4ba;cursor:pointer;border-bottom:1px solid #0e1a12}.suggest-item:active,.suggest-item:hover{background:#112016;color:#3dba6f}.suggest-id{font-size:11px;color:#527a5c;margin-left:8px}.member-sync-bar{padding:8px 20px;border-bottom:1px solid #152018;background:#0a0a18;display:flex;align-items:center;gap:10px}.member-count{font-size:11px;color:#7a7aaa;font-weight:500}.rl-search{display:flex;gap:8px;padding:8px 16px;border-bottom:1px solid #1a2e22}.rl-search-input{flex:1;min-width:0;background:#08120a;border:1px solid #1a2e22;border-radius:8px;outline:none;font-size:16px;color:#e8f0ea;padding:8px 12px}.rl-search-input:focus{border-color:#c8973a}.rl-search-clear{display:none;background:#0d1a0f;border:1px solid #1a2e22;border-radius:8px;color:#7aaa82;font-size:13px;padding:0 14px}.rl-search-clear.show{display:block}</style></head><body><div class="reg-header"><div class="reg-brand">SPC Registration</div><div class="reg-dot" id="dot"></div></div><div id="event-name" style="padding:6px 20px;font-size:13px;color:#c8973a;font-weight:600;text-align:center;display:none"></div><div class="reg-stats"><div class="rs"><div class="rs-lbl">Active</div><div class="rs-val" id="s-active">-</div></div><div class="rs"><div class="rs-lbl">Entries</div><div class="rs-val" id="s-entries">-</div></div><div class="rs"><div class="rs-lbl">Tables</div><div class="rs-val" id="s-tables">-</div></div><div class="rs"><div class="rs-lbl">Mode</div><div class="rs-val green" id="s-mode">-</div></div></div><div class="reentry-strip" id="re-strip"><span class="re-lbl" id="re-lbl2"></span><span class="re-desc" id="re-desc2"></span></div><div class="scan-area"><div class="member-sync-bar"><span class="member-count" id="member-count">Members: syncing...</span></div><div class="scan-box" style="position:relative"><div class="scan-label">Scan SPC card / boarding pass / type name + Enter</div><input class="scan-input" id="scan" placeholder="Ready to scan..." autocomplete="off" autocorrect="off" spellcheck="false"><div class="suggest-list" id="suggest-list"></div></div><div class="last-reg" id="last-reg"><div class="lr-name" id="lr-name"></div><div class="lr-seat" id="lr-seat"></div></div><div class="reg-log"><div class="rl-hdr"><span class="rl-title">Registrations this session</span><span class="rl-count" id="rl-count">0</span></div><div class="rl-search"><input class="rl-search-input" id="rl-search" type="search" placeholder="Search name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="rl-search-clear" id="rl-search-clear" type="button">Clear</button></div><div class="rl-list" id="rl-list"><div class="rl-empty">No registrations yet</div></div></div></div><div id="nl-panel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:#06090a;padding:24px 20px;overflow:auto"><div id="nl-title" style="font-size:20px;font-weight:700;margin-bottom:16px;color:#e4f0e8"></div><div id="nl-list"></div><button onclick="checkAgain()" style="display:block;width:100%;min-height:48px;padding:10px 12px;background:#08120a;border:1px solid #3dba6f;color:#e4f0e8;border-radius:8px;font-size:16px;font-weight:600">Check again</button></div><div class="toast" id="toast"></div><script>' + COUNTER_SUGGEST_JS + 'var lastState=null;var eventId=null,eventName="",notLive=false;try{eventId=localStorage.getItem("spc_counter_event");}catch(x){}window.addEventListener("unhandledrejection",function(e){e.preventDefault();});function evUrl(){return "/api/state?event="+encodeURIComponent(eventId);}function rememberEvent(id){try{localStorage.setItem("spc_counter_event",id);}catch(x){}}function hideNotLive(){notLive=false;document.getElementById("nl-panel").style.display="none";if(scanInput)scanInput.focus();}function renderNotLive(evs){var l=document.getElementById("nl-list");l.innerHTML="";evs.forEach(function(e){if(e.id===eventId)return;var b=document.createElement("button");b.style.cssText="display:block;width:100%;min-height:48px;margin-bottom:10px;padding:10px 12px;background:#3dba6f;color:#04080a;border:0;border-radius:8px;font-size:16px;font-weight:700";b.textContent="Switch to "+(e.short||e.name||e.id);b.onclick=function(){chooseEvent(e.id,e.short||e.name);};l.appendChild(b);});}function refreshNotLive(){return fetch("/api/events").then(function(r){return r.json();}).then(function(d){renderNotLive(d.events||[]);return d.events||[];}).catch(function(){return [];});}function showNotLive(){notLive=true;document.getElementById("dot").className="reg-dot";document.getElementById("nl-title").textContent=(eventName||"That event")+" is no longer live on the desk.";document.getElementById("nl-panel").style.display="block";refreshNotLive();}function chooseEvent(id,name){eventId=id;eventName=name||"";rememberEvent(id);lastState=null;hideNotLive();poll();}function checkAgain(){refreshNotLive().then(function(evs){var live=evs.some(function(e){return e.id===eventId;});if(live){hideNotLive();poll();}else showToast("Still not live","error");});}function loadEvent(){fetch("/api/events").then(function(r){return r.json();}).then(function(d){var evs=d.events||[];if(evs.length===1){chooseEvent(evs[0].id,evs[0].short||evs[0].name);}else if(evs.length>1){notLive=true;document.getElementById("nl-title").textContent="Choose an event";document.getElementById("nl-panel").style.display="block";renderNotLive(evs);}else{document.getElementById("dot").className="reg-dot";}}).catch(function(){document.getElementById("dot").className="reg-dot";});}var regLog=[];var memberList=[];var rlFilter=\'\';var rlSearchTimer=null;var lastRegPending=null;var scanInput=document.getElementById(\'scan\');scanInput.focus();document.addEventListener(\'click\',function(e){if(e.target&&e.target.id===\'rl-search\')return;scanInput.focus();});function countryFlag(cc){if(!cc)return\'\';try{return String.fromCodePoint.apply(null,cc.toUpperCase().split(\'\').filter(Boolean).map(function(c){return 0x1F1E6+c.charCodeAt(0)-65;}));}catch(e){return\'\';}}function parseQR(raw){if(!raw||!raw.trim())return null;var trimmed=raw.trim();var spcMatch=trimmed.match(/^(SPC-\\d{5})(\\/(\[A-Z\]{2}))?$/i);if(spcMatch){var mid=spcMatch[1].toUpperCase();var cc=spcMatch[3]?spcMatch[3].toUpperCase():null;for(var i=0;i<memberList.length;i++){if(memberList[i].member_id===mid){return{name:memberList[i].name,country:cc||memberList[i].country||null};}}return{unsynced:true,memberId:mid};}var parts=trimmed.split(\';\');if(parts.length>=4){var n=parts[3]?parts[3].trim():\'\';if(n)return{name:n,country:null};}if(trimmed){var cc2=null;for(var k=0;k<memberList.length;k++){if(memberList[k].name&&memberList[k].name.toLowerCase()===trimmed.toLowerCase()){cc2=memberList[k].country||null;break;}}return{name:trimmed,country:cc2};}return null;}function showToast(msg,type){var t=document.getElementById(\'toast\');t.textContent=msg;t.className=\'toast show\'+(type?\' \'+type:\'\');clearTimeout(window._toastT);window._toastT=setTimeout(function(){t.className=\'toast\';},type===\'error\'?5000:2500);}function sendAction(obj){if(!eventId||notLive){showToast(notLive?"Event is no longer live. Choose an event.":"Not connected to an event. Reload this page.","error");return Promise.reject(new Error("no_event"));}var body={};for(var k in obj)body[k]=obj[k];body.event=eventId;var ac=window.AbortController?new AbortController():null;var tm=setTimeout(function(){if(ac)ac.abort();},6000);return fetch("/api/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:ac?ac.signal:undefined}).then(function(r){clearTimeout(tm);if(r.ok)return r;return r.json().catch(function(){return {};}).then(function(j){showToast(j.message||"Action refused","error");if(j.error==="unknown_event")showNotLive();throw new Error(j.error||"refused");});},function(e){clearTimeout(tm);showToast(e&&e.name==="AbortError"?"No response. Check Wi-Fi and the desk before retrying.":"Not sent. Check Wi-Fi and try again.","error");throw e;});}function findPlayerSeat(name){if(!lastState||!lastState.tournament)return null;var tm=lastState.tournament.tableMap||[];for(var i=0;i<tm.length;i++){var t=tm[i];for(var j=0;j<t.players.length;j++){if(t.players[j].name===name)return{table:t.num,seat:t.players[j].seatNum};}}return null;}function doScan(){var raw=scanInput.value;if(!raw.trim())return;var parsed=parseQR(raw);if(!parsed){showToast(\'Could not parse scan\',\'error\');scanInput.value=\'\';return;}if(parsed.unsynced){showToast(parsed.memberId+\' not synced \u2014 please type player name manually\',\'error\');scanInput.value=\'\';return;}var name=typeof parsed===\'string\'?parsed:parsed.name;var country=typeof parsed===\'object\'?parsed.country:null;var isDup=false;if(lastState&&lastState.tournament){var tm=lastState.tournament.tableMap||[];for(var i=0;i<tm.length;i++){for(var j=0;j<tm[i].players.length;j++){if(tm[i].players[j].name===name){isDup=true;break;}}if(isDup)break;}}var prevTs=(lastState&&lastState.tournament&&lastState.tournament.regLog&&lastState.tournament.regLog.length)?lastState.tournament.regLog[0].ts:0;sendAction({type:\'register\',name:name,country:country}).then(function(){var entry={name:name,country:country,isDup:isDup,isReentry:false,time:new Date()};regLog.unshift(entry);lastRegPending={name:name,prevTs:prevTs,isDup:isDup};var lr=document.getElementById(\'last-reg\');lr.className=\'last-reg show\'+(isDup?\' dup\':\'\');document.getElementById(\'lr-name\').innerHTML=name+(country?\' \'+countryFlag(country):\'\')+(isDup?\'<span class="lr-badge dup">DUPLICATE</span>\':\'\');document.getElementById(\'lr-seat\').textContent=\'Assigning seat...\';document.getElementById(\'lr-seat\').className=\'lr-seat pending\';setTimeout(function(){fetch(evUrl()).then(function(r){return r.json();}).then(function(data){if(!data.tournament){document.getElementById(\'lr-seat\').textContent=\'Registered\';document.getElementById(\'lr-seat\').className=\'lr-seat\';return;}lastState=data;var seat=findPlayerSeat(name);if(seat){document.getElementById(\'lr-seat\').textContent=\'Table \'+seat.table+\' Seat \'+seat.seat;document.getElementById(\'lr-seat\').className=\'lr-seat\';entry.table=seat.table;entry.seat=seat.seat;}else{document.getElementById(\'lr-seat\').textContent=data.tournament&&data.tournament.seatingMode===\'manual\'?\'Added to queue (manual mode)\':\'Seated\';document.getElementById(\'lr-seat\').className=\'lr-seat\';}renderLog();});},800);showToast(isDup?name+\' (DUPLICATE - registered anyway)\':name+\' registered\');renderLog();},function(){if(!scanInput.value)scanInput.value=raw;scanInput.focus();});scanInput.value=\'\';scanInput.focus();}scanInput.addEventListener(\'keydown\',function(e){if(e.key===\'Enter\'){e.preventDefault();doScan();}});scanInput.addEventListener("input",function(){showSuggest(scanInput.value);});scanInput.addEventListener("blur",function(){setTimeout(function(){document.getElementById("suggest-list").className="suggest-list";},200);});var rlSearch=document.getElementById(\'rl-search\');var rlClear=document.getElementById(\'rl-search-clear\');function setRlFilter(v){rlFilter=v;rlClear.className=\'rl-search-clear\'+(v?\' show\':\'\');renderLog();}function armRlTimer(){clearTimeout(rlSearchTimer);rlSearchTimer=setTimeout(function(){rlSearch.blur();scanInput.focus();},15000);}rlSearch.addEventListener(\'input\',function(){setRlFilter(rlSearch.value.trim());armRlTimer();});rlSearch.addEventListener(\'focus\',armRlTimer);rlSearch.addEventListener(\'blur\',function(){clearTimeout(rlSearchTimer);});rlSearch.addEventListener(\'keydown\',function(e){if(e.key===\'Enter\'){e.preventDefault();rlSearch.blur();scanInput.focus();}});rlClear.addEventListener(\'click\',function(){rlSearch.value=\'\';setRlFilter(\'\');});function pad2(n){return n<10?\'0\'+n:\'\'+n;}function renderLog(){var q=rlFilter.toLowerCase();var shown=0;regLog.forEach(function(r){if(!q||(r.name||\'\').toLowerCase().indexOf(q)>=0)shown++;});document.getElementById(\'rl-count\').textContent=q?(\'showing \'+shown+\' of \'+regLog.length):regLog.length;if(!regLog.length){document.getElementById(\'rl-list\').innerHTML=\'<div class="rl-empty">No registrations yet</div>\';return;}if(!shown){document.getElementById(\'rl-list\').innerHTML=\'<div class="rl-empty">No names match</div>\';return;}var lst=document.getElementById(\'rl-list\');var st=lst.scrollTop;lst.innerHTML=regLog.map(function(r,i){if(q&&(r.name||\'\').toLowerCase().indexOf(q)<0)return \'\';var seatStr=r.table?\'T\'+r.table+\' S\'+r.seat:\'...\';var timeStr=pad2(r.time.getHours())+\':\'+pad2(r.time.getMinutes())+\':\'+pad2(r.time.getSeconds());return \'<div class="rl-row\'+(r.isDup?\' dup-row\':\'\')+\'"><span class="rl-num">\'+(regLog.length-i)+\'</span><span class="rl-name">\'+r.name+(r.country?\' \'+countryFlag(r.country):\'\')+(r.isDup?\' <span class="lr-badge dup">DUP</span>\':\'\')+(r.isReentry&&!r.isDup?\' <span class="lr-badge reentry">RE-ENTRY</span>\':\'\')+\'</span><span class="rl-seat">\'+seatStr+\'</span><span class="rl-time">\'+timeStr+\'</span></div>\';}).join(\'\');lst.scrollTop=st;}function renderServerLog(serverLog){if(!Array.isArray(serverLog)||!serverLog.length)return;regLog=serverLog.map(function(r){var t=r.ts?new Date(r.ts):(r.time?new Date(r.time):new Date());return{name:r.name,country:r.country,isDup:r.isDup,isReentry:!!r.isReentry,time:t,table:r.tableNum,seat:r.seatNum};});renderLog();if(lastRegPending&&serverLog[0].ts!==lastRegPending.prevTs&&serverLog[0].name===lastRegPending.name){if(serverLog[0].isReentry&&!serverLog[0].isDup&&!lastRegPending.isDup){document.getElementById(\'lr-name\').insertAdjacentHTML(\'beforeend\',\'<span class="lr-badge reentry">RE-ENTRY</span>\');}lastRegPending=null;}}function updateStats(d){if(!d)return;var evn=document.getElementById("event-name");if(evn){if(d.eventName){evn.textContent=d.eventName;evn.style.display="block";}else{evn.style.display="none";}}var cumE=(d.players||0)+(d.inheritedEntries||0);document.getElementById(\'s-active\').textContent=d.active||\'-\';document.getElementById(\'s-entries\').textContent=cumE||\'-\';document.getElementById(\'s-tables\').textContent=d.tables||\'-\';document.getElementById(\'s-mode\').textContent=(d.seatingMode||\'auto\').toUpperCase();var rs=document.getElementById(\'re-strip\');if(d.reentryUntil>0){rs.style.display=\'flex\';rs.className=\'reentry-strip \'+(d.reentryOpen?\'open\':\'closed\');document.getElementById(\'re-lbl2\').textContent=d.reentryOpen?\'Re-entries OPEN\':\'Re-entries CLOSED\';document.getElementById(\'re-desc2\').textContent=d.reentryDesc||\'\';}else{rs.style.display=\'none\';}}function poll(){if(notLive){refreshNotLive();return;}if(!eventId){loadEvent();return;}var id=eventId;var ac=window.AbortController?new AbortController():null;var tm=setTimeout(function(){if(ac)ac.abort();},4000);fetch(evUrl(),{signal:ac?ac.signal:undefined}).then(function(r){clearTimeout(tm);if(r.status===404){if(id===eventId&&!notLive)showNotLive();return null;}return r.json();}).then(function(data){if(!data||id!==eventId||notLive)return;lastState=data;if(data.tournament&&(data.tournament.eventShort||data.tournament.eventName))eventName=data.tournament.eventShort||data.tournament.eventName;document.getElementById(\'dot\').className=\'reg-dot on\';if(data.members&&data.members.length){memberList=data.members;document.getElementById(\'member-count\').textContent=\'Members: \'+data.members.length+\' loaded\';}if(data.tournament){updateStats(data.tournament);if(data.tournament.regLog)renderServerLog(data.tournament.regLog);}}).catch(function(){document.getElementById(\'dot\').className=\'reg-dot\';});}poll();setInterval(poll,2000);</script></body></html>';
+  var src = counterClient.toString();
+  var body = src.substring(src.indexOf('{') + 1, src.lastIndexOf('}'));
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SPC Registration</title><style>' + COUNTER_CSS + COUNTER_CSS_NEW + '</style></head><body>' + COUNTER_BODY + '<script>' + COUNTER_SUGGEST_JS + body + '</script></body></html>';
 }
 
 module.exports = {
@@ -267,20 +675,28 @@ module.exports = {
       var path = url.parse(req.url).pathname;
       if (path === '/') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getFloorHTML()); }
       else if (path === '/register') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getRegisterHTML()); }
-      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":9}'); }
+      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":10}'); }
+      else if (path === '/api/members') { sendJson(res, 200, { members: membersList || [] }); }
       else if (path === '/api/events') {
         var evs = Object.keys(liveEvents).map(function(id) {
           var e = liveEvents[id]; var t = e.tournament || {}; var c = e.clock || {};
           var st = c.status || (c.running ? 'running' : 'paused');
-          return { id: id, name: t.eventName || '', short: t.eventShort || t.eventName || '', color: t.eventColor || '', eventType: t.eventType || '', running: !!c.running, status: st };
+          return { id: id, name: t.eventName || '', short: t.eventShort || t.eventName || '', color: t.eventColor || '', eventType: t.eventType || '', buyin: t.buyin || 0, running: !!c.running, status: st, reg: regSummary(e.tournament, Date.now()) };
         });
-        sendJson(res, 200, { events: evs });
+        sendJson(res, 200, { events: evs, serverNow: Date.now() });
       }
       else if (path === '/api/state') {
         var evId = url.parse(req.url, true).query.event;
         if (!evId) sendJson(res, 400, { ok: false, error: 'missing_event', message: 'No event given. Reload this page.' });
         else if (!hasEvent(evId)) sendJson(res, 404, { ok: false, error: 'unknown_event', message: 'That event is no longer live on the desk.' });
-        else { var slot = liveEvents[evId]; sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: slot.tournament, members: membersList }); }
+        else {
+          var slot = liveEvents[evId];
+          if (url.parse(req.url, true).query.lite) {
+            // The counter polls several events every 2s: leave the (large) members list out; it has its own route.
+            var lt = slot.tournament ? Object.assign({}, slot.tournament) : slot.tournament; if (lt) delete lt.members;
+            sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: lt });
+          } else sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: slot.tournament, members: membersList });
+        }
       }
       else if (path === '/api/action' && req.method === 'POST') {
         var body = '';
@@ -290,7 +706,40 @@ module.exports = {
           try { a = JSON.parse(body); } catch(e) { sendJson(res, 400, { ok: false, error: 'bad_json', message: 'Bad request. Reload this page.' }); return; }
           if (!a || typeof a !== 'object' || !a.event) { sendJson(res, 400, { ok: false, error: 'missing_event', message: 'This action has no event. Reload this page.' }); return; }
           if (!hasEvent(a.event)) { sendJson(res, 409, { ok: false, error: 'unknown_event', message: 'That event is no longer live on the desk. Action not applied.' }); return; }
-          try { if (floorActionCallback) floorActionCallback(a); sendJson(res, 200, { ok: true }); }
+          var result = { ok: true };
+          if (REG && (a.type === 'register' || a.type === 'register-next')) {
+            var now = Date.now();
+            var ev = liveEvents[a.event].tournament;
+            if (ev && ev.reg) {
+              var nm = ev.eventShort || ev.eventName || 'This event';
+              var name = (typeof a.name === 'string') ? a.name.trim() : '';
+              var pend = pendingFor(a.event, now);
+              var chk = name ? REG.checkRegistration(ev, name, pend) : { isDup: false, isReentry: false, blocked: null };
+              // Day 2 style events: no new entries, no re-entries, ever (an already-seated name just reports as a duplicate)
+              if (chk.blocked && chk.blocked.code === 'no_entries') { sendJson(res, 409, { ok: false, error: 'no_entries', message: chk.blocked.message }); return; }
+              var w = REG.regWindow(ev.reg, ev.lateRegEndsAt, now);
+              if (!w.accepting && !(chk.isDup && ev.noEntries)) {
+                var msg = (ev.reg.status === 'closed' && w.closedAt != null) ? (nm + ' registration closed at ' + hm(w.closedAt) + '.') : (nm + ' registration is not open.');
+                sendJson(res, 409, { ok: false, error: 'registration_closed', message: msg, event: nm, closedAt: w.closedAt }); return;
+              }
+              if (chk.blocked) { sendJson(res, 409, { ok: false, error: chk.blocked.code, message: chk.blocked.message }); return; }
+              var warnings = [];
+              if (w.state === 'lateOver') warnings.push({ kind: 'late', text: 'Late reg for ' + nm + ' ended ' + hm(w.lateRegEndedAt) + ' (grace ended ' + hm(w.adviceEndsAt) + ')' });
+              if (name) {
+                Object.keys(liveEvents).forEach(function(oid) {
+                  if (oid === a.event) return;
+                  var ot = liveEvents[oid].tournament; if (!ot) return;
+                  var onm = ot.eventShort || ot.eventName || 'another event';
+                  (ot.tableMap || []).forEach(function(tb) { (tb.players || []).forEach(function(p) { if (p.name === name) warnings.push({ kind: 'elsewhere', text: 'Still seated in ' + onm + ', Table ' + tb.num }); }); });
+                  (ot.unseated || []).forEach(function(p) { if (p.name === name) warnings.push({ kind: 'elsewhere', text: 'Still in ' + onm + ' (not seated yet)' }); });
+                });
+              }
+              if (w.state === 'lateOver') a.late = true;
+              result = { ok: true, isDup: chk.isDup, isReentry: chk.isReentry, warnings: warnings, event: nm, state: w.state };
+              if (name && !chk.isDup) { (pendingRegs[a.event] = pendingRegs[a.event] || []).push({ name: name, isReentry: chk.isReentry, ts: now }); }
+            }
+          }
+          try { if (floorActionCallback) floorActionCallback(a); sendJson(res, 200, result); }
           catch(e) { console.error('floor action failed:', e && e.message); sendJson(res, 500, { ok: false, error: 'server_error', message: 'Server error. Action may not have been applied.' }); }
         });
       } else { res.writeHead(404); res.end(''); }
@@ -305,7 +754,7 @@ module.exports = {
       // The desk says which events are live: drop every other event.
       var keep = {};
       s._liveList.forEach(function(i) { keep[i] = true; });
-      Object.keys(liveEvents).forEach(function(id) { if (!keep[id]) delete liveEvents[id]; });
+      Object.keys(liveEvents).forEach(function(id) { if (!keep[id]) { delete liveEvents[id]; delete pendingRegs[id]; } });
       return;
     }
     if (!s || !s.eventId) { console.warn('broadcastTournamentState: payload has no eventId, ignored'); return; }

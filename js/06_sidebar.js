@@ -20,7 +20,7 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
           {liveRows.map(r=>(
             <button key={r.id} className={'lv-row'+(r.id===focusedId?' active':'')} onClick={()=>onFocus(r.id)}>
               <span className="lv-bar" style={{background:r.color}}></span>
-              <span className="lv-main"><span className="lv-short">{r.short}</span><span className={'lv-status '+r.status}>{r.status.toUpperCase()}</span></span>
+              <span className="lv-main"><span className="lv-short">{r.short}</span><span className={'lv-status '+r.status}>{r.status.toUpperCase()}</span><span className={'lv-reg '+r.regState}>{r.regLabel}</span></span>
               <span className="lv-clock">{fmt.time(r.secs)}</span>
             </button>
           ))}

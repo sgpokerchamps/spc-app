@@ -150,6 +150,10 @@ function buildTournamentPayload(tournament) {
         eventShort:_evCfg?_evCfg.short:(tournament.name||''),
         eventColor:_evCfg?_evCfg.color:'#c8973a',
         buyin:tournament.buyin||0,
+        reg:tournament.reg||defaultReg(tournament.eventType,'open'),
+        lateRegEndsAt:lateRegEndsAtOf(tournament),
+        maxReentries:(_evCfg&&typeof _evCfg.maxReentries==='number'&&isFinite(_evCfg.maxReentries))?_evCfg.maxReentries:null,
+        noEntries:!!(_evCfg&&_evCfg.noEntries),
         active:_activePlayers.length,
         players:tournament.players.length,
         inheritedEntries:tournament.inheritedEntries||0,
@@ -179,6 +183,7 @@ function buildTournamentPayload(tournament) {
 /* Shared by Resume and by auto-resume on relaunch: legacy migration, then catch the clock up to the wall clock.
    Over 10 minutes since the level should have ended: ask, naming the event. */
 function prepareResumed(t, now) {
+  t=ensureReg(t);
   if(t.status!=='running') return t;
   if(typeof t.levelEndsAt!=='number') t={...t,levelEndsAt:now+(t.timeRemainingSeconds||0)*1000};
   if(now-t.levelEndsAt>600000){
@@ -333,7 +338,7 @@ function App() {
             const isDup=!!existing;
             if(!existing){addPlayer(action.name, false, action.country||null);SoundEngine.register();}
             // Add to regLog so counter sees it
-            setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)};});
+            setTournament(t=>{const entry={name:action.name,country:action.country||null,isDup,isReentry:!!t.players.find(p=>p.name===action.name&&p.status==='busted'),late:!!action.late,ts:Date.now(),tableNum:null,seatNum:null};return{...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)};});
           } else {
             // find next unused number
             const used=new Set(ev.players.map(p=>p.name));
@@ -575,6 +580,7 @@ function App() {
       stack:config.stack,maxTables:config.maxTables,seatsPerTable:config.seatsPerTable,startTable:config.startTable||1,
       tableNumbers:(config.tableNumbers&&config.tableNumbers.length)?[...config.tableNumbers].sort((a,b)=>a-b):getTableNumbers({startTable:config.startTable||1,maxTables:config.maxTables}),
       players:_seatedPlayers,structure,currentLevelIdx:0,timeRemainingSeconds:structure[0].mins*60,levelEndsAt:null,
+      reg:{...defaultReg(config.eventType,'notOpen'),...(config.lateRegLevel!==undefined?{lateRegLevel:config.lateRegLevel}:{})},
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
       extraBagWinners:_extraBagWinners,extraBagCount:_totalExtraBags>0?_totalExtraBags:(config.extraBagCount||0),
@@ -642,6 +648,30 @@ Starting setup — you can adjust settings before launching.`);
   function deleteTournament(id) {
     deleteT(id); setSavedIndex(getIndex());
     if(liveRef.current[id]){ if(removeLiveEvent(id)===0) setView('home'); }
+  }
+
+  /* Registration controls (desk). Only Close / Close immediately stop the counter; the late-reg window is advisory. */
+  function regAction(id,type,val) {
+    updateEvent(id,t=>{
+      const reg=t.reg||defaultReg(t.eventType,'open'); const now=Date.now(); const cfg=EVENT_CONFIGS[t.eventType]||null;
+      const notLeft=lvl=>{const i=t.structure.findIndex(e=>!e.isBreak&&e.level===lvl);return i<0||t.currentLevelIdx<=i;};
+      let next=reg, msg='';
+      if(type==='open'){ if(cfg&&cfg.noEntries) return t; next={...reg,status:'open',closedAt:null,noGrace:false}; msg='Registration opened'; }
+      else if(type==='close'){ next={...reg,status:'closed',closedAt:now,noGrace:false}; msg='Registration closed (grace '+reg.graceMins+' min)'; }
+      else if(type==='closeNow'){ next={...reg,status:'closed',closedAt:now,noGrace:true}; msg='Registration closed immediately'; }
+      else if(type==='extend'){
+        if(reg.lateRegLevel==null||(cfg&&cfg.noEntries)) return t;
+        const nl=reg.lateRegLevel+1;
+        next={...reg,lateRegLevel:nl,lateRegEndedAt:notLeft(nl)?null:reg.lateRegEndedAt};
+        if(reg.status==='closed') next={...next,status:'open',closedAt:null,noGrace:false};
+        msg='Late registration extended to end of Level '+nl;
+      }
+      else if(type==='setLevel'){ const nl=(val===null||isNaN(val))?null:Math.max(1,Math.round(val)); next={...reg,lateRegLevel:nl,lateRegEndedAt:(nl!=null&&notLeft(nl))?null:reg.lateRegEndedAt}; msg=nl==null?'Late registration level cleared':'Late registration level set to '+nl; }
+      else if(type==='setGrace'){ const g=Math.max(0,Math.round(val)||0); next={...reg,graceMins:g}; msg='Registration grace set to '+g+' min'; }
+      else if(type==='override'){ msg='Desk registered '+val+' while registration was closed'; }
+      else return t;
+      return{...t,reg:next,activityLog:[...(t.activityLog||[]),{ts:now,type:'register',detail:msg}]};
+    });
   }
 
   function closeFocusedEvent() {
@@ -1080,10 +1110,24 @@ Starting setup — you can adjust settings before launching.`);
   const tablesInUse=[...new Set(activePlayers.map(p=>p.tableNum).filter(Boolean))].length;
   const clockCls=secs<=60?'danger':secs<=300?'warn':'';
   const _rowsNow=Date.now();
-  const liveRows=Object.keys(live).map(id=>{const t=live[id];const c=EVENT_CONFIGS[t.eventType]||null;return{id:id,short:c?c.short:(t.name||'Event'),color:c?c.color:'#c8973a',status:t.status,secs:clockRemainingSecs(t,_rowsNow)};});
+  const _regLabels={notOpen:'REG NOT OPEN',open:'REG OPEN',lateGrace:'LATE REG GRACE',lateOver:'LATE REG OVER',closingGrace:'REG CLOSING',closed:'REG CLOSED'};
+  const _hm=ms=>new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+  const regBanners=[];
+  const liveRows=Object.keys(live).map(id=>{
+    const t=live[id];const c=EVENT_CONFIGS[t.eventType]||null;const short=c?c.short:(t.name||'Event');
+    const lre=lateRegEndsAtOf(t); const rw=regWindow(t.reg,lre,_rowsNow);
+    if(t.reg&&!(c&&c.noEntries)){
+      if(rw.state==='open'&&lre!=null&&lre-_rowsNow<=300000) regBanners.push({id:id,kind:'warn',text:short+' late registration ends in '+fmt.time(Math.max(0,Math.ceil((lre-_rowsNow)/1000)))+' (end of Level '+t.reg.lateRegLevel+', +'+t.reg.graceMins+' min)'});
+      else if(rw.state==='lateGrace') regBanners.push({id:id,kind:'warn',text:short+' late reg ended '+_hm(rw.lateRegEndedAt)+'. Grace until '+_hm(rw.adviceEndsAt)});
+      else if(rw.state==='lateOver') regBanners.push({id:id,kind:'over',text:short+' late reg is over. The counter is still accepting. Press Close to stop.'});
+      else if(rw.state==='closingGrace') regBanners.push({id:id,kind:'warn',text:short+' closing. Counter stops at '+_hm(rw.graceEndsAt)});
+    }
+    return{id:id,short:short,color:c?c.color:'#c8973a',status:t.status,secs:clockRemainingSecs(t,_rowsNow),regState:rw.state,regLabel:_regLabels[rw.state]};
+  });
 
   return(
     <div className="app">
+      {regBanners.length>0&&(<div className="reg-banners">{regBanners.map(b=>(<div key={b.id+b.kind} className={'reg-banner '+b.kind}><span>{b.text}</span>{b.kind==='over'&&(<span style={{display:'flex',gap:6}}><button onClick={()=>regAction(b.id,'close')}>Close</button><button onClick={()=>regAction(b.id,'closeNow')}>Close now</button></span>)}</div>))}</div>)}
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
       {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament}/>}
@@ -1115,7 +1159,7 @@ Starting setup — you can adjust settings before launching.`);
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
             onHome={()=>{saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
           <div className="main">
-            {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo}/>}
+            {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo} onRegAction={(type,val)=>regAction(tournament.id,type,val)}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
             {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRemovePhantomBust={removePhantomBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
             {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}

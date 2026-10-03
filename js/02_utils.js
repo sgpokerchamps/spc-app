@@ -295,15 +295,86 @@ function clockRemainingSecs(t, now) {
 function advanceLevelFn(t, baseMs) {
   const base=typeof baseMs==='number'?baseMs:Date.now();
   const ni=t.currentLevelIdx+1;
-  if(ni>=t.structure.length) return{...t,status:'complete',timeRemainingSeconds:0,levelEndsAt:null};
+  // Leaving the late-registration level: record the exact moment it ended (advisory window, never changes status).
+  let reg=t.reg;
+  const left=t.structure[t.currentLevelIdx];
+  if(reg&&reg.lateRegLevel!=null&&reg.lateRegEndedAt==null&&left&&!left.isBreak&&left.level===reg.lateRegLevel) reg={...reg,lateRegEndedAt:base};
+  if(ni>=t.structure.length) return{...t,reg,status:'complete',timeRemainingSeconds:0,levelEndsAt:null};
   const secs=t.structure[ni].mins*60;
-  return{...t,currentLevelIdx:ni,timeRemainingSeconds:secs,levelEndsAt:t.status==='running'?base+secs*1000:null};
+  return{...t,reg,currentLevelIdx:ni,timeRemainingSeconds:secs,levelEndsAt:t.status==='running'?base+secs*1000:null};
 }
 /* Advance through every level whose end time has passed. Used by the tick and by resume. */
 function catchUpClock(t, now) {
   let x=t, guard=0;
   while(x&&x.status==='running'&&typeof x.levelEndsAt==='number'&&x.levelEndsAt<=now&&guard<1000){ x=advanceLevelFn(x,x.levelEndsAt); guard++; }
   return x;
+}
+// ---SHARED:regWindow:START---
+/* Registration rules shared by the desk (browser) and server.js (Node, evaluated from this file).
+   reg = {status:'notOpen'|'open'|'closed', lateRegLevel, graceMins, lateRegEndedAt, closedAt, noGrace}.
+   Only the TD's Close / Close immediately blocks the counter. The late-registration window is advisory. */
+function regWindow(reg, lateRegEndsAt, now) {
+  var r = reg || {status:'notOpen'};
+  var grace = (typeof r.graceMins === 'number' ? r.graceMins : 10) * 60000;
+  var endedAt = (typeof r.lateRegEndedAt === 'number') ? r.lateRegEndedAt
+    : ((typeof lateRegEndsAt === 'number' && now >= lateRegEndsAt) ? lateRegEndsAt : null);
+  var out = {accepting:false, state:'notOpen', lateRegEndedAt:endedAt, adviceEndsAt:(endedAt != null ? endedAt + grace : null), closedAt:(typeof r.closedAt === 'number' ? r.closedAt : null), graceEndsAt:null};
+  if (r.status === 'open') {
+    out.accepting = true;
+    if (endedAt == null) out.state = 'open';
+    else if (now < endedAt + grace) out.state = 'lateGrace';
+    else out.state = 'lateOver';
+  } else if (r.status === 'closed') {
+    out.state = 'closed';
+    if (!r.noGrace && out.closedAt != null) {
+      out.graceEndsAt = out.closedAt + grace;
+      if (now < out.graceEndsAt) { out.state = 'closingGrace'; out.accepting = true; }
+    }
+  }
+  return out;
+}
+/* The end of the late-registration level, only while the clock is running on that level (a paused clock does not end late reg). */
+function lateRegEndsAtOf(t) {
+  if (!t || !t.reg || t.reg.lateRegLevel == null || t.status !== 'running' || typeof t.levelEndsAt !== 'number') return null;
+  var cur = t.structure && t.structure[t.currentLevelIdx];
+  if (cur && !cur.isBreak && cur.level === t.reg.lateRegLevel) return t.levelEndsAt;
+  return null;
+}
+/* Server-side judgement of one registration against an event's broadcast payload.
+   ev: {tableMap, unseated, regLog, bustedPositions, maxReentries (number, or null/undefined = unlimited), noEntries, eventShort}
+   pending: [{name,isReentry}] accepted a moment ago but not yet in the broadcast. */
+function checkRegistration(ev, name, pending) {
+  var active = {};
+  (ev.tableMap || []).forEach(function(tb) { (tb.players || []).forEach(function(p) { active[p.name] = true; }); });
+  (ev.unseated || []).forEach(function(p) { active[p.name] = true; });
+  var pend = pending || [];
+  var pendingSame = pend.filter(function(p) { return p.name === name; });
+  var isDup = !!active[name] || pendingSame.length > 0;
+  var isReentry = !isDup && !!(ev.bustedPositions && Object.prototype.hasOwnProperty.call(ev.bustedPositions, name));
+  var used = (ev.regLog || []).filter(function(r) { return r.name === name && r.isReentry && !r.isDup; }).length;
+  var max = (typeof ev.maxReentries === 'number') ? ev.maxReentries : null;
+  var res = {isDup:isDup, isReentry:isReentry, reentriesUsed:used, blocked:null};
+  if (ev.noEntries && !isDup) {
+    // Day 2: survivors only. No new entries and no re-entries, ever.
+    res.blocked = {code:'no_entries', message:(ev.eventShort || 'This event') + ' is closed to entries and re-entries.'};
+  } else if (isReentry && max !== null && used >= max) {
+    var nm = ev.eventShort || 'this event';
+    res.blocked = {code:'reentry_limit', message: max === 0 ? ('No re-entries in ' + nm + '.') : (name + ' has already used their ' + max + ' re-entr' + (max === 1 ? 'y' : 'ies') + ' (' + nm + ').')};
+  }
+  return res;
+}
+// ---SHARED:regWindow:END---
+
+/* Registration state for a tournament. New events start closed to the counter (the TD presses Open); events saved before
+   this model existed default to open so nothing stops accepting mid-event. */
+function defaultReg(eventType, status) {
+  var cfg = EVENT_CONFIGS[eventType] || null;
+  var noEntries = !!(cfg && cfg.noEntries);
+  return {status:noEntries ? 'closed' : (status || 'notOpen'), lateRegLevel:(cfg && cfg.lateRegLevel != null ? cfg.lateRegLevel : null), graceMins:10, lateRegEndedAt:null, closedAt:null, noGrace:noEntries};
+}
+function ensureReg(t) {
+  if (!t || t.reg) return t;
+  return {...t, reg:defaultReg(t.eventType, 'open')};
 }
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 
