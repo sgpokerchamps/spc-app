@@ -354,3 +354,12 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .reg-btn{padding:6px 12px;border-radius:6px;border:1px solid #2a4a35;background:none;color:#b2d4ba;font-size:12px;font-weight:600;cursor:pointer}
 .reg-btn:disabled{opacity:.35;cursor:default}
 .reg-btn.danger{border-color:#a04040;color:#e08080}
+/* ---- Screens panel (sidebar) ---- */
+.sc-panel{padding:8px 8px 6px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sc-title{font-size:10px;letter-spacing:2px;color:#7aaa82;font-weight:700;text-transform:uppercase;margin-bottom:6px}
+.sc-row{margin-bottom:8px}
+.sc-lbl{font-size:12px;color:#b2d4ba;font-weight:600;margin-bottom:3px}
+.sc-sel{width:100%;background:#08120a;color:#e4f0e8;border:1px solid #2a4a35;border-radius:6px;padding:5px 6px;font-size:12px;margin-bottom:3px}
+.sc-split{display:flex;flex-direction:column;gap:3px}
+.sc-state{font-size:11px;color:#7aaa82}
+.sc-warn{font-size:11px;color:#f0c040;font-weight:600}

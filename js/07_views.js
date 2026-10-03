@@ -494,6 +494,142 @@ function BlindEditView({tournament, onUpdate, onSetChips, onAppend}) {
     </div>
   );
 }
+/* ==== DISPLAY MODEL (single source for the desk full-screen clock and every served display) ==== */
+/* Pure: tournament -> plain data. Everything that moves with the clock is NOT in here as a ticking number:
+   the clock itself comes from levelEndsAt / pausedSecs in the clock payload, and the next break is stored as
+   "minutes after the current level ends" (nextBreakAfter) so it stays right when the clock is paused and resumed. */
+function buildDisplayModel(t) {
+  const cfg=EVENT_CONFIGS[t.eventType]||null;
+  const cur=t.structure[t.currentLevelIdx];
+  const nxt=t.structure[t.currentLevelIdx+1];
+  const isBreak=!!(cur&&cur.isBreak);
+  const isComplete=t.status==='complete';
+  const active=t.players.filter(p=>p.status==='active');
+  const busted=t.players.filter(p=>p.status==='busted');
+  const tablesInUse=[...new Set(active.map(p=>p.tableNum).filter(Boolean))].length;
+  const entries=t.players.length;
+  const effChips=t.chipsInPlay||(entries*(t.stack||0));
+  const avgStack=active.length>0?Math.round(effChips/active.length):0;
+  const accent=cfg?cfg.color:'#3dba6f';
+  const cumE=t.players.length+(t.inheritedEntries||0);
+  const totalChips=t.chipsInPlay||(cumE*(t.stack||0));
+  // stats, in display order
+  const stats=[];
+  stats.push({id:'players',lbl:'Players',val:`${active.length}${cumE>0?`/${cumE}`:''}`,color:accent});
+  stats.push({id:'tables',lbl:'Tables',val:tablesInUse||'—'});
+  if(avgStack>0) stats.push({id:'avg',lbl:'Avg stack',val:fmt.chips(avgStack),color:'#9b7bce'});
+  if(isSatellite(t)){const sx=getSatelliteSeats(t);stats.push({id:'seats',lbl:'Seats',val:sx.seats,color:'#c8973a',sub:fmt.currency(sx.seatValue)+' each'});}
+  if(t.bountyPool>0) stats.push({id:'bounty',lbl:'Bounty pool',val:fmt.currency(t.bountyPool),color:'#c8973a'});
+  const extraTotal=(t.extraBagCount||0)*1500;
+  const netPrize=t.prizePool-extraTotal;
+  if(netPrize>0) stats.push({id:'prize',lbl:extraTotal>0?'Net prize pool':'Prize pool',val:fmt.currency(netPrize),color:'#9b7bce'});
+  if(extraTotal>0) stats.push({id:'extra',lbl:'Extra bags',val:fmt.currency(extraTotal),color:'#c8973a'});
+  if(totalChips>0) stats.push({id:'chips',lbl:'Total chips',val:fmt.chips(totalChips),color:'#527a5c'});
+  // next break: minutes of full levels between the end of this level and the next break (null = none ahead)
+  let nextBreakAfter=null;
+  if(t.structure&&!isComplete){
+    let mins=0;
+    for(let i=t.currentLevelIdx+1;i<t.structure.length;i++){
+      const lv=t.structure[i];
+      if(lv.isBreak){nextBreakAfter=mins;break;}
+      mins+=lv.mins;
+    }
+  }
+  if(nextBreakAfter!==null) stats.push({id:'nextBreak',lbl:'Next break',color:'#c8973a',fontSize:'2.2vw',after:nextBreakAfter});
+  // payouts: satellite shows seats and bubble; others collapse equal amounts into ranges
+  let rows=[];
+  if(isSatellite(t)){
+    const fs=getSatelliteSeats(t);
+    rows=[{label:fs.seats+' seat'+(fs.seats===1?'':'s'),seat:true,text:'Seat',top:-1}];
+    if(fs.bubblePos) rows.push({label:fmt.ordinal(fs.bubblePos)+' (bubble)',text:fmt.currency(fs.leftover),top:-1});
+  } else {
+    let src=[];
+    if(t.payoutTable&&t.payoutTable.length) src=t.payoutTable;
+    else{
+      const e=(t.players||[]).length+(t.inheritedEntries||0);
+      const pp=t.prizePool||0;
+      if(e>0&&pp>0) src=generatePayoutRows(e,pp,t.eventType==='mysteryBounty');
+    }
+    let i=0;
+    while(i<src.length){
+      let j=i;
+      while(j+1<src.length&&src[j+1].amount===src[i].amount) j++;
+      const label=i===j
+        ?(i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`)
+        :`${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'}–${j+1}${j===0?'st':j===1?'nd':j===2?'rd':'th'}`;
+      rows.push({label,text:fmt.currency(src[i].amount),top:i<3?i:-1});
+      i=j+1;
+    }
+  }
+  return {
+    v:1, eventId:t.id, short:cfg?cfg.short:(t.name||''), color:accent, bgDeep:cfg?cfg.bgDeep:'#09180c',
+    isMainEvent:!!(cfg&&cfg.isMainEvent), group:cfg?cfg.group:t.name, subtitle:(cfg&&cfg.subtitle)||'',
+    levelKind:isComplete?'complete':isBreak?'break':cur?'level':'none',
+    levelText:isComplete?'Tournament Complete':isBreak?'Break':cur?`Level ${cur.level}`:'—',
+    note:(isBreak&&cur&&cur.note)||'',
+    blinds:(cur&&!isBreak&&!isComplete)?[['SB',fmt.chips(cur.sb)],['BB',fmt.chips(cur.bb)],...(cur.ante>0?[['Ante',fmt.chips(cur.ante)]]:[])]:[],
+    nextText:nxt?formatNextEntry(nxt):'',
+    stats:stats,
+    payouts:{published:!!t.payoutsPublished,rows:rows},
+  };
+}
+/* The full-screen clock face, rendered from the model. page = payout page (10 rows per page). */
+function ClockFace({model,secs,page}) {
+  const m=model;
+  const timerColor=secs<=60?'#e05a5a':secs<=300?'#c8973a':'#e4f0e8';
+  const posColors=['#f0c040','#c8d0d8','#c87a3a'];
+  const pageCount=Math.max(1,Math.ceil(m.payouts.rows.length/10));
+  const pageRows=m.payouts.rows.slice(page*10,(page+1)*10);
+  return(<>
+    {m.isMainEvent&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:'2vh',right:'2.5vw',height:'6vh',objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
+    <div className="fs-name" style={{color:m.color}}>{m.group}</div>
+    {m.subtitle&&<div style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.3)',letterSpacing:'0.3em',textTransform:'uppercase',marginBottom:'0.3vh'}}>{m.subtitle}</div>}
+    <div className="fs-level" style={{color:m.levelKind==='break'?'#c8973a':m.color}}>{m.levelText}</div>
+    {m.note&&<div className="fs-note">{m.note}</div>}
+    <div className="fs-clock" style={{color:timerColor}}>{fmt.time(secs)}</div>
+    {m.blinds.length>0&&(
+      <div className="fs-blinds">
+        {m.blinds.map(([lbl,val])=>(
+          <div key={lbl} className="fs-blind">
+            <div className="fs-blind-lbl">{lbl}</div>
+            <div className="fs-blind-val">{val}</div>
+          </div>
+        ))}
+      </div>
+    )}
+    {m.nextText&&(
+      <div className="fs-next">
+        <span style={{color:'rgba(255,255,255,0.4)',fontSize:'1.2vw',letterSpacing:'.15em'}}>NEXT &nbsp;</span>
+        <span>{m.nextText}</span>
+      </div>
+    )}
+    <div className="fs-stats">
+      <img src={SPC_LOGO} alt="SPC" style={{height:'10vh',objectFit:'contain'}}/>
+      <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:'2.5vh',background:'rgba(0,0,0,0.35)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,padding:'2vh 1.8vw'}}>
+        {m.stats.map(st=>{
+          let val=st.val;
+          if(st.id==='nextBreak'){const nb=Math.round(secs/60+st.after);val=nb>=60?`${Math.floor(nb/60)}h ${nb%60}m`:`${nb}m`;}
+          const style=st.color?(st.fontSize?{color:st.color,fontSize:st.fontSize}:{color:st.color}):undefined;
+          return(<div key={st.id} className="fs-stat"><div className="fs-stat-lbl">{st.lbl}</div><div className="fs-stat-val" style={style}>{val}</div>{st.sub&&<div style={{fontSize:'0.9vw',color:'rgba(255,255,255,0.4)',marginTop:'0.3vh'}}>{st.sub}</div>}</div>);
+        })}
+      </div>
+    </div>
+    {m.payouts.published&&pageRows.length>0&&(
+      <div style={{position:'absolute',right:'2.5vw',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:'1.4vh',alignItems:'flex-end',zIndex:5}}>
+        <div style={{fontSize:'1vw',color:'rgba(255,255,255,0.4)',letterSpacing:'0.25em',textTransform:'uppercase',marginBottom:'0.4vh',textAlign:'right'}}>
+          Payouts{pageCount>1?` · ${page+1}/${pageCount}`:''}
+        </div>
+        {pageRows.map((p,i)=>(
+          <div key={i} style={{textAlign:'right',display:'flex',alignItems:'baseline',justifyContent:'flex-end',gap:'0.6vw'}}>
+            <span style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase'}}>{p.label}</span>
+            <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'3vw':p.top===1?'2.5vw':p.top===2?'2.2vw':'1.9vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{p.text}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </>);
+}
+
 /* ==== CLOCK ==== */
 function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,secs,clockCls,onToggle,onPrev,onNext,onAdjust,totalEntries,onUpdateBlinds,onRegisterRandom,onBustRandom}) {
   const _evCfg=EVENT_CONFIGS[tournament.eventType]||null;
@@ -533,133 +669,21 @@ function ClockView({tournament,cur,nxt,activePlayers,bustedPlayers,tablesInUse,s
   }
   const entries=tournament.players.length;
   const _effChips=tournament.chipsInPlay||(entries*(tournament.stack||0));const avgStack=activePlayers.length>0?Math.round(_effChips/activePlayers.length):0;
-  const fsTimerColor=secs<=60?'#e05a5a':secs<=300?'#c8973a':'#e4f0e8';
+  const _fsModel=buildDisplayModel(tournament);
   const [_fsPage,_setFsPage]=useState(0);
-  const _fsAllPayouts=(()=>{
-    if(!tournament) return [];
-    if(isSatellite(tournament)){
-      const _fs=getSatelliteSeats(tournament);
-      const _r=[{label:_fs.seats+' seat'+(_fs.seats===1?'':'s'),seat:true,amount:0,top:-1}];
-      if(_fs.bubblePos)_r.push({label:fmt.ordinal(_fs.bubblePos)+' (bubble)',amount:_fs.leftover,top:-1});
-      return _r;
-    }
-    let rows=[];
-    if(tournament.payoutTable&&tournament.payoutTable.length) rows=tournament.payoutTable;
-    else{
-      const _e=(tournament.players||[]).length+(tournament.inheritedEntries||0);
-      const _pp=tournament.prizePool||0;
-      if(_e>0&&_pp>0) rows=generatePayoutRows(_e,_pp,tournament.eventType==='mysteryBounty');
-    }
-    if(!rows.length) return [];
-    const collapsed=[];
-    let i=0;
-    while(i<rows.length){
-      let j=i;
-      while(j+1<rows.length&&rows[j+1].amount===rows[i].amount) j++;
-      const label=i===j
-        ?(i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`)
-        :`${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'}–${j+1}${j===0?'st':j===1?'nd':j===2?'rd':'th'}`;
-      collapsed.push({label,amount:rows[i].amount,top:i<3?i:-1});
-      i=j+1;
-    }
-    return collapsed;
-  })();
-  const _fsPageCountOuter=Math.max(1,Math.ceil(_fsAllPayouts.length/10));
+  const _fsRows=_fsModel.payouts.rows;
+  const _fsPageCountOuter=Math.max(1,Math.ceil(_fsRows.length/10));
   useEffect(()=>{
-    if(!tournament||!tournament.payoutsPublished||_fsAllPayouts.length<=10)return;
+    if(!tournament||!tournament.payoutsPublished||_fsRows.length<=10)return;
     const t=setInterval(()=>_setFsPage(p=>(p+1)%_fsPageCountOuter),10000);
     return()=>clearInterval(t);
-  },[tournament&&tournament.payoutsPublished,_fsPageCountOuter,_fsAllPayouts.length]);
+  },[tournament&&tournament.payoutsPublished,_fsPageCountOuter,_fsRows.length]);
 
   if(isFS) {
-    const _fsCfg=EVENT_CONFIGS[tournament.eventType]||null;
-    const _fsAccent=_fsCfg?_fsCfg.color:'#3dba6f';
-    const _fsIsMe=_fsCfg&&_fsCfg.isMainEvent;
-    const _allFsPayouts=_fsAllPayouts;
-    const _fsPageCount=_fsPageCountOuter;
-    const _fsPayouts=_fsAllPayouts.slice(_fsPage*10,(_fsPage+1)*10);
-    const _totalE=totalEntries||0;
-    const posColors=['#f0c040','#c8d0d8','#c87a3a'];
     return(
     <div ref={clockRef} className="clock-fs" onContextMenu={handleContextMenu}
-      style={{background:`radial-gradient(ellipse at center, ${_fsCfg?_fsCfg.bgDeep:'#09180c'} 0%, #020806 72%)`}}>
-      {/* Logos */}
-      {_fsIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:'2vh',right:'2.5vw',height:'6vh',objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
-      {/* Event name */}
-      <div className="fs-name" style={{color:_fsAccent}}>{_fsCfg?_fsCfg.group:tournament.name}</div>
-      {_fsCfg&&_fsCfg.subtitle&&<div style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.3)',letterSpacing:'0.3em',textTransform:'uppercase',marginBottom:'0.3vh'}}>{_fsCfg.subtitle}</div>}
-      <div className="fs-level" style={{color:isBreak?'#c8973a':_fsAccent}}>
-        {isComplete?'Tournament Complete':isBreak?'Break':cur?`Level ${cur.level}`:'—'}
-      </div>
-      {isBreak&&cur&&cur.note&&<div className="fs-note">{cur.note}</div>}
-      <div className="fs-clock" style={{color:fsTimerColor}}>{fmt.time(secs)}</div>
-      {cur&&!isBreak&&!isComplete&&(
-        <div className="fs-blinds">
-          {[['SB',cur.sb],['BB',cur.bb],...(cur.ante>0?[['Ante',cur.ante]]:[])].map(([lbl,val])=>(
-            <div key={lbl} className="fs-blind">
-              <div className="fs-blind-lbl">{lbl}</div>
-              <div className="fs-blind-val">{fmt.chips(val)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {nxt&&(
-        <div className="fs-next">
-          <span style={{color:'rgba(255,255,255,0.4)',fontSize:'1.2vw',letterSpacing:'.15em'}}>NEXT &nbsp;</span>
-          <span>{formatNextEntry(nxt)}</span>
-        </div>
-      )}
-      {/* Stats row */}
-      <div className="fs-stats">
-        <img src={SPC_LOGO} alt="SPC" style={{height:'10vh',objectFit:'contain'}}/>
-        <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:'2.5vh',background:'rgba(0,0,0,0.35)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,padding:'2vh 1.8vw'}}>
-        {(()=>{
-          const _cumE=tournament.players.length+(tournament.inheritedEntries||0);
-          const _cumB=bustedPlayers.length+(tournament.inheritedBusted||0);
-          const _totalChips=tournament.chipsInPlay||(_cumE*(tournament.stack||0));
-          // Next break calculation
-          let _nextBreakMins=null;
-          if(tournament.structure&&!isComplete){
-            let mins=secs/60;
-            for(let i=tournament.currentLevelIdx+1;i<tournament.structure.length;i++){
-              const lv=tournament.structure[i];
-              if(lv.isBreak){_nextBreakMins=Math.round(mins);break;}
-              mins+=lv.mins;
-            }
-          }
-          return(<>
-            <div className="fs-stat"><div className="fs-stat-lbl">Players</div><div className="fs-stat-val" style={{color:_fsAccent}}>{activePlayers.length}{_cumE>0?`/${_cumE}`:''}</div></div>
-            <div className="fs-stat"><div className="fs-stat-lbl">Tables</div><div className="fs-stat-val">{tablesInUse||'—'}</div></div>
-            {avgStack>0&&<div className="fs-stat"><div className="fs-stat-lbl">Avg stack</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
-            {isSatellite(tournament)&&(()=>{const _sx=getSatelliteSeats(tournament);return <div className="fs-stat"><div className="fs-stat-lbl">Seats</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{_sx.seats}</div><div style={{fontSize:'0.9vw',color:'rgba(255,255,255,0.4)',marginTop:'0.3vh'}}>{fmt.currency(_sx.seatValue)} each</div></div>;})()}
-            {tournament.bountyPool>0&&<div className="fs-stat"><div className="fs-stat-lbl">Bounty pool</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{fmt.currency(tournament.bountyPool)}</div></div>}
-            {(()=>{
-              const _extraTotal=(tournament.extraBagCount||0)*1500;
-              const _netPrize=tournament.prizePool-_extraTotal;
-              return(<>
-                {_netPrize>0&&<div className="fs-stat"><div className="fs-stat-lbl">{_extraTotal>0?'Net prize pool':'Prize pool'}</div><div className="fs-stat-val" style={{color:'#9b7bce'}}>{fmt.currency(_netPrize)}</div></div>}
-                {_extraTotal>0&&<div className="fs-stat"><div className="fs-stat-lbl">Extra bags</div><div className="fs-stat-val" style={{color:'#c8973a'}}>{fmt.currency(_extraTotal)}</div></div>}
-              </>);
-            })()}
-            {_totalChips>0&&<div className="fs-stat"><div className="fs-stat-lbl">Total chips</div><div className="fs-stat-val" style={{color:'#527a5c'}}>{fmt.chips(_totalChips)}</div></div>}
-            {_nextBreakMins!==null&&<div className="fs-stat"><div className="fs-stat-lbl">Next break</div><div className="fs-stat-val" style={{color:'#c8973a',fontSize:'2.2vw'}}>{_nextBreakMins>=60?`${Math.floor(_nextBreakMins/60)}h ${_nextBreakMins%60}m`:`${_nextBreakMins}m`}</div></div>}
-          </>);
-        })()}
-        </div>
-      </div>
-      {tournament.payoutsPublished&&_fsPayouts.length>0&&(
-        <div style={{position:'absolute',right:'2.5vw',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:'1.4vh',alignItems:'flex-end',zIndex:5}}>
-          <div style={{fontSize:'1vw',color:'rgba(255,255,255,0.4)',letterSpacing:'0.25em',textTransform:'uppercase',marginBottom:'0.4vh',textAlign:'right'}}>
-            Payouts{_fsPageCount>1?` · ${_fsPage+1}/${_fsPageCount}`:''}
-          </div>
-          {_fsPayouts.map((p,i)=>(
-            <div key={i} style={{textAlign:'right',display:'flex',alignItems:'baseline',justifyContent:'flex-end',gap:'0.6vw'}}>
-              <span style={{fontSize:'1.2vw',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase'}}>{p.label}</span>
-              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:p.top===0?'3vw':p.top===1?'2.5vw':p.top===2?'2.2vw':'1.9vw',fontWeight:700,color:p.top>=0?posColors[p.top]:'#b2d4ba'}}>{p.seat?'Seat':fmt.currency(p.amount)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      style={{background:`radial-gradient(ellipse at center, ${_fsModel.bgDeep} 0%, #020806 72%)`}}>
+      <ClockFace model={_fsModel} secs={secs} page={_fsPage}/>
 
       {ctxMenu&&(
         <>

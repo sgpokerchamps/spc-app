@@ -50,6 +50,36 @@ const REG = (function() {
   }
 })();
 
+// Venue screens pinned by the desk (sent as {_screens}): which live event(s) each screen shows. The desk resends at startup.
+var screens = { main: { layout: 'logo', events: [] }, side: { layout: 'logo', events: [] } };
+function cleanScreens(v) {
+  var out = { main: { layout: 'logo', events: [] }, side: { layout: 'logo', events: [] } };
+  ['main', 'side'].forEach(function(k) {
+    var x = v && v[k]; if (!x) return;
+    out[k].layout = (x.layout === 'single' || x.layout === 'split') ? x.layout : 'logo';
+    out[k].events = Array.isArray(x.events) ? x.events.slice(0, 2).map(function(i) { return typeof i === 'string' ? i : ''; }) : [];
+  });
+  return out;
+}
+
+// Assets for the served display page, read from the files the desk already ships: the two logos (data URIs in
+// js/01_constants.js) and the full-screen clock CSS (styles.css), so a display looks like the desk's full-screen clock.
+const DISPLAY_ASSETS = (function() {
+  var out = { spc: null, n8: null, css: '' };
+  try {
+    var c = fs.readFileSync(path.join(__dirname, 'js', '01_constants.js'), 'utf8');
+    var grab = function(n) { var m = c.match(new RegExp('const ' + n + "\\s*=\\s*'data:image/png;base64,([^']+)'")); return m ? Buffer.from(m[1], 'base64') : null; };
+    out.spc = grab('SPC_LOGO'); out.n8 = grab('N8_LOGO');
+  } catch (e) { console.error('display logos not loaded: ' + e.message); }
+  try {
+    var css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+    var rules = css.match(/[^{}]+\{[^{}]*\}/g) || [];
+    out.css = rules.filter(function(r) { return /^\s*(\.clock-fs|\.fs-name|\.fs-level|\.fs-note|\.fs-clock|\.fs-blinds|\.fs-blind|\.fs-next|\.fs-stats|\.fs-stat)/.test(r); }).join('\n');
+  } catch (e) { console.error('display css not loaded: ' + e.message); }
+  return out;
+})();
+var FONT_DIR = fs.existsSync(path.join(__dirname, 'fonts')) ? path.join(__dirname, 'fonts') : path.join(__dirname, 'src', 'fonts');
+
 var pendingRegs = {};   // eventId -> [{name, isReentry, ts}]: registrations accepted a moment ago, not yet in the desk's broadcast
 var PENDING_TTL = 3000;
 function hm(ms) { var d = new Date(ms); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); }
@@ -665,6 +695,172 @@ function getRegisterHTML() {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SPC Registration</title><style>' + COUNTER_CSS + COUNTER_CSS_NEW + '</style></head><body>' + COUNTER_BODY + '<script>' + COUNTER_SUGGEST_JS + body + '</script></body></html>';
 }
 
+const DISPLAY_PAGE_CSS = `html,body{margin:0;padding:0;background:#020806;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e4f0e8}
+.fs-late{font-size:1.6vw;color:#c8973a;letter-spacing:.08em;margin-bottom:2vh;min-height:1.8vw;text-align:center}
+.dsp{display:flex;width:100vw;height:100vh;background:#020806}
+.dsp-half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #123022;position:relative}
+.dsp-half:first-child{border-left:none}
+.dsp-band{position:absolute;top:0;left:0;right:0;padding:1.5vh 0;text-align:center;font-size:3.2vw;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#04080a}
+.dsp-level{font-size:2.6vw;letter-spacing:.25em;text-transform:uppercase;font-weight:700;margin-bottom:.5vh}
+.dsp-clock{font-size:15vw;font-weight:700;line-height:1;letter-spacing:-.03em;margin-bottom:2vh}
+.dsp-blinds{font-size:2.6vw;color:#b2d4ba;margin-bottom:2vh}
+.dsp-blinds b{color:#e4f0e8;font-size:3.4vw}
+.dsp-stats{display:flex;gap:3vw;font-size:2vw;color:#9ab8a2}
+.dsp-stats b{color:#e4f0e8}
+.dsp-late{font-size:1.6vw;color:#c8973a;margin-top:2vh;min-height:1.8vw;text-align:center}
+.dsp-logo{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#09180c 0%,#020806 72%)}
+.dsp-logo img{width:28vw;opacity:.9}
+.dsp-logo-s{width:20vw;opacity:.8}
+.dsp-msg{color:#9ab8a2;padding:6vh 4vw;font-size:2vw}
+#conn-dot{position:fixed;right:1.2vw;bottom:1.2vh;width:1.4vw;height:1.4vw;border-radius:50%;background:#e05a5a;display:none;z-index:100}
+#recon{position:fixed;left:0;right:0;bottom:2vh;text-align:center;color:#e05a5a;font-size:2.4vw;letter-spacing:.2em;text-transform:uppercase;display:none;z-index:100}
+`;
+
+/* The display page's browser code is a real function so Node syntax-checks it; its source is injected into the page. */
+function displayClient() {
+  /* Runs in the browser (injected as page source). A passive screen: pinned from the URL (?screen=main|side or ?event=<id>[,<id>]),
+     it never chooses anything itself. */
+  var params = {};
+  location.search.replace(/^\?/, '').split('&').forEach(function(p) { var kv = p.split('='); if (kv[0]) params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || ''); });
+  var query = params.screen ? 'screen=' + encodeURIComponent(params.screen) : (params.event ? 'event=' + encodeURIComponent(params.event) : '');
+  var data = null;          // last /api/display response
+  var offset = 0;           // server clock minus this device's clock (midpoint method)
+  var lastOk = 0;           // device time of the last good poll
+  var sig = '';             // what the DOM was last built from
+  var payPage = 0, payTimer = 0;
+  var root = document.getElementById('root');
+  var dot = document.getElementById('conn-dot'), recon = document.getElementById('recon');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtTime(s) { if (!s && s !== 0) return '--:--'; if (s < 0) s = 0; return pad2(Math.floor(s / 60)) + ':' + pad2(s % 60); }
+  function mmss(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
+  function nowSrv() { return Date.now() + offset; }
+  function secsOf(ev) {
+    var c = ev.clock || {};
+    if (ev.display && ev.display.levelKind === 'complete') return 0;
+    if (c.status === 'running' && typeof c.levelEndsAt === 'number') return Math.max(0, Math.ceil((c.levelEndsAt - nowSrv()) / 1000));
+    return Math.max(0, c.pausedSecs || 0);
+  }
+  function timerColor(secs) { return secs <= 60 ? '#e05a5a' : secs <= 300 ? '#c8973a' : '#e4f0e8'; }
+
+  /* "Late registration until end of Level 8" -> "ends in 4:59" (inside 15 min) -> "closed". Advisory, as on the counter. */
+  function lateLine(ev) {
+    var r = ev.reg; if (!r || r.lateRegLevel == null || r.status === 'notOpen') return '';
+    var now = nowSrv();
+    if (r.state === 'open' || r.state === 'notOpen') {
+      if (typeof r.lateRegEndsAt === 'number' && r.lateRegEndsAt > now && r.lateRegEndsAt - now <= 900000) return 'Late registration ends in ' + mmss(r.lateRegEndsAt - now);
+      return 'Late registration until end of Level ' + r.lateRegLevel;
+    }
+    return 'Late registration closed';
+  }
+
+  function singleHTML(ev) {
+    var m = ev.display, h = '';
+    if (m.isMainEvent) h += '<img src="/display/n8-logo.png" alt="Natural8" style="position:absolute;top:2vh;right:2.5vw;height:6vh;object-fit:contain;mix-blend-mode:screen;z-index:10">';
+    h += '<div class="fs-name" style="color:' + esc(m.color) + '">' + esc(m.group) + '</div>';
+    if (m.subtitle) h += '<div style="font-size:1.2vw;color:rgba(255,255,255,0.3);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:0.3vh">' + esc(m.subtitle) + '</div>';
+    h += '<div class="fs-level" style="color:' + (m.levelKind === 'break' ? '#c8973a' : esc(m.color)) + '">' + esc(m.levelText) + '</div>';
+    if (m.note) h += '<div class="fs-note">' + esc(m.note) + '</div>';
+    h += '<div class="fs-clock" id="clk">--:--</div>';
+    if (m.blinds.length) h += '<div class="fs-blinds">' + m.blinds.map(function(b) { return '<div class="fs-blind"><div class="fs-blind-lbl">' + esc(b[0]) + '</div><div class="fs-blind-val">' + esc(b[1]) + '</div></div>'; }).join('') + '</div>';
+    if (m.nextText) h += '<div class="fs-next"><span style="color:rgba(255,255,255,0.4);font-size:1.2vw;letter-spacing:.15em">NEXT &nbsp;</span><span>' + esc(m.nextText) + '</span></div>';
+    h += '<div class="fs-late" id="late"></div>';
+    h += '<div class="fs-stats"><img src="/display/spc-logo.png" alt="SPC" style="height:10vh;object-fit:contain"><div style="display:flex;flex-direction:column;justify-content:center;gap:2.5vh;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:2vh 1.8vw">' +
+      m.stats.map(function(st) {
+        var style = st.color ? ' style="color:' + esc(st.color) + (st.fontSize ? ';font-size:' + esc(st.fontSize) : '') + '"' : '';
+        return '<div class="fs-stat"><div class="fs-stat-lbl">' + esc(st.lbl) + '</div><div class="fs-stat-val"' + style + (st.id === 'nextBreak' ? ' id="nb"' : '') + '>' + esc(st.id === 'nextBreak' ? '' : st.val) + '</div>' + (st.sub ? '<div style="font-size:0.9vw;color:rgba(255,255,255,0.4);margin-top:0.3vh">' + esc(st.sub) + '</div>' : '') + '</div>';
+      }).join('') + '</div></div>';
+    h += '<div id="pay"></div>';
+    return h;
+  }
+  function payHTML(m) {
+    var rows = m.payouts.rows; if (!m.payouts.published || !rows.length) return '';
+    var pages = Math.max(1, Math.ceil(rows.length / 10)); var page = payPage % pages;
+    var pos = ['#f0c040', '#c8d0d8', '#c87a3a'];
+    return '<div style="position:absolute;right:2.5vw;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:1.4vh;align-items:flex-end;z-index:5"><div style="font-size:1vw;color:rgba(255,255,255,0.4);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:0.4vh;text-align:right">Payouts' + (pages > 1 ? ' · ' + (page + 1) + '/' + pages : '') + '</div>' +
+      rows.slice(page * 10, (page + 1) * 10).map(function(p) {
+        var fs = p.top === 0 ? '3vw' : p.top === 1 ? '2.5vw' : p.top === 2 ? '2.2vw' : '1.9vw';
+        return '<div style="text-align:right;display:flex;align-items:baseline;justify-content:flex-end;gap:0.6vw"><span style="font-size:1.2vw;color:rgba(255,255,255,0.5);letter-spacing:0.1em;text-transform:uppercase">' + esc(p.label) + '</span><span style="font-family:Rajdhani,sans-serif;font-size:' + fs + ';font-weight:700;color:' + (p.top >= 0 ? pos[p.top] : '#b2d4ba') + '">' + esc(p.text) + '</span></div>';
+      }).join('') + '</div>';
+  }
+  function halfHTML(ev, i) {
+    if (!ev || !ev.live) return '<div class="dsp-half"><img class="dsp-logo-s" src="/display/spc-logo.png" alt="SPC"></div>';
+    var m = ev.display;
+    var blinds = m.levelKind === 'break' ? esc(m.note || 'Break') : m.blinds.map(function(b) { return esc(b[0]) + ' <b>' + esc(b[1]) + '</b>'; }).join('  ');
+    var keep = { players: 1, avg: 1 };
+    var stats = m.stats.filter(function(s) { return keep[s.id]; }).map(function(s) { return '<span>' + esc(s.lbl) + ' <b>' + esc(s.val) + '</b></span>'; }).join('');
+    return '<div class="dsp-half"><div class="dsp-band" style="background:' + esc(m.color) + '">' + esc(m.short) + '</div><div class="dsp-level" style="color:' + (m.levelKind === 'break' ? '#c8973a' : esc(m.color)) + '">' + esc(m.levelText) + '</div><div class="dsp-clock" id="clk' + i + '">--:--</div><div class="dsp-blinds">' + blinds + '</div><div class="dsp-stats">' + stats + '</div><div class="dsp-late" id="late' + i + '"></div></div>';
+  }
+
+  function build() {
+    var d = data; if (!d) { root.innerHTML = ''; return; }
+    var key = d.layout + '|' + JSON.stringify(d.events.map(function(e) { return e.live ? e.display : null; }));
+    if (key === sig) return;
+    sig = key; payPage = 0;
+    if (d.layout === 'single' && d.events[0] && d.events[0].live) {
+      var ev = d.events[0];
+      root.innerHTML = '<div class="clock-fs" style="background:radial-gradient(ellipse at center, ' + esc(ev.display.bgDeep) + ' 0%, #020806 72%)">' + singleHTML(ev) + '</div>';
+    } else if (d.layout === 'split') {
+      root.innerHTML = '<div class="dsp">' + halfHTML(d.events[0], 0) + halfHTML(d.events[1], 1) + '</div>';
+    } else {
+      root.innerHTML = '<div class="dsp-logo"><img src="/display/spc-logo.png" alt="SPC"></div>';
+    }
+  }
+  function tick() {
+    var d = data;
+    if (d) {
+      var dim = lastOk && Date.now() - lastOk > 60000;
+      if (d.layout === 'single' && d.events[0] && d.events[0].live) {
+        var ev = d.events[0], secs = secsOf(ev), c = document.getElementById('clk');
+        if (c) { c.textContent = fmtTime(secs); c.style.color = timerColor(secs); c.style.opacity = dim ? '0.35' : '1'; }
+        var nbEl = document.getElementById('nb');
+        if (nbEl) { var st = null; ev.display.stats.forEach(function(s) { if (s.id === 'nextBreak') st = s; }); if (st) { var nb = Math.round(secs / 60 + st.after); nbEl.textContent = nb >= 60 ? Math.floor(nb / 60) + 'h ' + (nb % 60) + 'm' : nb + 'm'; } }
+        var late = document.getElementById('late'); if (late) late.textContent = lateLine(ev);
+        var pay = document.getElementById('pay'); if (pay) { var ph = payHTML(ev.display); if (pay.getAttribute('data-h') !== ph) { pay.setAttribute('data-h', ph); pay.innerHTML = ph; } }
+      } else if (d.layout === 'split') {
+        for (var i = 0; i < 2; i++) {
+          var e2 = d.events[i]; if (!e2 || !e2.live) continue;
+          var s2 = secsOf(e2), c2 = document.getElementById('clk' + i);
+          if (c2) { c2.textContent = fmtTime(s2); c2.style.color = timerColor(s2); c2.style.opacity = dim ? '0.35' : '1'; }
+          var l2 = document.getElementById('late' + i); if (l2) l2.textContent = lateLine(e2);
+        }
+      }
+    }
+    var gap = lastOk ? Date.now() - lastOk : 0;
+    dot.style.display = (gap > 10000 || !lastOk) ? 'block' : 'none';
+    recon.style.display = gap > 60000 ? 'block' : 'none';
+  }
+
+  function poll() {
+    if (!query) { root.innerHTML = '<div class="dsp-msg">Open this page as /display?screen=main, /display?screen=side or /display?event=ID</div>'; return; }
+    var t0 = Date.now();
+    var ac = window.AbortController ? new AbortController() : null;
+    var tm = setTimeout(function() { if (ac) ac.abort(); }, 4000);
+    fetch('/api/display?' + query, { signal: ac ? ac.signal : undefined }).then(function(r) { clearTimeout(tm); if (!r.ok) throw new Error('http ' + r.status); return r.json(); }, function(e) { clearTimeout(tm); throw e; }).then(function(d) {
+      var t1 = Date.now();
+      offset = d.serverNow - (t0 + t1) / 2;
+      data = d; lastOk = t1; build(); tick();
+    }).catch(function() { /* keep the last picture and keep counting */ });
+  }
+  /* payout paging every 10s */
+  setInterval(function() { payPage++; var d = data; if (d && d.layout === 'single' && d.events[0] && d.events[0].live) { var pay = document.getElementById('pay'); if (pay) { var ph = payHTML(d.events[0].display); pay.setAttribute('data-h', ph); pay.innerHTML = ph; } } }, 10000);
+  /* keep awake where the browser allows it (secure contexts only; a LAN http page relies on caffeinate instead) */
+  var wl = null;
+  function reqWake() { if (navigator.wakeLock && !wl) { navigator.wakeLock.request('screen').then(function(l) { wl = l; l.addEventListener('release', function() { wl = null; }); }).catch(function() {}); } }
+  document.addEventListener('click', reqWake);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) reqWake(); });
+  reqWake();
+  poll(); setInterval(poll, 1000);
+  setInterval(tick, 250);
+}
+
+function getDisplayHTML() {
+  var src = displayClient.toString();
+  var body = src.substring(src.indexOf('{') + 1, src.lastIndexOf('}'));
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="SPC Display"><title>SPC Display</title><link rel="stylesheet" href="/fonts/fonts.css"><style>' + DISPLAY_ASSETS.css + DISPLAY_PAGE_CSS + '</style></head><body><div id="root"></div><div id="conn-dot"></div><div id="recon">Reconnecting</div><script>' + body + '</script></body></html>';
+}
+
 module.exports = {
   start: function(port, callback) {
     httpServer = http.createServer(function(req, res) {
@@ -675,7 +871,44 @@ module.exports = {
       var path = url.parse(req.url).pathname;
       if (path === '/') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getFloorHTML()); }
       else if (path === '/register') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getRegisterHTML()); }
-      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":10}'); }
+      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":11}'); }
+      else if (path === '/display') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getDisplayHTML()); }
+      else if (path === '/display/spc-logo.png' || path === '/display/n8-logo.png') {
+        var logo = path === '/display/spc-logo.png' ? DISPLAY_ASSETS.spc : DISPLAY_ASSETS.n8;
+        if (!logo) { res.writeHead(404); res.end(''); } else { res.writeHead(200, {'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400'}); res.end(logo); }
+      }
+      else if (path.indexOf('/fonts/') === 0) {
+        var fname = path.slice(7);
+        if (!/^[A-Za-z0-9._-]+$/.test(fname) || fname.indexOf('..') >= 0) { res.writeHead(404); res.end(''); }
+        else {
+          var fp = FONT_DIR + '/' + fname;
+          fs.readFile(fp, function(err, buf) {
+            if (err) { res.writeHead(404); res.end(''); return; }
+            res.writeHead(200, {'Content-Type': /\.woff2$/.test(fname) ? 'font/woff2' : (/\.css$/.test(fname) ? 'text/css' : 'application/octet-stream'), 'Cache-Control': 'public, max-age=3600'}); res.end(buf);
+          });
+        }
+      }
+      else if (path === '/api/display') {
+        var qd = url.parse(req.url, true).query; var dnow = Date.now(); var dlayout, dids;
+        if (qd.screen) {
+          var sc = screens[qd.screen];
+          if (!sc) { sendJson(res, 400, { ok: false, error: 'unknown_screen', message: 'screen must be main or side' }); return; }
+          dlayout = sc.layout; dids = sc.events.slice();
+        } else if (qd.event) {
+          dids = String(qd.event).split(',').slice(0, 2); dlayout = dids.length > 1 ? 'split' : 'single';
+        } else { sendJson(res, 400, { ok: false, error: 'missing_screen', message: 'Name a screen (?screen=main|side) or an event (?event=ID)' }); return; }
+        var dents = dids.map(function(id) {
+          var slot = hasEvent(id) ? liveEvents[id] : null;
+          if (!slot || !slot.tournament || !slot.tournament.display || !slot.clock) return { eventId: id, live: false };
+          var c = slot.clock;
+          return { eventId: id, live: true, display: slot.tournament.display, reg: regSummary(slot.tournament, dnow),
+            clock: { status: c.status || (c.running ? 'running' : 'paused'), levelEndsAt: c.levelEndsAt == null ? null : c.levelEndsAt, pausedSecs: c.pausedSecs == null ? null : c.pausedSecs } };
+        });
+        if (dlayout === 'single' && !(dents[0] && dents[0].live)) dlayout = 'logo';
+        if (dlayout === 'split' && !dents.some(function(e) { return e.live; })) dlayout = 'logo';
+        if (dlayout === 'logo') dents = [];
+        sendJson(res, 200, { serverNow: dnow, layout: dlayout, events: dents });
+      }
       else if (path === '/api/members') { sendJson(res, 200, { members: membersList || [] }); }
       else if (path === '/api/events') {
         var evs = Object.keys(liveEvents).map(function(id) {
@@ -750,6 +983,7 @@ module.exports = {
   broadcastClockState: function(s) { if (!s || !s.eventId) { console.warn('broadcastClockState: payload has no eventId, ignored'); return; } eventSlot(s.eventId).clock = s; },
   broadcastTournamentState: function(s) {
     if (s && s._membersOnly) { membersList = s.members; return; }
+    if (s && s._screens) { screens = cleanScreens(s._screens); return; }
     if (s && Array.isArray(s._liveList)) {
       // The desk says which events are live: drop every other event.
       var keep = {};

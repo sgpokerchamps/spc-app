@@ -120,6 +120,8 @@ function buildClockPayload(t, now) {
     secs:clockRemainingSecs(t,now),
     running:t.status==='running',
     status:t.status,
+    levelEndsAt:(t.status==='running'&&typeof t.levelEndsAt==='number')?t.levelEndsAt:null,
+    pausedSecs:(t.status==='running')?null:Math.max(0,t.timeRemainingSeconds||0),
     isBreak:cur&&cur.isBreak,
     level:cur&&cur.level,
     sb:cur&&cur.sb,bb:cur&&cur.bb,ante:cur&&cur.ante,
@@ -150,6 +152,7 @@ function buildTournamentPayload(tournament) {
         eventShort:_evCfg?_evCfg.short:(tournament.name||''),
         eventColor:_evCfg?_evCfg.color:'#c8973a',
         buyin:tournament.buyin||0,
+        display:buildDisplayModel(tournament),
         reg:tournament.reg||defaultReg(tournament.eventType,'open'),
         lateRegEndsAt:lateRegEndsAtOf(tournament),
         maxReentries:(_evCfg&&typeof _evCfg.maxReentries==='number'&&isFinite(_evCfg.maxReentries))?_evCfg.maxReentries:null,
@@ -195,6 +198,19 @@ function prepareResumed(t, now) {
     return {...t,status:'paused',timeRemainingSeconds:savedAt?Math.max(0,Math.ceil((t.levelEndsAt-savedAt)/1000)):Math.max(0,t.timeRemainingSeconds||0),levelEndsAt:null};
   }
   return catchUpClock(t,now);
+}
+
+/* Screens persisted by the desk (localStorage spc_screens). */
+function loadScreens() {
+  const dflt={main:{layout:'logo',events:[],names:[]},side:{layout:'logo',events:[],names:[]}};
+  try{
+    const v=JSON.parse(localStorage.getItem('spc_screens')||'null');
+    if(v&&v.main&&v.side){
+      const fix=x=>({layout:['logo','single','split'].indexOf(x.layout)>=0?x.layout:'logo',events:Array.isArray(x.events)?x.events.slice(0,2):[],names:Array.isArray(x.names)?x.names.slice(0,2):[]});
+      return {main:fix(v.main),side:fix(v.side)};
+    }
+  }catch(e){}
+  return dflt;
 }
 
 /* ==== APP ==== */
@@ -444,6 +460,20 @@ function App() {
   const lastSavedRef = useRef({});
   const saveFailuresRef = useRef({});
   const [saveFailures,setSaveFailures] = useState({});
+
+  /* Screens: which live event(s) each venue screen shows. Pinned from the desk, persisted, and NEVER derived from focus.
+     layout: 'logo' | 'single' | 'split'; events: [id] or [idA,idB]; names: short names kept so a closed event can still be named. */
+  const [screens,setScreens] = useState(loadScreens);
+  useEffect(()=>{
+    try{ localStorage.setItem('spc_screens',JSON.stringify(screens)); }catch(e){}
+    if(typeof window.electronAPI!=='undefined'){
+      window.electronAPI.sendTournamentState({_screens:{main:{layout:screens.main.layout,events:screens.main.events},side:{layout:screens.side.layout,events:screens.side.events}}});
+    }
+  },[screens]);
+  function setScreen(which,layout,events){
+    const names=events.map(id=>{const t=liveRef.current[id];const c=t&&EVENT_CONFIGS[t.eventType];return id?(c?c.short:((screens[which].events||[]).indexOf(id)>=0?(screens[which].names||[])[(screens[which].events||[]).indexOf(id)]:'')):'';});
+    setScreens(prev=>({...prev,[which]:{layout:layout,events:events,names:names}}));
+  }
   function saveLiveEvent(id,t){
     let prev=null; try{ prev=getIndex().find(x=>x.id===id)||null; }catch(e){}
     const ok=saveT(t);
@@ -1153,7 +1183,7 @@ Starting setup — you can adjust settings before launching.`);
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
-          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
+          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
