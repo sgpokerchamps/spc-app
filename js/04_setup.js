@@ -5,7 +5,8 @@
    ============================================================ */
 
 /* ==== SETUP ==== */
-function SetupScreen({eventType,onBack,onStart}) {
+function SetupScreen({eventType,onBack,onStart,takenTables}) {
+  const _taken=takenTables||{};
   const cfg=EVENT_CONFIGS[eventType]||EVENT_CONFIGS.miniRoller;
   const isME=cfg.isMainEvent;
   const [name,setName]=useState(_tpl?_tpl.name:`SPC ${cfg.name}`);
@@ -24,9 +25,9 @@ function SetupScreen({eventType,onBack,onStart}) {
   const _prizePerEntry=_netPerEntry-(isMB?bountyAmt:0);
   const [stack,setStack]=useState(cfg.stack);
   const [spcSeries,setSpcSeries]=useState(_tpl?_tpl.spcSeries||CURRENT_SPC_SERIES:CURRENT_SPC_SERIES);
-  const [selectedTables,setSelectedTables]=useState(Array.from({length:15},(_,i)=>i+1));
+  const [selectedTables,setSelectedTables]=useState(Array.from({length:15},(_,i)=>i+1).filter(n=>_taken[n]==null));
   const [seats,setSeats]=useState(9);
-  function toggleTable(n){setSelectedTables(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n].sort((a,b)=>a-b));}
+  function toggleTable(n){if(_taken[n]!=null)return;setSelectedTables(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n].sort((a,b)=>a-b));}
   const _tpl=window._importedTemplate&&window._importedTemplate.eventType===eventType?window._importedTemplate:null;
   useEffect(()=>{ window._importedTemplate=null; },[]);
   const [structure,setStructure]=useState((_tpl&&_tpl.structure?_tpl.structure:STRUCTURES[eventType]||STRUCTURES.miniRoller).map((r,i)=>({...r,_id:i})));
@@ -136,11 +137,11 @@ function SetupScreen({eventType,onBack,onStart}) {
             <label className="form-label">Tables in play — tap to toggle</label>
             <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:4}}>
               {Array.from({length:15},(_,i)=>i+1).map(n=>{
-                const on=selectedTables.includes(n);
-                return <button key={n} type="button" onClick={()=>toggleTable(n)}
-                  style={{padding:'7px 13px',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer',
-                    background:on?'#1a3a22':'#0b1610',border:`1px solid ${on?'#3dba6f':'#152018'}`,color:on?'#3dba6f':'#527a5c'}}>
-                  {n}
+                const on=selectedTables.includes(n);const tk=_taken[n];
+                return <button key={n} type="button" disabled={tk!=null} title={tk!=null?('In use by '+tk):''} onClick={()=>toggleTable(n)}
+                  style={{padding:'7px 13px',borderRadius:6,fontSize:12,fontWeight:700,cursor:tk!=null?'not-allowed':'pointer',opacity:tk!=null?0.45:1,
+                    background:on?'#1a3a22':'#0b1610',border:`1px solid ${tk!=null?'#5a2a2a':on?'#3dba6f':'#152018'}`,color:tk!=null?'#a05555':on?'#3dba6f':'#527a5c'}}>
+                  {n}{tk!=null&&<div style={{fontSize:8,fontWeight:600}}>{tk}</div>}
                 </button>;
               })}
             </div>

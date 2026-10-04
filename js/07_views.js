@@ -1210,7 +1210,7 @@ function PlayersView({tournament,activePlayers,bustedPlayers,onAdd,onAddMany,onB
     </div>
   );
 }
-function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onRedrawFinal,onUpdateChipCount,onExportSeating}) {
+function TablesView({takenElsewhere,tournament,activePlayers,onBalance,onOpen,onCloseConfirm,onMove,onRemove,onLock,onRedraw,onRedrawFinal,onUpdateChipCount,onExportSeating}) {
   const [selectedPlayer,setSelectedPlayer] = useState(null);
   const [closeMode,setCloseMode] = useState(null);
   const [breakMode,setBreakMode] = useState(null); // {closingTable, assignments:{id:{tableNum,seatNum}}}
@@ -1411,11 +1411,11 @@ function TablesView({tournament,activePlayers,onBalance,onOpen,onCloseConfirm,on
         <div style={{fontSize:12,color:'#3dba6f',fontWeight:700,marginBottom:12}}>+ Select a table number to open:</div>
         <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
           {Array.from({length:15},(_,i)=>i+1).map(n=>{
-            const open=allTableNums.includes(n);
+            const _tkn=(takenElsewhere||{})[n];const open=allTableNums.includes(n)||_tkn!=null;
             return <button key={n} disabled={open} onClick={()=>{onOpen(n);setOpenMode(false);}}
               style={{padding:'8px 16px',borderRadius:6,fontSize:13,fontWeight:700,cursor:open?'default':'pointer',
                 background:open?'#0b1610':'#1a3a22',border:'1px solid '+(open?'#152018':'#3dba6f'),color:open?'#3a5a42':'#3dba6f'}}>
-              {n}{open?' · open':''}
+              {n}{_tkn!=null?' · '+_tkn:(open?' · open':'')}
             </button>;
           })}
         </div>

@@ -443,6 +443,9 @@ function App() {
   },[liveIdsKey,focusedId,restored]);
 
   function startTournament(config) {
+    {const _want=(config.tableNumbers&&config.tableNumbers.length)?config.tableNumbers:null;
+     if(_want){const _tk=tablesElsewhere(liveRef.current,null);const _bad=_want.filter(n=>_tk[n]!=null);
+       if(_bad.length){alert('Table'+(_bad.length>1?'s ':' ')+_bad.join(', ')+' '+(_bad.length>1?'are':'is')+' already in use by another live event ('+_tk[_bad[0]]+'). Change the table selection.');return;}}}
     const structure=[...config.structure];
     const guarantee = config.guarantee||0;
     const inheritedEntries=config.inheritedEntries||0;
@@ -492,8 +495,9 @@ function App() {
     if(isDay2){
       // Day 2: seat deduplicated inherited players
       _deduped.forEach((p,idx)=>{
-        const tNum=(idx%_maxT)+1;
-        const sNum=Math.floor(idx/_maxT)+1;
+        const _tl=(config.tableNumbers&&config.tableNumbers.length)?[...config.tableNumbers].sort((a,b)=>a-b):Array.from({length:_maxT},(_,k)=>k+1);
+        const tNum=_tl[idx%_tl.length];
+        const sNum=Math.floor(idx/_tl.length)+1;
         const bestHistorical=Math.max(p.chipCount||0,p.inheritedChipCount||0);
         _seatedPlayers.push({...p,id:uid(),status:'active',bustPosition:null,inherited:true,
           chipCount:p.chipCount||0,inheritedChipCount:bestHistorical,
@@ -965,19 +969,30 @@ Starting setup — you can adjust settings before launching.`);
   }
 
   function openTable(specificNum){
-    setTournament(t=>{
+    const id=scopeRef.current||focusedIdRef.current;
+    if(!id||!liveRef.current[id]) return;
+    if(specificNum!=null){
+      const _tk=tablesElsewhere(liveRef.current,id)[Number(specificNum)];
+      if(_tk!=null){alert('Table '+specificNum+' is in use by '+_tk+'. Pick another table.');return;}
+    }
+    // Atomic: re-checks against every live event inside the single state update
+    setLive(prev=>{
+      const t=prev[id]; if(!t) return prev;
       const tableNumbers=getTableNumbers(t);
-      if(tableNumbers.length>=15) return t;
+      if(tableNumbers.length>=15) return prev;
+      const taken=tablesElsewhere(prev,id);
       let newTableNum;
       if(specificNum!=null){
         const n=Number(specificNum);
-        if(!n||n<1||tableNumbers.includes(n)) return t;
+        if(!n||n<1||tableNumbers.includes(n)||taken[n]!=null) return prev;
         newTableNum=n;
       } else {
         newTableNum=Math.max.apply(null,tableNumbers)+1;
+        while(taken[newTableNum]!=null&&newTableNum<=15) newTableNum++;
+        if(newTableNum>15) return prev;
       }
       const newTableNumbers=[...tableNumbers,newTableNum].sort((a,b)=>a-b);
-      return{...t,tableNumbers:newTableNumbers,maxTables:newTableNumbers.length,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]};
+      return {...prev,[id]:{...t,tableNumbers:newTableNumbers,maxTables:newTableNumbers.length,activityLog:[...(t.activityLog||[]),{ts:Date.now(),type:'table',detail:`Table ${newTableNum} opened`}]}};
     });
     SoundEngine.register();
   }
@@ -1074,9 +1089,10 @@ Starting setup — you can adjust settings before launching.`);
   return(
     <div className="app">
       {regBanners.length>0&&(<div className="reg-banners">{regBanners.map(b=>(<div key={b.id+b.kind} className={'reg-banner '+b.kind}><span>{b.text}</span>{b.kind==='over'&&(<span style={{display:'flex',gap:6}}><button onClick={()=>regAction(b.id,'close')}>Close</button><button onClick={()=>regAction(b.id,'closeNow')}>Close now</button></span>)}</div>))}</div>)}
+      {tableOverlaps(live).map((o,i)=>(<div key={'ovl'+i} className="reg-banner warn"><span>{'Table clash: '+o.a+' and '+o.b+' both use table'+(o.tables.length>1?'s ':' ')+formatTableRanges(o.tables)+'. Nothing was changed. Close or move one of those tables.'}</span></div>))}
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
-      {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament}/>}
+      {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament} takenTables={tablesElsewhere(live,null)}/>}
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
@@ -1089,7 +1105,7 @@ Starting setup — you can adjust settings before launching.`);
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo} onRegAction={(type,val)=>regAction(tournament.id,type,val)}/>}
             {subview==='clock'&&<ClockView tournament={tournament} cur={cur} nxt={nxt} activePlayers={activePlayers} bustedPlayers={bustedPlayers} tablesInUse={tablesInUse} secs={secs} clockCls={clockCls} onToggle={toggleClock} onPrev={prevLevel} onNext={nextLevel} onAdjust={adjustTime} totalEntries={tournament.players.length} onUpdateBlinds={updateCurrentBlinds} onRegisterRandom={()=>{const reg=new Set(tournament.players.map(p=>p.name));for(let i=1;i<=700;i++){const n=String(i).padStart(3,'0');if(!reg.has(n)){addPlayer(n);break;}}}} onBustRandom={()=>{const a=tournament.players.filter(p=>p.status==='active');if(a.length)bustPlayer(a[Math.floor(Math.random()*a.length)].id);}}/>}
             {subview==='players'&&<PlayersView tournament={tournament} activePlayers={activePlayers} bustedPlayers={bustedPlayers} onAdd={addPlayer} onAddMany={addPlayers} onBust={bustPlayer} onBustMany={bustManyPlayers} onUndoBust={undoBust} onSwapBust={swapBust} onRemovePhantomBust={removePhantomBust} onRename={updatePlayerName} onRemove={removePlayer} modal={modal} setModal={setModal}/>}
-            {subview==='tables'&&<TablesView tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
+            {subview==='tables'&&<TablesView takenElsewhere={tablesElsewhere(live,focusedId)} tournament={tournament} activePlayers={activePlayers} onBalance={balanceTables} onOpen={openTable} onCloseConfirm={closeTableConfirm} onMove={movePlayerSeat} onRemove={removePlayer} onLock={setSeatLock} onRedraw={redrawSeats} onRedrawFinal={redrawFinalTable} onUpdateChipCount={updateChipCount} onExportSeating={exportSeating}/>}
             {subview==='log'&&<LogView activityLog={tournament.activityLog||[]}/>}
             {subview==='blinds'&&<BlindEditView tournament={tournament} onUpdate={updateBlindLevel} onSetChips={setChipsInPlay} onAppend={appendStructureEntry}/>}
             {subview==='payouts'&&isSatellite(tournament)&&<SatellitePayoutsView tournament={tournament} onUpdate={updatePayoutSettings} onPublish={publishPayouts} onUnpublish={unpublishPayouts}/>}

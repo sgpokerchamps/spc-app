@@ -106,6 +106,28 @@ function getTableNumbers(tournament) {
   for(let i=0;i<maxTables;i++) out.push(startTable+i);
   return out;
 }
+function evLabel(t){ const c=(typeof EVENT_CONFIGS!=='undefined'&&EVENT_CONFIGS[t.eventType])||null; return (c&&c.short)||t.eventShort||t.eventName||t.name||'another event'; }
+/* Tables claimed by OTHER live events (empty and paused ones included). Returns {tableNum: eventName}. */
+function tablesElsewhere(liveMap, exceptId) {
+  const out={};
+  Object.keys(liveMap||{}).forEach(id=>{
+    if(id===exceptId) return;
+    const t=liveMap[id]; if(!t) return;
+    const nm=evLabel(t);
+    getTableNumbers(t).forEach(n=>{ if(out[n]==null) out[n]=nm; });
+  });
+  return out;
+}
+/* [{a,b,tables}] pairs of live events that share table numbers (warn-only on resume). */
+function tableOverlaps(liveMap) {
+  const ids=Object.keys(liveMap||{}); const out=[];
+  for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
+    const A=liveMap[ids[i]],B=liveMap[ids[j]]; if(!A||!B) continue;
+    const bs=new Set(getTableNumbers(B)); const sh=getTableNumbers(A).filter(n=>bs.has(n));
+    if(sh.length) out.push({a:evLabel(A),b:evLabel(B),tables:sh});
+  }
+  return out;
+}
 function formatTableRanges(nums) {
   if(!nums||!nums.length) return '';
   const sorted=[...nums].sort((a,b)=>a-b);
