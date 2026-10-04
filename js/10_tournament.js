@@ -258,10 +258,12 @@ function App() {
         } else if(action.type==='undo-register'){
           // remove the most recently registered active player
           setTournament(t=>{
-            const active=[...t.players].filter(p=>p.status==='active').sort((a,b)=>b.registeredAt-a.registeredAt);
+            const active=[...t.players].filter(p=>p.status==='active').sort((a,b)=>(b.registeredAt||0)-(a.registeredAt||0));
             if(active.length===0)return t;
-            const remove=active[0].id;
-            return {...t, players:t.players.filter(p=>p.id!==remove)};
+            const gone=active[0];
+            // also drop that registration's log row (newest non-duplicate entry for the name), so no "Unassigned" ghost is left
+            const log=t.regLog||[]; const li=log.findIndex(r=>r.name===gone.name&&!r.isDup);
+            return {...t, players:t.players.filter(p=>p.id!==gone.id), regLog:li>=0?[...log.slice(0,li),...log.slice(li+1)]:log};
           });
         } else if(action.type==='bust'||action.type==='bust-random'){
           if(action.name){
