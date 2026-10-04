@@ -326,7 +326,23 @@ function App() {
   },[]);
 
   /* Floor URL overlay */
-  const [serverInfo,setServerInfo]=useState(null);
+  const [rawServerInfo,setServerInfo]=useState(null);
+  /* Live LAN addresses from the server (read each time, so joining the venue router later needs no restart and no terminal). */
+  const [lanAddrs,setLanAddrs]=useState([]);
+  const [prefIp,setPrefIp]=useState(()=>{try{return localStorage.getItem('spc_pref_ip')||'';}catch(e){return '';}});
+  function choosePrefIp(ip){setPrefIp(ip);try{localStorage.setItem('spc_pref_ip',ip);}catch(e){}}
+  useEffect(()=>{
+    const port=rawServerInfo&&rawServerInfo.port; if(!port) return;
+    let alive=true;
+    const read=()=>{fetch('http://127.0.0.1:'+port+'/api/net',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(alive&&j&&Array.isArray(j.addrs)) setLanAddrs(j.addrs);}).catch(()=>{});};
+    read(); const iv=setInterval(read,3000);
+    return()=>{alive=false;clearInterval(iv);};
+  },[rawServerInfo&&rawServerInfo.port]);
+  window._spcChooseIp = choosePrefIp;
+  const serverInfo=rawServerInfo?(()=>{
+    const pick=lanAddrs.find(a=>a.ip===prefIp)||lanAddrs[0];
+    return {...rawServerInfo,ip:pick?pick.ip:rawServerInfo.ip,all:lanAddrs,pref:pick?pick.ip:null,prefSet:!!lanAddrs.find(a=>a.ip===prefIp)};
+  })():null;
   /* Main screen (venue HDMI output): status from the app shell. An older app package has no openMainScreen/mainScreenStatus. */
   const mainScreenSupported=typeof window.electronAPI!=='undefined'&&typeof window.electronAPI.mainScreenStatus==='function';
   const [mainScreenInfo,setMainScreenInfo]=useState(null);
@@ -1082,7 +1098,7 @@ Starting setup — you can adjust settings before launching.`);
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
-          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} mainScreen={{supported:mainScreenSupported,info:mainScreenInfo,url:'http://127.0.0.1:'+((serverInfo&&serverInfo.port)||3456)+'/display?screen=main'}} onReopenMain={reopenMainScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
+          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} mainScreen={{supported:mainScreenSupported,info:mainScreenInfo,url:'http://127.0.0.1:'+((serverInfo&&serverInfo.port)||3456)+'/display?screen=main',sideUrl:serverInfo?('http://'+serverInfo.ip+':'+serverInfo.port+'/display?screen=side'):null}} onReopenMain={reopenMainScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament}

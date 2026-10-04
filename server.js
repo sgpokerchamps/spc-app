@@ -10,6 +10,34 @@ let httpServer = null;
 var liveEvents = {};   // eventId -> { clock, tournament }
 var membersList = null; // global, not per event
 
+/* Live LAN addresses, read at call time so a network switch is picked up without restarting the app.
+   Labels come from macOS hardware ports (en0 -> Wi-Fi, en5 -> USB LAN) when available. */
+var _portLabels = { at: 0, map: {} };
+function portLabels() {
+  if (Date.now() - _portLabels.at < 60000) return _portLabels.map;
+  var map = {};
+  try {
+    var out = require('child_process').execFileSync('networksetup', ['-listallhardwareports'], { timeout: 1500, encoding: 'utf8' });
+    var cur = null;
+    out.split('\n').forEach(function(l) {
+      var m = /^Hardware Port: (.*)$/.exec(l); if (m) cur = m[1];
+      var d = /^Device: (\S+)/.exec(l); if (d && cur) map[d[1]] = cur;
+    });
+  } catch (e) {}
+  _portLabels = { at: Date.now(), map: map };
+  return map;
+}
+function lanAddrs() {
+  var ifs = require('os').networkInterfaces(), labels = portLabels(), out = [];
+  Object.keys(ifs).forEach(function(name) {
+    (ifs[name] || []).forEach(function(a) {
+      if (a.family !== 'IPv4' || a.internal) return;
+      out.push({ iface: name, label: labels[name] || name, ip: a.address, linkLocal: /^169\.254\./.test(a.address) });
+    });
+  });
+  out.sort(function(a, b) { return (a.linkLocal ? 1 : 0) - (b.linkLocal ? 1 : 0); });
+  return out;
+}
 function tablesElsewhere(exceptId) {
   var out = {};
   Object.keys(liveEvents).forEach(function(id) {
@@ -881,6 +909,7 @@ module.exports = {
       var path = url.parse(req.url).pathname;
       if (path === '/') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getFloorHTML()); }
       else if (path === '/register') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getRegisterHTML()); }
+      else if (path === '/api/net') { res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}); res.end(JSON.stringify({ addrs: lanAddrs(), serverNow: Date.now() })); }
       else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":11}'); }
       else if (path === '/display') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getDisplayHTML()); }
       else if (path === '/display/spc-logo.png' || path === '/display/n8-logo.png') {

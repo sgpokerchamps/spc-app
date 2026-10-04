@@ -181,10 +181,12 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
           <div style={{flex:1,background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,padding:'10px 14px'}}>
             <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#c8973a',marginBottom:5,fontWeight:700}}>Counter staff URL</div>
             <div style={{fontSize:15,color:'#e8d8a0',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}/register`}</div>
+            {serverInfo.all&&serverInfo.all.length>1&&<div style={{marginTop:6,fontSize:11,color:'#7a6a3a'}}>Other networks on this laptop: {serverInfo.all.filter(a=>a.ip!==serverInfo.ip).map(a=>(<span key={a.ip} style={{marginRight:10}}>{a.label}: {`http://${a.ip}:${serverInfo.port}/register`} <button type="button" style={{fontSize:10,cursor:'pointer'}} onClick={()=>window._spcChooseIp&&window._spcChooseIp(a.ip)}>Use this</button></span>))}</div>}
           </div>
           <div style={{flex:1,background:'#060e09',border:'1px solid #1a2e22',borderRadius:8,padding:'10px 14px'}}>
             <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#7aaa82',marginBottom:5,fontWeight:700}}>Floor staff URL</div>
             <div style={{fontSize:15,color:'#3dba6f',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}`}</div>
+            {serverInfo.all&&serverInfo.all.length>0&&<div style={{marginTop:6,fontSize:11,color:'#3a7a52'}}>On: {(serverInfo.all.find(a=>a.ip===serverInfo.ip)||{}).label||'this network'}{serverInfo.all.length>1?' (this laptop is on '+serverInfo.all.length+' networks)':''}{serverInfo.all.length>1&&!serverInfo.prefSet&&<span style={{color:'#e07a5f',fontWeight:700,marginLeft:8}}>Pick the venue network: tap Use this on the counter URL box.</span>}</div>}
           </div>
         </div>
       )}

@@ -90,6 +90,7 @@ function ScreensPanel({screens,liveRows,onScreen,mainScreen,onReopenMain}) {
             {gone.length>0
               ?<div className="sc-warn">{labels[which]}: {gone.map(x=>x.name||'event').join(', ')} closed. Choose an event.</div>
               :<div className="sc-state">{sc.layout==='logo'?'Showing: logo':'Showing: '+(shown.join(' + ')||'nothing yet')}</div>}
+            {which==='side'&&mainScreen&&mainScreen.sideUrl&&<div className="sc-info">Standby Mac or tablet: open {mainScreen.sideUrl}</div>}
             {which==='main'&&mainScreen&&(()=>{
               if(!mainScreen.supported) return <div className="sc-info">Main screen output needs the new app version (DMG). For now open {mainScreen.url} in Safari on the HDMI display.</div>;
               const i=mainScreen.info;
