@@ -5,21 +5,43 @@
    ============================================================ */
 
 /* ==== HOME ==== */
-/* Check for updates: pulls the latest app.html / js / server.js and offers a restart. Lives on the home page only. */
+/* Check for updates. Two steps on a current app package: (1) stage = download and check everything, change NOTHING;
+   (2) only after you confirm, apply = write the changed files together, then restart. Cancel at the question changes nothing.
+   An older app package only has a button that writes files the moment they download, so there we ask FIRST. */
 function UpdateButton() {
-  const [busy,setBusy]=useState(false);
-  const supported=typeof window.electronAPI!=='undefined'&&typeof window.electronAPI.checkForUpdates==='function';
-  function check(){
-    if(!supported||busy) return;
-    setBusy(true);
-    window.electronAPI.checkForUpdates().then(r=>{
-      setBusy(false);
-      if(r.success){ if(confirm('Updated: '+r.files.join(', ')+'. Restart now?')) window.electronAPI.restartApp(); }
-      else alert('Update failed: '+(r.error||'Unknown error'));
-    }).catch(e=>{ setBusy(false); alert('Update error: '+e.message); });
+  const [busy,setBusy]=useState('');
+  const api=typeof window.electronAPI!=='undefined'?window.electronAPI:null;
+  const newApi=!!(api&&api.stageUpdate&&api.applyUpdate);
+  const oldApi=!!(api&&api.checkForUpdates);
+  async function check(){
+    if(busy||!(newApi||oldApi)) return;
+    if(newApi){
+      setBusy('Checking...');
+      try{
+        const r=await api.stageUpdate();
+        if(!r.success){ alert('Update check failed: '+(r.error||'Unknown error')+'\n\nNothing was changed.'); return; }
+        if(!r.changed.length){ alert('Already up to date ('+r.ref+'). Nothing was changed.'); return; }
+        const list=r.changed.slice(0,10).join(', ')+(r.changed.length>10?', ...':'');
+        if(!confirm('Update available ('+r.ref+'): '+r.changed.length+' of '+r.total+' files change:\n'+list+'\n\nNothing has been changed yet. Apply the update and restart now?')) return;
+        setBusy('Applying...');
+        const a=await api.applyUpdate();
+        if(!a.success){ alert('Update failed: '+(a.error||'Unknown error')+'\n\nThe existing files were left as they were.'); return; }
+        api.restartApp();
+      }catch(e){ alert('Update error: '+e.message+'\n\nNothing was changed.'); }
+      finally{ setBusy(''); }
+    } else {
+      if(!confirm('This app version applies an update the moment it downloads it, and "Cancel" later does not undo it. Check for updates and apply now?')) return;
+      setBusy('Checking...');
+      try{
+        const r=await api.checkForUpdates();
+        if(r.success){ if(confirm('Updated: '+r.files.join(', ')+'. Restart now?')) api.restartApp(); }
+        else alert('Update failed: '+(r.error||'Unknown error'));
+      }catch(e){ alert('Update error: '+e.message); }
+      finally{ setBusy(''); }
+    }
   }
-  if(!supported) return null;
-  return <button className="home-update" onClick={check} disabled={busy}>{busy?'Checking...':'Check for updates'}</button>;
+  if(!(newApi||oldApi)) return null;
+  return <button className="home-update" onClick={check} disabled={!!busy}>{busy||'Check for updates'}</button>;
 }
 
 function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport,liveRows,onFocusLive}) {

@@ -33,7 +33,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mainScreenStatus: () => ipcRenderer.invoke('main-screen-status'),
 
   // Updates
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),   // older: writes files immediately
+  stageUpdate: () => ipcRenderer.invoke('update-stage'),            // newer: download and check, change nothing
+  applyUpdate: () => ipcRenderer.invoke('update-apply'),            // then write the staged files together
   getUpdateInfo: () => ipcRenderer.invoke('get-update-info'),
   restartApp: () => ipcRenderer.invoke('restart-app'),
 

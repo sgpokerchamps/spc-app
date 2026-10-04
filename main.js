@@ -3,6 +3,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const https = require('https');
+const vm = require('vm');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const isDev = !app.isPackaged;
@@ -67,9 +68,9 @@ function ensureUpdateAssets() {
   if (!fs.existsSync(updateLib) && fs.existsSync(bundleLib)) copyDir(bundleLib, updateLib);
 }
 
-function downloadGitHub(filename) {
+function downloadGitHub(filename, ref) {
   return new Promise(function(resolve, reject) {
-    var url = 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/' + UPDATE_BRANCH + '/' + filename;
+    var url = 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/' + (ref || UPDATE_BRANCH) + '/' + filename;
     https.get(url, function(res) {
       if (res.statusCode === 301 || res.statusCode === 302) {
         https.get(res.headers.location, function(r2) {
@@ -357,6 +358,88 @@ ipcMain.handle('main-screen-open', () => { mainScreenSuppressed = false; if (!is
 ipcMain.handle('main-screen-close', () => { mainScreenSuppressed = true; closeMainScreenWindow(); return mainScreenStatusInfo(); });
 
 // ── Update IPC ────────────────────────────────────────────────────────────────
+// ── Safe update: stage everything in memory, ask, then apply together ─────────────
+// (The older 'check-for-updates' below writes each file as soon as it is downloaded and is kept only for app packages
+// whose renderer still calls it.)
+const UPDATE_FILES = ['app.html', 'server.js', 'styles.css'].concat([
+  '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
+  '06_sidebar.js', '07_views.js', '08_payouts.js', '09_potyview.js', '10_tournament.js'].map(function(n) { return 'js/' + n; }));
+const STAGE_MAX_AGE_MS = 10 * 60 * 1000;
+let stagedUpdate = null;
+
+// Download every update file (all from one commit when the commit id is known), validate each one, and report which
+// would change. Writes NOTHING. download(relPath, ref) -> Promise<string>; resolveRef() -> Promise<string>.
+async function stageUpdateCore(download, resolveRef, updateDir) {
+  var ref = UPDATE_BRANCH;
+  try { var r = await resolveRef(); if (r) ref = r; } catch (e) { /* fall back to the branch name */ }
+  var files = {};
+  for (var i = 0; i < UPDATE_FILES.length; i++) {
+    var rel = UPDATE_FILES[i];
+    var content = await download(rel, ref);
+    if (typeof content !== 'string') throw new Error(rel + ' did not download');
+    if (rel === 'app.html' && !(content.length > 1000 && content.indexOf('<!DOCTYPE') === 0)) throw new Error('app.html invalid (' + content.length + ' bytes)');
+    if (rel === 'server.js') {
+      if (content.length < 500) throw new Error('server.js invalid (' + content.length + ' bytes)');
+      try { new vm.Script(content); } catch (e) { throw new Error('server.js does not parse: ' + e.message); }
+    }
+    if (rel === 'styles.css' && content.length < 1000) throw new Error('styles.css invalid (' + content.length + ' bytes)');
+    if (rel.indexOf('js/') === 0 && content.length < 200) throw new Error(rel + ' invalid (' + content.length + ' bytes)');
+    files[rel] = content;
+  }
+  var changed = [];
+  UPDATE_FILES.forEach(function(rel) {
+    var cur = null;
+    try { cur = fs.readFileSync(path.join(updateDir, rel), 'utf8'); } catch (e) {}
+    if (cur !== files[rel]) changed.push(rel);
+  });
+  return { at: Date.now(), ref: ref, files: files, changed: changed };
+}
+// Write the changed files: each to a temp name first, then rename them all. On any failure the temp files are removed
+// and the existing files are left exactly as they were.
+function applyStagedCore(staged, updateDir, now) {
+  if (!staged || (now - staged.at) > STAGE_MAX_AGE_MS) return { success: false, error: 'No fresh update is staged. Check again.' };
+  var tmps = [];
+  try {
+    staged.changed.forEach(function(rel) {
+      var dest = path.join(updateDir, rel);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      var tmp = dest + '.update-tmp';
+      fs.writeFileSync(tmp, staged.files[rel], 'utf8');
+      tmps.push([tmp, dest]);
+    });
+    tmps.forEach(function(p) { fs.renameSync(p[0], p[1]); });
+    fs.writeFileSync(path.join(updateDir, 'updated_at.txt'), new Date().toISOString(), 'utf8');
+    return { success: true, files: staged.changed.slice() };
+  } catch (err) {
+    tmps.forEach(function(p) { try { fs.unlinkSync(p[0]); } catch (e) {} });
+    return { success: false, error: err.message };
+  }
+}
+function resolveUpdateRef() {
+  return new Promise(function(resolve, reject) {
+    https.get({ hostname: 'api.github.com', path: '/repos/' + UPDATE_REPO + '/commits/' + UPDATE_BRANCH,
+      headers: { 'User-Agent': 'spc-tournament-director', 'Accept': 'application/vnd.github+json' } }, function(res) {
+      var d = ''; res.on('data', function(c) { d += c; });
+      res.on('end', function() { try { var j = JSON.parse(d); resolve(j && typeof j.sha === 'string' && /^[0-9a-f]{40}$/.test(j.sha) ? j.sha : null); } catch (e) { resolve(null); } });
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+ipcMain.handle('update-stage', async () => {
+  try {
+    stagedUpdate = await stageUpdateCore(downloadGitHub, resolveUpdateRef, getUpdateDir());
+    return { success: true, changed: stagedUpdate.changed.slice(), total: UPDATE_FILES.length, ref: String(stagedUpdate.ref).slice(0, 7) };
+  } catch (err) {
+    stagedUpdate = null;
+    return { success: false, error: err.message };
+  }
+});
+ipcMain.handle('update-apply', async () => {
+  var r = applyStagedCore(stagedUpdate, getUpdateDir(), Date.now());
+  if (r.success) { stagedUpdate = null; try { ensureUpdateAssets(); } catch (e) {} }
+  return r;
+});
+
 ipcMain.handle('check-for-updates', async () => {
   try {
     var updateDir = getUpdateDir();
