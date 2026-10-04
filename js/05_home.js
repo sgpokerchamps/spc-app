@@ -5,6 +5,23 @@
    ============================================================ */
 
 /* ==== HOME ==== */
+/* Check for updates: pulls the latest app.html / js / server.js and offers a restart. Lives on the home page only. */
+function UpdateButton() {
+  const [busy,setBusy]=useState(false);
+  const supported=typeof window.electronAPI!=='undefined'&&typeof window.electronAPI.checkForUpdates==='function';
+  function check(){
+    if(!supported||busy) return;
+    setBusy(true);
+    window.electronAPI.checkForUpdates().then(r=>{
+      setBusy(false);
+      if(r.success){ if(confirm('Updated: '+r.files.join(', ')+'. Restart now?')) window.electronAPI.restartApp(); }
+      else alert('Update failed: '+(r.error||'Unknown error'));
+    }).catch(e=>{ setBusy(false); alert('Update error: '+e.message); });
+  }
+  if(!supported) return null;
+  return <button className="home-update" onClick={check} disabled={busy}>{busy?'Checking...':'Check for updates'}</button>;
+}
+
 function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport,liveRows,onFocusLive}) {
   const others=[
     {key:'miniRoller',    suit:'♥',color:'#3dba6f',sub:'40-min levels · 27 levels'},
@@ -26,7 +43,10 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
             <div className="home-brand">Singapore Poker Championships</div>
             <div className="home-title">Tournament Director</div>
           </div>
-          <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:10}}>
+            <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
+            <UpdateButton/>
+          </div>
         </div>
         {liveRows&&liveRows.length>0&&(
           <div className="lv-strip">

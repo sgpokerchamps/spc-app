@@ -239,8 +239,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .floor-qr{position:fixed;bottom:80px;right:16px;background:#0b1610;border:1px solid #1a2e22;border-radius:8px;padding:10px 14px;z-index:100;font-size:11px;color:#527a5c;text-align:center;cursor:pointer}
 .floor-qr:hover{border-color:#3dba6f;color:#3dba6f}
 .floor-url{font-size:12px;color:#3dba6f;font-weight:600;margin-top:3px;word-break:break-all}
-.floor-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:6000;display:flex;align-items:center;justify-content:center}
-.floor-modal{background:#0b1610;border:1px solid #1a2e22;border-radius:12px;padding:28px;width:380px;text-align:center}
 
 /* ==== REGISTER TAB ==== */
 .reg-wrap{padding:28px 32px;max-width:860px;margin:0 auto}
@@ -291,9 +289,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .uq-name{flex:1;font-size:13px;color:#e8d8a0}
 .uq-btn{padding:5px 14px;border:1px solid #2a1c06;border-radius:4px;background:transparent;color:#c8973a;font-size:11px;cursor:pointer;transition:.15s}
 .uq-btn:hover{background:#c8973a;color:#0a0a0a}
-.floor-modal-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#e4f0e8;margin-bottom:6px}
-.floor-modal-sub{font-size:12px;color:#3a5a42;margin-bottom:20px}
-.floor-url-big{font-size:18px;font-weight:700;color:#3dba6f;background:#09140b;border:1px solid #1a2e22;border-radius:7px;padding:12px 16px;margin-bottom:16px;word-break:break-all;letter-spacing:.5px}
 
 /* ---- live event switcher (sidebar) and Running-now strip (home) ---- */
 .lv-switch{padding:8px 8px 6px;border-bottom:1px solid rgba(255,255,255,0.06)}
@@ -346,3 +341,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .sc-info.ok{color:#3dba6f;font-weight:600}
 .sc-btn{display:block;margin-top:4px;padding:4px 10px;background:none;border:1px solid #2a4a35;color:#b2d4ba;border-radius:5px;font-size:11px;cursor:pointer}
 .sc-btn:hover{border-color:#3dba6f;color:#3dba6f}
+.home-update{padding:6px 14px;background:none;border:1px solid #2a4a35;color:#7aaa82;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Barlow',sans-serif}
+.home-update:hover{border-color:#3dba6f;color:#3dba6f}
+.home-update:disabled{opacity:.5;cursor:default}

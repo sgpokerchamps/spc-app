@@ -336,7 +336,6 @@ function App() {
     return()=>{ alive=false; clearInterval(iv); };
   },[mainScreenSupported]);
   function reopenMainScreen(){ if(mainScreenSupported) window.electronAPI.openMainScreen().then(setMainScreenInfo).catch(()=>{}); }
-  const [showFloorModal,setShowFloorModal]=useState(false);
   useEffect(()=>{
     // Listen for future events
     function onServer(e){setServerInfo(e.detail);}
@@ -1078,32 +1077,13 @@ Starting setup — you can adjust settings before launching.`);
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
       {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament}/>}
-      {/* Floor staff connection modal */}
-      {showFloorModal&&(
-        <div className="floor-modal-bg" onClick={()=>setShowFloorModal(false)}>
-          <div className="floor-modal" onClick={e=>e.stopPropagation()}>
-            <div className="floor-modal-title">Floor Staff Access</div>
-            <div className="floor-modal-sub">Open this URL on any phone on the same wifi</div>
-            {serverInfo
-              ?<div className="floor-url-big">{`http://${serverInfo.ip}:${serverInfo.port}`}</div>
-              :<div className="floor-url-big" style={{fontSize:14,color:'#c8973a'}}>
-                Run in Terminal: <br/>
-                <span style={{fontSize:12,letterSpacing:.5}}>ipconfig getifaddr en0</span><br/>
-                <span style={{fontSize:11,color:'#3a5a42'}}>Then open http://[that IP]:3456 on your phone</span>
-              </div>
-            }
-            <div style={{fontSize:11,color:'#3a5a42',marginBottom:16}}>Floor staff can register players, bust players, and control the clock.</div>
-            <button className="btn-primary" style={{width:'100%'}} onClick={()=>setShowFloorModal(false)}>Close</button>
-          </div>
-        </div>
-      )}
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
           <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} mainScreen={{supported:mainScreenSupported,info:mainScreenInfo,url:'http://127.0.0.1:'+((serverInfo&&serverInfo.port)||3456)+'/display?screen=main'}} onReopenMain={reopenMainScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
-            onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}
+            onReset={resetTournament}
             onHome={()=>{saveT(tournament);setSavedIndex(getIndex());setView('home');}}/>
           <div className="main">
             {subview==='register'&&<RegisterView tournament={tournament} onRegister={addPlayer} onSetMode={setSeatingMode} onAssignSeat={assignSeat} serverInfo={serverInfo} onRegAction={(type,val)=>regAction(tournament.id,type,val)}/>}
