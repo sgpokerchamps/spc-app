@@ -269,8 +269,10 @@ function openMainScreenWindow(display) {
         // macOS keeps the menu bar visible on a secondary display in (simple) full screen. Instead: a frameless window exactly on the
         // display's bounds at the screen-saver level, which draws above the menu bar and the Dock.
         w.setAlwaysOnTop(true, 'screen-saver');
-        w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        // skipTransformProcessType: without it Electron turns the whole app into a background agent (no Dock icon, no app menu bar).
+        w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
         w.setBounds(display.bounds);
+        try { if (app.dock) app.dock.show(); } catch (e) {}   // belt and braces: keep the normal Dock icon and app menu
       } else {
         w.setFullScreen(true);
       }
