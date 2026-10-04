@@ -74,12 +74,12 @@ function downloadGitHub(filename, ref) {
     https.get(url, function(res) {
       if (res.statusCode === 301 || res.statusCode === 302) {
         https.get(res.headers.location, function(r2) {
-          var d = ''; r2.on('data', function(c) { d += c; }); r2.on('end', function() { resolve(d); }); r2.on('error', reject);
+          var d = ''; r2.setEncoding('utf8'); r2.on('data', function(c) { d += c; }); r2.on('end', function() { resolve(d); }); r2.on('error', reject);
         }).on('error', reject);
         return;
       }
       if (res.statusCode !== 200) { reject(new Error('HTTP ' + res.statusCode)); return; }
-      var d = ''; res.on('data', function(c) { d += c; }); res.on('end', function() { resolve(d); }); res.on('error', reject);
+      var d = ''; res.setEncoding('utf8'); res.on('data', function(c) { d += c; }); res.on('end', function() { resolve(d); }); res.on('error', reject);
     }).on('error', reject);
   });
 }
@@ -419,7 +419,7 @@ function resolveUpdateRef() {
   return new Promise(function(resolve, reject) {
     https.get({ hostname: 'api.github.com', path: '/repos/' + UPDATE_REPO + '/commits/' + UPDATE_BRANCH,
       headers: { 'User-Agent': 'spc-tournament-director', 'Accept': 'application/vnd.github+json' } }, function(res) {
-      var d = ''; res.on('data', function(c) { d += c; });
+      var d = ''; res.setEncoding('utf8'); res.on('data', function(c) { d += c; });
       res.on('end', function() { try { var j = JSON.parse(d); resolve(j && typeof j.sha === 'string' && /^[0-9a-f]{40}$/.test(j.sha) ? j.sha : null); } catch (e) { resolve(null); } });
       res.on('error', reject);
     }).on('error', reject);
