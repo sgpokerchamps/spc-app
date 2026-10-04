@@ -25,7 +25,7 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
   const _prizePerEntry=_netPerEntry-(isMB?bountyAmt:0);
   const [stack,setStack]=useState(cfg.stack);
   const [spcSeries,setSpcSeries]=useState(_tpl?_tpl.spcSeries||CURRENT_SPC_SERIES:CURRENT_SPC_SERIES);
-  const [selectedTables,setSelectedTables]=useState(Array.from({length:15},(_,i)=>i+1).filter(n=>_taken[n]==null));
+  const [selectedTables,setSelectedTables]=useState([]);
   const [seats,setSeats]=useState(9);
   function toggleTable(n){if(_taken[n]!=null)return;setSelectedTables(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n].sort((a,b)=>a-b));}
   const _tpl=window._importedTemplate&&window._importedTemplate.eventType===eventType?window._importedTemplate:null;
