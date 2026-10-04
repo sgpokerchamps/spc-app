@@ -177,7 +177,7 @@ function App() {
   }
   const [subview,setSubview] = useState('clock');
   // Global callback for RegisterView to persist regLog
-  window._spcUpdateRegLog = function(log){ setTournament(t=>({...t,regLog:log})); };
+  window._spcAddRegLog = function(entry){ setTournament(t=>({...t,regLog:[entry,...(t.regLog||[])].slice(0,1000)})); };
   const [modal,setModal] = useState(null);
   const [savedIndex,setSavedIndex] = useState(getIndex);
   const [tickSecond,setTickSecond] = useState(0);

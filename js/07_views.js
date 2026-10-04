@@ -13,7 +13,6 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
   const [lastScanned, setLastScanned] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [selIdx, setSelIdx] = useState(-1);
-  const [recentLog, setRecentLog] = useState(tournament.regLog||[]);
   const [syncStatus, setSyncStatus] = useState(() => {
     try {
       const ts = localStorage.getItem('spc_members_synced_at');
@@ -42,14 +41,10 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       setSyncStatus('Sync failed — check internet connection');
     }
   }
-  const displayLog = recentLog.filter(r=>Date.now()-r.ts<600000);
+  const displayLog = (tournament.regLog||[]).filter(r=>Date.now()-r.ts<600000);
   function addToLog(entry){
-    setRecentLog(prev=>{
-      const updated=[entry,...prev].slice(0,1000);
-      // Sync back to tournament state for persistence
-      if(window._spcUpdateRegLog) window._spcUpdateRegLog(updated);
-      return updated;
-    });
+    // Append to the live event's log (never overwrite: the counter and undo also write to it)
+    if(window._spcAddRegLog) window._spcAddRegLog(entry);
   }
 
   const evCfg = EVENT_CONFIGS[tournament.eventType]||null;
