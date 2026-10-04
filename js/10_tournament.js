@@ -1,115 +1,15 @@
 /* ============================================================
    10_tournament.js
    The main App component (state management, all tournament
-   action handlers, startTournament, view routing) plus
-   DisplayPage (the spectator/projector window, driven by the
-   DISPLAY_ID hash check and writeLive polling). Loads last —
+   action handlers, startTournament, view routing). Loads last —
    everything else this file references is already a global by
-   the time this executes.
+   the time this executes. (The old #display= window is gone:
+   venue screens are the served /display page, see server.js.)
    ============================================================ */
 
 const { useState, useEffect, useRef, useCallback } = React;
 
 
-
-/* ==== DISPLAY PAGE ==== */
-function DisplayPage({id}) {
-  const [d, setD] = useState(null);
-  const [last, setLast] = useState(0);
-  useEffect(()=>{
-    function read() {
-      try {
-        const raw=localStorage.getItem(`spc_live_${id}`);
-        if(raw){const parsed=JSON.parse(raw); if(parsed.ts!==last){setD(parsed);setLast(parsed.ts);}}
-      }catch(e){}
-    }
-    read();
-    const iv=setInterval(read,400);
-    function onStorage(e){if(e.key===`spc_live_${id}`)read();}
-    window.addEventListener('storage',onStorage);
-    return()=>{clearInterval(iv);window.removeEventListener('storage',onStorage);};
-  },[id]);
-
-  if(!d) return(
-    <div className="display-page" style={{background:`radial-gradient(ellipse at center, ${_dCfg?_dCfg.bgDeep:'#09180c'} 0%, #020806 72%)`}}>
-      <img src={SPC_LOGO} alt="SPC" style={{width:120,opacity:.5,marginBottom:20}}/>
-      <div className="d-waiting">Waiting for tournament data...</div>
-      <div style={{marginTop:12,fontSize:12,color:'#2a4a35',letterSpacing:2}}>KEEP THIS WINDOW OPEN</div>
-    </div>
-  );
-
-  const {name, cur, nxt, secs, status, activePlayers, tablesInUse, prizePool, bountyPool, avgStack, eventType, totalEntries, payouts, payoutsPublished, satellite} = d;
-  const _dCfg = EVENT_CONFIGS[eventType]||null;
-  const _dAccent = _dCfg ? _dCfg.color : '#3dba6f';
-  const _dIsMe = _dCfg && _dCfg.isMainEvent;
-  const clockCls = secs<=60?'danger':secs<=300?'warn':'';
-  const isBreak = cur && cur.isBreak;
-  const isComplete = status==='complete';
-
-  return(
-    <div className="display-page" style={{background:`radial-gradient(ellipse at center, ${_dCfg?_dCfg.bgDeep:'#09180c'} 0%, #020806 72%)`}}>
-      {/* SPC logo — always top-left */}
-      <img src={SPC_LOGO} alt="SPC" style={{position:'absolute',top:20,left:36,height:92,objectFit:'contain',zIndex:10}}/>
-      {/* Natural8 logo — top-right, Main Event only */}
-      {_dIsMe&&<img src={N8_LOGO} alt="Natural8" style={{position:'absolute',top:28,right:36,height:52,objectFit:'contain',mixBlendMode:'screen',zIndex:10}}/>}
-      <div className="d-name" style={{color:_dAccent}}>{_dCfg?_dCfg.group:name}</div>
-      {_dCfg&&_dCfg.subtitle&&<div style={{fontSize:13,letterSpacing:3,color:'rgba(255,255,255,0.3)',marginBottom:4,textTransform:'uppercase'}}>{_dCfg.subtitle}</div>}
-      <div className={`d-level ${isBreak?'break':''}`} style={{color:isBreak?'#c8973a':_dAccent}}>
-        {isComplete?'Tournament Complete':isBreak?'Break':cur?`Level ${cur.level}`:'—'}
-      </div>
-      {isBreak && cur && cur.note && <div className="d-note">{cur.note}</div>}
-      <div className={`d-clock ${clockCls}`}>{fmt.time(secs)}</div>
-      {cur && !isBreak && !isComplete && (
-        <div className="d-blinds">
-          <div className="d-blind"><div className="d-blind-lbl">Small blind</div><div className="d-blind-val">{fmt.chips(cur.sb)}</div></div>
-          <div className="d-blind-sep">/</div>
-          <div className="d-blind"><div className="d-blind-lbl">Big blind</div><div className="d-blind-val">{fmt.chips(cur.bb)}</div></div>
-          {cur.ante>0&&<><div className="d-blind-sep">·</div><div className="d-blind"><div className="d-blind-lbl">Ante</div><div className="d-blind-val">{fmt.chips(cur.ante)}</div></div></>}
-        </div>
-      )}
-      {nxt&&(
-        <div className="d-next">
-          Next: <strong>{formatNextEntry(nxt)}</strong>
-        </div>
-      )}
-      <div className="d-stats">
-        <div className="d-stat"><div className="d-stat-lbl">Players</div><div className="d-stat-val">{activePlayers}</div></div>
-        <div className="d-stat"><div className="d-stat-lbl">Tables</div><div className="d-stat-val">{tablesInUse}</div></div>
-        {avgStack>0&&<div className="d-stat"><div className="d-stat-lbl">Avg stack</div><div className="d-stat-val" style={{color:'#9b7bce'}}>{fmt.chips(avgStack)}</div></div>}
-        {bountyPool>0&&<div className="d-stat"><div className="d-stat-lbl">Bounty pool</div><div className="d-stat-val" style={{color:'#c8973a'}}>{fmt.currency(bountyPool)}</div></div>}
-        <div className="d-stat"><div className="d-stat-lbl">Prize pool</div><div className="d-stat-val" style={{color:bountyPool>0?'#9b7bce':_dAccent}}>{fmt.currency(prizePool)}</div></div>
-        {(tournament.chipsInPlay>0||(totalEntries>0&&tournament.stack>0))&&<div className="d-stat"><div className="d-stat-lbl">Total chips</div><div className="d-stat-val" style={{color:'#3a5a42'}}>{fmt.chips(tournament.chipsInPlay||(totalEntries*tournament.stack))}</div></div>}
-      </div>
-      {payoutsPublished&&satellite&&(
-        <div style={{display:'flex',gap:28,marginTop:14,flexWrap:'wrap',justifyContent:'center',maxWidth:'80vw'}}>
-          <div style={{textAlign:'center',minWidth:70}}>
-            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>Seats awarded</div>
-            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:'#f0c040'}}>{satellite.seats}</div>
-          </div>
-          {satellite.bubblePos&&(
-            <div style={{textAlign:'center',minWidth:70}}>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{fmt.ordinal(satellite.bubblePos)} (bubble)</div>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:'#b2d4ba'}}>{fmt.currency(satellite.leftover)}</div>
-            </div>
-          )}
-        </div>
-      )}
-      {payoutsPublished&&!satellite&&payouts&&payouts.length>0&&(
-        <div style={{display:'flex',gap:20,marginTop:14,flexWrap:'wrap',justifyContent:'center',maxWidth:'80vw'}}>
-          {payouts.map((p,i)=>{
-            const posColors=['#f0c040','#c8d0d8','#c87a3a'];
-            return(
-              <div key={i} style={{textAlign:'center',minWidth:70}}>
-                <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`}</div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:18,fontWeight:700,color:posColors[i]||'#b2d4ba'}}>{fmt.currency(p.amount)}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ==== BROADCAST PAYLOADS (one per live event) ==== */
 function buildClockPayload(t, now) {
@@ -215,7 +115,6 @@ function loadScreens() {
 
 /* ==== APP ==== */
 function App() {
-  if(DISPLAY_ID) return <DisplayPage id={DISPLAY_ID}/>;
 
   const [view,setView] = useState('home');
   const [selEvent,setSelEvent] = useState(null);
@@ -285,7 +184,6 @@ function App() {
   const lastSecsRef = useRef({});
   const lastSentRef = useRef({});
   const lastClockRef = useRef({});
-  const lastLiveWriteRef = useRef({});
   const secs = clockRemainingSecs(tournament, Date.now());
 
   /* Clock tick: one interval for the life of App, covering EVERY live event. Level changes come from levelEndsAt.
@@ -304,16 +202,11 @@ function App() {
     return()=>clearInterval(iv);
   },[]);
 
-  /* Live display + floor clock sync, for every live event, every displayed second */
+  /* Floor, counter and venue-screen clock sync, for every live event, every displayed second */
   useEffect(()=>{
     const now=Date.now();
     Object.keys(live).forEach(id=>{
       const t=live[id];
-      const cur=t.structure[t.currentLevelIdx];
-      const nxt=t.structure[t.currentLevelIdx+1];
-      const active=t.players.filter(p=>p.status==='active');
-      const tables=[...new Set(active.map(p=>p.tableNum).filter(Boolean))].length;
-      if(t.status==='running'||lastLiveWriteRef.current[id]!==t){ lastLiveWriteRef.current[id]=t; writeLive(t,cur,nxt,active.length,tables); }
       if(typeof window.electronAPI!=='undefined'){
         const p=buildClockPayload(t,now); const key=JSON.stringify(p);
         if(lastClockRef.current[id]!==key){ lastClockRef.current[id]=key; window.electronAPI.sendClockState(p); }
@@ -432,6 +325,17 @@ function App() {
 
   /* Floor URL overlay */
   const [serverInfo,setServerInfo]=useState(null);
+  /* Main screen (venue HDMI output): status from the app shell. An older app package has no openMainScreen/mainScreenStatus. */
+  const mainScreenSupported=typeof window.electronAPI!=='undefined'&&typeof window.electronAPI.mainScreenStatus==='function';
+  const [mainScreenInfo,setMainScreenInfo]=useState(null);
+  useEffect(()=>{
+    if(!mainScreenSupported) return;
+    let alive=true;
+    const read=()=>{ window.electronAPI.mainScreenStatus().then(i=>{ if(alive) setMainScreenInfo(i); }).catch(()=>{}); };
+    read(); const iv=setInterval(read,3000);
+    return()=>{ alive=false; clearInterval(iv); };
+  },[mainScreenSupported]);
+  function reopenMainScreen(){ if(mainScreenSupported) window.electronAPI.openMainScreen().then(setMainScreenInfo).catch(()=>{}); }
   const [showFloorModal,setShowFloorModal]=useState(false);
   useEffect(()=>{
     // Listen for future events
@@ -498,6 +402,19 @@ function App() {
       Object.keys(saveFailuresRef.current).forEach(id=>{ if(cur[id]) saveLiveEvent(id,cur[id]); });
     },10000);
     return()=>clearInterval(iv);
+  },[]);
+
+  /* One-time cleanup: the retired display mode left one spc_live_<tournament id> key per event (display cache only; the
+     tournaments themselves are spc_t_<id>). Delete them all EXCEPT spc_live_ids, which auto-resume uses. */
+  useEffect(()=>{
+    try{
+      if(localStorage.getItem('spc_cleanup_display_keys_v1')) return;
+      const del=[];
+      for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('spc_live_')===0&&k!=='spc_live_ids') del.push(k); }
+      del.forEach(k=>localStorage.removeItem(k));
+      localStorage.setItem('spc_cleanup_display_keys_v1',String(Date.now()));
+      console.log('[SPC] removed '+del.length+' old spc_live_ display keys');
+    }catch(e){}
   },[]);
 
   /* Auto-resume on launch: every event that was live comes back (crash, Cmd-Q, update restart). */
@@ -1183,7 +1100,7 @@ Starting setup — you can adjust settings before launching.`);
       {view==='tournament'&&tournament&&(()=>{
         const _th=getTheme(tournament.eventType);
         return(<div className="tour-layout" key={tournament.id} style={{'--accent':_th.accent,'--sidebar-bg':_th.sidebarBg,'--active-bg':_th.activeBg,'--active-nav':_th.activeNav}}>
-          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
+          <Sidebar tournament={tournament} subview={subview} setSubview={setSubview} screens={screens} onScreen={setScreen} mainScreen={{supported:mainScreenSupported,info:mainScreenInfo,url:'http://127.0.0.1:'+((serverInfo&&serverInfo.port)||3456)+'/display?screen=main'}} onReopenMain={reopenMainScreen} liveRows={liveRows} focusedId={focusedId} onFocus={focusEvent} onCloseEvent={closeFocusedEvent}
             onSave={saveTournamentNow}
             onExportSave={exportCurrentSave} onExportTemplate={exportCurrentTemplate}
             onReset={resetTournament} onFloor={()=>setShowFloorModal(true)}

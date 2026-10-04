@@ -4,7 +4,7 @@
    Tables/Payouts/Blinds/Log/POTY subviews during a running event.
    ============================================================ */
 
-function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor,liveRows,focusedId,onFocus,onCloseEvent,screens,onScreen}) {
+function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemplate,onReset,onHome,onFloor,liveRows,focusedId,onFocus,onCloseEvent,screens,onScreen,mainScreen,onReopenMain}) {
   const _cfg=EVENT_CONFIGS[tournament.eventType]||null;
   const nav=[{key:'register',label:'Register',icon:'⊕'},{key:'clock',label:'Clock',icon:'⏱'},{key:'players',label:'Players',icon:'👥'},{key:'tables',label:'Tables',icon:'⬡'},{key:'payouts',label:'Payouts',icon:'S$'},{key:'blinds',label:'Blinds',icon:'♠'},{key:'log',label:'Log',icon:'📋'},{key:'poty',label:'POTY',icon:'🏆'}];
   const status=tournament.status;
@@ -27,7 +27,7 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
           <button className="lv-add" onClick={onHome}>+ Add event</button>
         </div>
       )}
-      {screens&&<ScreensPanel screens={screens} liveRows={liveRows||[]} onScreen={onScreen}/>}
+      {screens&&<ScreensPanel screens={screens} liveRows={liveRows||[]} onScreen={onScreen} mainScreen={mainScreen} onReopenMain={onReopenMain}/>}
       <div className="sidebar-nav">
         {nav.map(n=>(
           <button key={n.key} className={`nav-btn ${subview===n.key?'active':''}`} onClick={()=>setSubview(n.key)}>
@@ -62,7 +62,7 @@ function Sidebar({tournament,subview,setSubview,onSave,onExportSave,onExportTemp
 }
 
 /* Which live event(s) each venue screen shows. Pinned here; they never follow the desk's focus. */
-function ScreensPanel({screens,liveRows,onScreen}) {
+function ScreensPanel({screens,liveRows,onScreen,mainScreen,onReopenMain}) {
   const labels={main:'Main screen',side:'Side screen'};
   const opts=liveRows.map(r=>(<option key={r.id} value={r.id}>{r.short}</option>));
   function modeOf(sc){return sc.layout==='logo'?'logo':sc.layout==='split'?'split':(sc.events[0]||'logo');}
@@ -100,6 +100,14 @@ function ScreensPanel({screens,liveRows,onScreen}) {
             {gone.length>0
               ?<div className="sc-warn">{labels[which]}: {gone.map(x=>x.name||'event').join(', ')} closed. Choose an event.</div>
               :<div className="sc-state">{sc.layout==='logo'?'Showing: logo':'Showing: '+(shown.join(' + ')||'nothing yet')}</div>}
+            {which==='main'&&mainScreen&&(()=>{
+              if(!mainScreen.supported) return <div className="sc-info">Main screen output needs the new app version (DMG). For now open {mainScreen.url} in Safari on the HDMI display.</div>;
+              const i=mainScreen.info;
+              if(!i) return <div className="sc-info">Checking the HDMI output...</div>;
+              if(i.open) return <div className="sc-info ok">On: {i.displayName}</div>;
+              if(i.secondaryInstance) return <div className="sc-info">This is a second instance; it does not use the HDMI output.</div>;
+              return(<div className="sc-info">{i.externalAvailable?('Closed. Display available: '+i.externalName):'No external display'}<button className="sc-btn" onClick={onReopenMain}>Reopen</button></div>);
+            })()}
           </div>
         );
       })}

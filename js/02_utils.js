@@ -789,26 +789,3 @@ function markTournamentCommitted(id) {
 function markTournamentUncommitted(id) {
   try { localStorage.setItem('spc_committed_tournaments',JSON.stringify(getCommittedTournamentIds().filter(x=>x!==id))); } catch(e){}
 }
-function writeLive(t, cur, nxt, active, tables) {
-  try {
-    const _payouts=(()=>{
-      if(isSatellite(t)) return getSatelliteLadder(t);
-      if(t.payoutTable&&t.payoutTable.length) return t.payoutTable.slice(0,10);
-      const _e=t.players.length+(t.inheritedEntries||0);
-      const _pp=t.prizePool||0;
-      if(_e>0&&_pp>0) return generatePayoutRows(_e,_pp,t.eventType==='mysteryBounty').slice(0,10);
-      return [];
-    })();
-    const _cumEntries=t.players.length+(t.inheritedEntries||0);
-    const _cumBusted=t.players.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
-    localStorage.setItem(`spc_live_${t.id}`, JSON.stringify({
-      name:t.name, eventType:t.eventType, cur, nxt,
-      secs:clockRemainingSecs(t,Date.now()), status:t.status,
-      activePlayers:active.length, tablesInUse:tables, prizePool:t.prizePool, bountyPool:t.bountyPool||0,
-      totalEntries:_cumEntries, totalBusted:_cumBusted,
-      avgStack:active.length>0?Math.round(((t.chipsInPlay||_cumEntries*t.stack))/active.length):0,
-      payouts:_payouts, satellite:satelliteBroadcast(t), payoutsPublished:t.payoutsPublished||false, ts:Date.now()
-    }));
-  } catch(e){}
-}
-

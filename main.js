@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage, powerSaveBlocker, screen } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -22,6 +22,13 @@ let serverPort = (function() {
   return 3456;
 })();
 let localIP = null;
+// The second instance of the dual-instance fallback (--port=NNNN or SPC_PORT) must not grab the HDMI output as well.
+const isSecondaryInstance = process.argv.some(function(a) { return a.indexOf('--port=') === 0; }) || !!process.env.SPC_PORT;
+let mainScreenWindow = null;      // the venue's main screen: full screen on the HDMI output, shows /display?screen=main
+let mainScreenSuppressed = false; // set when the TD closes it from the desk; cleared by Reopen
+let mainScreenSyncTimer = null;
+let displayBlockerId = null;      // keeps the display from sleeping while the main-screen window is open
+let serverIsUp = false;
 
 // ── Update config ─────────────────────────────────────────────────────────────
 const UPDATE_REPO = 'sgpokerchamps/spc-app';
@@ -102,7 +109,9 @@ function startSyncServer() {
     }
     syncServer.start(serverPort, (port) => {
       serverPort = port;
+      serverIsUp = true;
       localIP = getLocalIP();
+      scheduleMainScreenSync();
       console.log(`Sync server running at http://${localIP}:${serverPort}`);
       if (mainWindow) {
         mainWindow.webContents.send('server-ready', { ip: localIP, port: serverPort });
@@ -193,6 +202,100 @@ function createWindow() {
   });
 }
 
+// ── Main screen (venue HDMI output) ───────────────────────────
+// A frameless full-screen window loading the served display page, so the main screen is pinned by the server exactly like
+// the side screen and never follows the desk's focus. It lives on the first display that is NOT the one the desk window is on
+// (a "not primary" rule would find nothing in clamshell mode, where the HDMI becomes the primary display).
+function chooseMainScreenDisplay(displays, deskDisplayId) {
+  for (var i = 0; i < displays.length; i++) { if (displays[i].id !== deskDisplayId) return displays[i]; }
+  return null;
+}
+function deskDisplayId() {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) return screen.getDisplayMatching(mainWindow.getBounds()).id;
+  } catch (e) {}
+  return screen.getPrimaryDisplay().id;
+}
+function describeDisplay(d) {
+  if (!d) return null;
+  return (d.label && d.label.length ? d.label : 'Display ' + d.id) + ' ' + d.bounds.width + 'x' + d.bounds.height;
+}
+function mainScreenStatusInfo() {
+  var ext = chooseMainScreenDisplay(screen.getAllDisplays(), deskDisplayId());
+  return {
+    open: !!(mainScreenWindow && !mainScreenWindow.isDestroyed()),
+    displayName: mainScreenWindow && !mainScreenWindow.isDestroyed() ? describeDisplay(screen.getDisplayMatching(mainScreenWindow.getBounds())) : null,
+    externalAvailable: !!ext,
+    externalName: describeDisplay(ext),
+    secondaryInstance: isSecondaryInstance,
+    suppressed: mainScreenSuppressed
+  };
+}
+function stopDisplayBlocker() {
+  try { if (displayBlockerId !== null && powerSaveBlocker.isStarted(displayBlockerId)) powerSaveBlocker.stop(displayBlockerId); } catch (e) {}
+  displayBlockerId = null;
+}
+function closeMainScreenWindow() {
+  var w = mainScreenWindow; mainScreenWindow = null;
+  stopDisplayBlocker();
+  try { if (w && !w.isDestroyed()) w.destroy(); } catch (e) {}
+}
+function openMainScreenWindow(display) {
+  if (!display || !serverIsUp) return false;
+  if (mainScreenWindow && !mainScreenWindow.isDestroyed()) {
+    // already open: make sure it is on the right display
+    try {
+      var cur = screen.getDisplayMatching(mainScreenWindow.getBounds());
+      if (cur.id !== display.id) { closeMainScreenWindow(); } else { return true; }
+    } catch (e) { closeMainScreenWindow(); }
+  }
+  var b = display.bounds;
+  var w = new BrowserWindow({
+    x: b.x, y: b.y, width: b.width, height: b.height,
+    frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
+    fullscreenable: false, enableLargerThanScreen: true, skipTaskbar: true, show: false, backgroundColor: '#000000', title: 'SPC Main Screen',
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, backgroundThrottling: false }
+  });
+  mainScreenWindow = w;
+  var url = 'http://127.0.0.1:' + serverPort + '/display?screen=main';
+  var load = function() { if (mainScreenWindow === w && !w.isDestroyed()) w.loadURL(url).catch(function() {}); };
+  w.webContents.on('did-fail-load', function() { setTimeout(load, 3000); });   // server not ready yet, or restarting
+  w.webContents.on('will-navigate', function(e) { e.preventDefault(); });
+  w.webContents.setWindowOpenHandler(function() { return { action: 'deny' }; });
+  w.once('ready-to-show', function() {
+    if (w.isDestroyed()) return;
+    try {
+      if (process.platform === 'darwin') {
+        // macOS keeps the menu bar visible on a secondary display in (simple) full screen. Instead: a frameless window exactly on the
+        // display's bounds at the screen-saver level, which draws above the menu bar and the Dock.
+        w.setAlwaysOnTop(true, 'screen-saver');
+        w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        w.setBounds(display.bounds);
+      } else {
+        w.setFullScreen(true);
+      }
+    } catch (e) { console.error('main screen placement failed: ' + e.message); }
+    w.showInactive();
+  });
+  w.on('closed', function() { if (mainScreenWindow === w) { mainScreenWindow = null; stopDisplayBlocker(); } });
+  try { displayBlockerId = powerSaveBlocker.start('prevent-display-sleep'); } catch (e) { console.error('display blocker failed: ' + e.message); }
+  load();
+  console.log('[SPC] main screen window opened on ' + describeDisplay(display));
+  return true;
+}
+// Open, move or close the main-screen window to match the displays that are connected right now.
+function syncMainScreen() {
+  if (mainScreenSuppressed || isSecondaryInstance || !serverIsUp || !app.isReady()) return;
+  var ext = chooseMainScreenDisplay(screen.getAllDisplays(), deskDisplayId());
+  if (!ext) { closeMainScreenWindow(); return; }
+  openMainScreenWindow(ext);
+}
+// Display events arrive in bursts; wait for them to settle.
+function scheduleMainScreenSync() {
+  clearTimeout(mainScreenSyncTimer);
+  mainScreenSyncTimer = setTimeout(syncMainScreen, 600);
+}
+
 // ── Tray ──────────────────────────────────────────────────────────────────────
 function createTray() {
   try {
@@ -245,6 +348,11 @@ ipcMain.handle('read-file', async (event, { filePath }) => {
 });
 
 ipcMain.handle('get-user-data-path', () => app.getPath('userData'));
+
+// Main screen (venue HDMI output), driven from the desk's Screens panel
+ipcMain.handle('main-screen-status', () => mainScreenStatusInfo());
+ipcMain.handle('main-screen-open', () => { mainScreenSuppressed = false; if (!isSecondaryInstance) syncMainScreen(); return mainScreenStatusInfo(); });
+ipcMain.handle('main-screen-close', () => { mainScreenSuppressed = true; closeMainScreenWindow(); return mainScreenStatusInfo(); });
 
 // ── Update IPC ────────────────────────────────────────────────────────────────
 ipcMain.handle('check-for-updates', async () => {
@@ -325,8 +433,11 @@ app.whenReady().then(() => {
   createTray();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) createWindow();   // not "no windows": the main-screen window may still be open
   });
+  screen.on('display-added', scheduleMainScreenSync);
+  screen.on('display-removed', scheduleMainScreenSync);
+  screen.on('display-metrics-changed', scheduleMainScreenSync);
 });
 
 app.on('window-all-closed', () => {
@@ -334,5 +445,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  closeMainScreenWindow();
   if (syncServer) syncServer.stop();
 });

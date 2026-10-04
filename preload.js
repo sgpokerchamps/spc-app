@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath) => ipcRenderer.invoke('read-file', { filePath }),
   getUserDataPath: () => ipcRenderer.invoke('get-user-data-path'),
 
+  // Main screen (venue HDMI output)
+  openMainScreen: () => ipcRenderer.invoke('main-screen-open'),
+  closeMainScreen: () => ipcRenderer.invoke('main-screen-close'),
+  mainScreenStatus: () => ipcRenderer.invoke('main-screen-status'),
+
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   getUpdateInfo: () => ipcRenderer.invoke('get-update-info'),

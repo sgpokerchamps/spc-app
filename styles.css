@@ -186,26 +186,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .payout-table tr:nth-child(1) td{color:#f0c040;font-size:14px;font-weight:600}
 .payout-table tr:nth-child(2) td{color:#c8d0d8}
 .payout-table tr:nth-child(3) td{color:#c87a3a}
-/* DISPLAY MODE (separate window) */
-.display-page{position:fixed;inset:0;background:#020806;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
-.d-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:5px;color:#3dba6f;text-transform:uppercase;margin-bottom:18px}
-.d-level{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;letter-spacing:3px;color:#3dba6f;text-transform:uppercase;margin-bottom:4px}
-.d-level.break{color:#c8973a}
-.d-note{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c8973a60;margin-bottom:6px}
-.d-clock{font-family:'Rajdhani',sans-serif;font-size:160px;font-weight:700;color:#e4f0e8;line-height:1;letter-spacing:-4px;margin-bottom:18px}
-.d-clock.warn{color:#c8973a}
-.d-clock.danger{color:#e05a5a;animation:blink 1s ease-in-out infinite}
-.d-blinds{display:flex;gap:44px;margin-bottom:24px;align-items:flex-end}
-.d-blind{text-align:center}
-.d-blind-lbl{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#2a4a35;margin-bottom:5px}
-.d-blind-val{font-family:'Rajdhani',sans-serif;font-size:50px;font-weight:700;color:#e4f0e8}
-.d-next{background:#0b1610;border:1px solid #152018;border-radius:7px;padding:10px 26px;font-size:13px;color:#3a5a42;margin-bottom:26px;text-align:center}
-.d-next strong{color:#b2d4ba;font-family:'Rajdhani',sans-serif}
-.d-stats{display:flex;gap:52px}
-.d-stat{text-align:center}
-.d-stat-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#2a4a35;margin-bottom:4px}
-.d-stat-val{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#c8973a}
-.d-blind-sep{font-size:28px;color:#152018;padding-bottom:6px}
 .clock-fs{width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;position:relative;overflow:hidden}
 .fs-name{font-size:1.8vw;color:#3dba6f;letter-spacing:.4em;text-transform:uppercase;margin-bottom:.5vh;font-weight:600}
 .fs-level{font-size:2.6vw;letter-spacing:.25em;text-transform:uppercase;margin-bottom:.4vh;font-weight:700}
@@ -233,7 +213,6 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .fs-btn{background:#0b1610;border:1px solid #1a2e22;color:#527a5c;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Barlow',sans-serif;transition:.15s;white-space:nowrap}
 .fs-btn:hover{border-color:#3dba6f;color:#3dba6f}
 .clock-outer:-webkit-full-screen{background:#020806}
-.d-waiting{font-family:'Rajdhani',sans-serif;font-size:22px;color:#2a4a35;letter-spacing:3px;text-transform:uppercase}
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:5000}
 .modal{background:#0b1610;border:1px solid #1a2e22;border-radius:11px;padding:26px;width:440px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column}
@@ -363,3 +342,7 @@ body{font-family:'Barlow',sans-serif;background:#06090a;color:#e4f0e8;-webkit-fo
 .sc-split{display:flex;flex-direction:column;gap:3px}
 .sc-state{font-size:11px;color:#7aaa82}
 .sc-warn{font-size:11px;color:#f0c040;font-weight:600}
+.sc-info{font-size:11px;color:#9ab8a2;margin-top:3px;line-height:1.35}
+.sc-info.ok{color:#3dba6f;font-weight:600}
+.sc-btn{display:block;margin-top:4px;padding:4px 10px;background:none;border:1px solid #2a4a35;color:#b2d4ba;border-radius:5px;font-size:11px;cursor:pointer}
+.sc-btn:hover{border-color:#3dba6f;color:#3dba6f}

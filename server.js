@@ -695,7 +695,7 @@ function getRegisterHTML() {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SPC Registration</title><style>' + COUNTER_CSS + COUNTER_CSS_NEW + '</style></head><body>' + COUNTER_BODY + '<script>' + COUNTER_SUGGEST_JS + body + '</script></body></html>';
 }
 
-const DISPLAY_PAGE_CSS = `html,body{margin:0;padding:0;background:#020806;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e4f0e8}
+const DISPLAY_PAGE_CSS = `html,body{cursor:none;margin:0;padding:0;background:#020806;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e4f0e8}
 .fs-late{font-size:1.6vw;color:#c8973a;letter-spacing:.08em;margin-bottom:2vh;min-height:1.8vw;text-align:center}
 .dsp{display:flex;width:100vw;height:100vh;background:#020806}
 .dsp-half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #123022;position:relative}
