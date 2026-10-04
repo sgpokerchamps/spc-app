@@ -457,52 +457,16 @@ function App() {
     const _spt=config.seatsPerTable||9;
     const isDay2=config.stack===0;
 
-    // Detect duplicate players in inherited list (multi-flight qualifiers)
     let _deduped=_inheritedPlayers;
     let _extraBagWinners=[];
     let _totalExtraBags=0;
     let _actualChips=0;
-
-    // Always deduplicate inherited players: keep best stack per name
-    if(_inheritedPlayers.length>0){
-      const bestByName={};
-      _inheritedPlayers.forEach(p=>{
-        if(!bestByName[p.name]||(p.chipCount||0)>(bestByName[p.name].chipCount||0)){
-          bestByName[p.name]=p;
-        }
-      });
-      _deduped=Object.values(bestByName);
-    }
-
-    // Day 2: calculate extra bags and actual chips
-    if(isDay2&&_inheritedPlayers.length>0){
-      const counts={};
-      _inheritedPlayers.forEach(p=>{counts[p.name]=(counts[p.name]||0)+1;});
-      const _ipCountries={};_inheritedPlayers.forEach(p=>{if(p.country)_ipCountries[p.name]=p.country;});
-      Object.keys(counts).forEach(name=>{
-        if(counts[name]>1){
-          const bags=counts[name]-1;
-          _extraBagWinners.push({name,bags,totalQualifications:counts[name],country:_ipCountries[name]||null});
-          _totalExtraBags+=bags;
-        }
-      });
-      _extraBagWinners.sort((a,b)=>b.bags-a.bags||a.name.localeCompare(b.name));
-      _actualChips=_deduped.reduce((s,p)=>s+(p.chipCount||0),0);
-    }
-
     let _seatedPlayers=[];
     let _baggedPlayers=[];
     if(isDay2){
-      // Day 2: seat deduplicated inherited players
-      _deduped.forEach((p,idx)=>{
-        const _tl=(config.tableNumbers&&config.tableNumbers.length)?[...config.tableNumbers].sort((a,b)=>a-b):Array.from({length:_maxT},(_,k)=>k+1);
-        const tNum=_tl[idx%_tl.length];
-        const sNum=Math.floor(idx/_tl.length)+1;
-        const bestHistorical=Math.max(p.chipCount||0,p.inheritedChipCount||0);
-        _seatedPlayers.push({...p,id:uid(),status:'active',bustPosition:null,inherited:true,
-          chipCount:p.chipCount||0,inheritedChipCount:bestHistorical,
-          tableNum:sNum<=_spt?tNum:null,seatNum:sNum<=_spt?sNum:null});
-      });
+      // Day 2: dedupe by normalised name (best stack), count extra bags, seat at the chosen tables
+      const _sd=seatDay2(_inheritedPlayers,config.tableNumbers&&config.tableNumbers.length?config.tableNumbers:Array.from({length:_maxT},(_,k)=>k+1),_spt,uid);
+      _deduped=_sd.deduped;_extraBagWinners=_sd.extraBagWinners;_totalExtraBags=_sd.totalExtraBags;_actualChips=_sd.chips;_seatedPlayers=_sd.seated;
     }else{
       // Day 1 flights: store ALL inherited entries (no dedup) to preserve flight counts for Day 2 extra bags
       _baggedPlayers=_inheritedPlayers.map(p=>({
@@ -533,12 +497,31 @@ function App() {
       reg:{...defaultReg(config.eventType,'notOpen'),...(config.lateRegLevel!==undefined?{lateRegLevel:config.lateRegLevel}:{})},
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
+      ...(isDay2&&config.parents&&config.parents.length?{parents:config.parents,parentAliases:config.parentAliases||{}}:{}),
       extraBagWinners:_extraBagWinners,extraBagCount:_totalExtraBags>0?_totalExtraBags:(config.extraBagCount||0),
       chipsInPlay:_actualChips>0?_actualChips
         :(config.stack===0&&inheritedEntries>0&&config.inheritedStack>0
         ? inheritedEntries*(config.inheritedStack)
         : 0)};
     if(!addLiveEvent({...t, payoutsPublished:false})) return; setSubview('register'); setView('tournament');
+  }
+
+  function canRebuildInheritance(t){
+    return !!(t&&t.parents&&t.parents.length&&t.status==='paused'&&t.levelEndsAt==null&&t.currentLevelIdx===0&&
+      t.timeRemainingSeconds===(t.structure[0]?t.structure[0].mins*60:-1)&&!t.players.some(p=>p.status==='busted'));
+  }
+  function rebuildInheritance(){
+    const id=focusedIdRef.current; const t=liveRef.current[id];
+    if(!canRebuildInheritance(t)) return;
+    const ps=t.parents.map(pid=>liveRef.current[pid]||loadT(pid)).filter(Boolean);
+    if(ps.length<t.parents.length&&!confirm('Some source flights are no longer saved on this Mac. Rebuild from the '+ps.length+' that are?')) return;
+    const d=deriveInheritance(ps,t.parentAliases);
+    const sd=seatDay2(d.players,getTableNumbers(t),t.seatsPerTable||9,uid);
+    if(!confirm('Rebuild Day 2 from '+ps.length+' flight(s)?\n'+sd.deduped.length+' players, '+sd.totalExtraBags+' extra bags, prize pool '+fmt.currency(Math.max(d.prizePool,t.guarantee||0))+'.\nThis replaces the current seating.')) return;
+    updateEvent(id,cur=>({...cur,players:[...cur.players.filter(p=>!p.inherited),...sd.seated],
+      inheritedEntries:Math.max(0,d.entries-sd.deduped.length),inheritedBusted:d.busted,inheritedPrizePool:d.prizePool,
+      prizePool:Math.max(d.prizePool,cur.guarantee||0),extraBagWinners:sd.extraBagWinners,extraBagCount:sd.totalExtraBags,chipsInPlay:sd.chips,
+      activityLog:[...(cur.activityLog||[]),{ts:Date.now(),type:'table',detail:'Day 2 survivors rebuilt from '+ps.length+' flight(s)'}]}));
   }
 
   function resetTournament() {
@@ -1090,6 +1073,7 @@ Starting setup — you can adjust settings before launching.`);
     <div className="app">
       {regBanners.length>0&&(<div className="reg-banners">{regBanners.map(b=>(<div key={b.id+b.kind} className={'reg-banner '+b.kind}><span>{b.text}</span>{b.kind==='over'&&(<span style={{display:'flex',gap:6}}><button onClick={()=>regAction(b.id,'close')}>Close</button><button onClick={()=>regAction(b.id,'closeNow')}>Close now</button></span>)}</div>))}</div>)}
       {tableOverlaps(live).map((o,i)=>(<div key={'ovl'+i} className="reg-banner warn"><span>{'Table clash: '+o.a+' and '+o.b+' both use table'+(o.tables.length>1?'s ':' ')+formatTableRanges(o.tables)+'. Nothing was changed. Close or move one of those tables.'}</span></div>))}
+      {view==='tournament'&&canRebuildInheritance(tournament)&&(<div className="reg-banner warn"><span>Day 2 has not started. If a flight changed, rebuild the survivor list.</span><button style={{marginLeft:10,cursor:'pointer'}} onClick={rebuildInheritance}>Rebuild from flights</button></div>)}
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
       {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament} takenTables={tablesElsewhere(live,null)}/>}

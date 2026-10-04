@@ -106,6 +106,67 @@ function getTableNumbers(tournament) {
   for(let i=0;i<maxTables;i++) out.push(startTable+i);
   return out;
 }
+/* ---- Day 2 inheritance (multi-parent). Flights are independent; Day 2 combines the ticked ones. ---- */
+function normName(n){ return String(n||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase(); }
+function nameTokenKey(n){ return normName(n).split(' ').sort().join(' '); }
+/* Dedupe survivors by normalised name (best stack wins), count extra bags (qualifications - 1 per name), seat round-robin at the chosen tables. */
+function seatDay2(inheritedPlayers, tableNums, spt, makeId){
+  const keyOf=p=>normName(p.name);
+  const best={}, counts={}, ctry={}, nice={};
+  (inheritedPlayers||[]).forEach(p=>{
+    const k=keyOf(p);
+    counts[k]=(counts[k]||0)+1;
+    if(p.country) ctry[k]=p.country;
+    if(!best[k]||(p.chipCount||0)>(best[k].chipCount||0)) best[k]=p;
+    if(p.name!==p.name.toLowerCase()&&!nice[k]) nice[k]=p.name;
+  });
+  Object.keys(best).forEach(k=>{ if(nice[k]) best[k]={...best[k],name:nice[k]}; });
+  const deduped=Object.keys(best).map(k=>best[k]);
+  const extraBagWinners=[]; let totalExtraBags=0;
+  Object.keys(counts).forEach(k=>{
+    if(counts[k]>1){ extraBagWinners.push({name:best[k].name,bags:counts[k]-1,totalQualifications:counts[k],country:ctry[k]||null}); totalExtraBags+=counts[k]-1; }
+  });
+  extraBagWinners.sort((a,b)=>b.bags-a.bags||a.name.localeCompare(b.name));
+  const tl=(tableNums&&tableNums.length)?[...tableNums].sort((a,b)=>a-b):[1];
+  const seated=deduped.map((p,idx)=>{
+    const tNum=tl[idx%tl.length]; const sNum=Math.floor(idx/tl.length)+1;
+    const bestHistorical=Math.max(p.chipCount||0,p.inheritedChipCount||0);
+    return {...p,id:makeId(),status:'active',bustPosition:null,inherited:true,chipCount:p.chipCount||0,inheritedChipCount:bestHistorical,
+      country:p.country||ctry[keyOf(p)]||undefined,tableNum:sNum<=spt?tNum:null,seatNum:sNum<=spt?sNum:null};
+  });
+  return {seated,deduped,extraBagWinners,totalExtraBags,chips:deduped.reduce((a,p)=>a+(p.chipCount||0),0)};
+}
+/* parents: loaded flight tournaments. aliases: {normalisedVariant: canonicalName} chosen in the preview. */
+function deriveInheritance(parents, aliases){
+  aliases=aliases||{};
+  const canon=n=>{ const a=aliases[normName(n)]; return a!=null?a:n; };
+  let entries=0, busted=0, rawPool=0, guar=0;
+  const players=[], info=[], chained=[];
+  (parents||[]).forEach(t=>{
+    const ps=t.players||[];
+    const ent=ps.length+(t.inheritedEntries||0);
+    const bus=ps.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
+    const net=(t.prizeComponent||0)*(1-(t.adminFeePercent||0)/100);
+    const ppe=(t.prizePerEntry>0)?t.prizePerEntry:(net-(t.bountyAmount||0));
+    entries+=ent; busted+=bus; rawPool+=Math.round(ent*ppe*100)/100; guar=Math.max(guar,t.guarantee||0);
+    const surv=[];
+    ps.filter(p=>p.status==='active').forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:t.eventShort||t.name||''}));
+    (t.baggedPlayers||[]).forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:'earlier flight'}));
+    if((t.inheritedEntries||0)>0||(t.baggedPlayers||[]).length>0) chained.push(t.name||t.id);
+    surv.forEach(p=>players.push(p));
+    info.push({id:t.id,name:t.name,entries:ent,busted:bus,survivors:surv.length});
+  });
+  const groups={};
+  players.forEach(p=>{ const k=normName(p.name); (groups[k]=groups[k]||[]).push(p); });
+  const duplicates=Object.keys(groups).filter(k=>groups[k].length>1).map(k=>({name:groups[k][0].name,count:groups[k].length,srcs:groups[k].map(p=>p.src),best:Math.max.apply(null,groups[k].map(p=>p.chipCount||0))}));
+  const byTok={};
+  Object.keys(groups).forEach(k=>{ const tk=nameTokenKey(k); (byTok[tk]=byTok[tk]||[]).push(k); });
+  const flags=Object.keys(byTok).filter(tk=>byTok[tk].length>1).map(tk=>({names:byTok[tk].map(k=>groups[k][0].name),keys:byTok[tk]}));
+  const extraBags=Object.keys(groups).reduce((a,k)=>a+Math.max(0,groups[k].length-1),0);
+  const poolRaw=Math.round(rawPool*100)/100;
+  return {entries,busted,prizePool:Math.max(poolRaw,guar),rawPool:poolRaw,guarantee:guar,players,parents:info,chained,
+    unique:Object.keys(groups).length,duplicates,flags,extraBags,chips:Object.keys(groups).reduce((a,k)=>a+Math.max.apply(null,groups[k].map(p=>p.chipCount||0)),0)};
+}
 function evLabel(t){ const c=(typeof EVENT_CONFIGS!=='undefined'&&EVENT_CONFIGS[t.eventType])||null; return (c&&c.short)||t.eventShort||t.eventName||t.name||'another event'; }
 /* Tables claimed by OTHER live events (empty and paused ones included). Returns {tableNum: eventName}. */
 function tablesElsewhere(liveMap, exceptId) {

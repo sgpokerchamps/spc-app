@@ -31,8 +31,11 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
   const _tpl=window._importedTemplate&&window._importedTemplate.eventType===eventType?window._importedTemplate:null;
   useEffect(()=>{ window._importedTemplate=null; },[]);
   const [structure,setStructure]=useState((_tpl&&_tpl.structure?_tpl.structure:STRUCTURES[eventType]||STRUCTURES.miniRoller).map((r,i)=>({...r,_id:i})));
-  const [inheritFrom,setInheritFrom]=useState(null); // {entries, busted, name}
-  const savedME=isME?getIndex().filter(x=>x.eventType&&x.eventType.startsWith('me_')):[];
+  const isD2=eventType==='me_d2';
+  const [parentIds,setParentIds]=useState([]);
+  const [aliases,setAliases]=useState({});
+  const d2Flights=isD2?getIndex().filter(x=>x.eventType&&x.eventType.startsWith('me_')&&x.eventType!=='me_d2').map(x=>({id:x.id,name:x.name,t:loadT(x.id)})).filter(f=>f.t):[];
+  const derived=isD2&&parentIds.length?deriveInheritance(d2Flights.filter(f=>parentIds.includes(f.id)).map(f=>f.t),aliases):null;
 
   function updRow(idx,field,val){setStructure(s=>s.map((r,i)=>i===idx?{...r,[field]:field==='isBreak'?val:Number(val)}:r));}
   function addLevel(){
@@ -147,44 +150,34 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
             </div>
           </div>
           <div style={{fontSize:11,color:'#2a4a35',marginBottom:4}}>Tables {formatTableRanges(selectedTables)||'none selected'} · {selectedTables.length} × {seats} = {selectedTables.length*seats} seats</div>
-          {isME&&savedME.length>0&&(
+          {isD2&&(
             <div style={{marginBottom:16}}>
-              <div className="form-label">Carry forward from previous flight</div>
+              <div className="form-label">Combine survivors from these Main Event flights</div>
+              {d2Flights.length===0&&<div style={{fontSize:11,color:'#a05555',marginTop:6}}>No saved Main Event flights found.</div>}
               <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:6}}>
-                <div
-                  className={`saved-item${inheritFrom===null?' ':''}`}
-                  style={{cursor:'pointer',background:inheritFrom===null?'#112016':'#0b1610',border:`1px solid ${inheritFrom===null?'#3dba6f40':'#152018'}`,borderRadius:6,padding:'7px 11px',fontSize:12,color:inheritFrom===null?'#3dba6f':'#527a5c'}}
-                  onClick={()=>setInheritFrom(null)}
-                >None — this is the first flight</div>
-                {savedME.map(s=>{
-                  const t=loadT(s.id);
-                  if(!t) return null;
-                  const entries=t.players.length+(t.inheritedEntries||0);
-                  const busted=t.players.filter(p=>p.status==='busted').length+(t.inheritedBusted||0);
-                  const inheritedPrizePool=t.prizePool||0;
-                  const sel=inheritFrom&&inheritFrom.id===s.id;
-                  return(
-                    <div key={s.id}
-                      style={{cursor:'pointer',background:sel?'#112016':'#0b1610',border:`1px solid ${sel?'#3dba6f40':'#152018'}`,borderRadius:6,padding:'7px 11px',transition:'.15s'}}
-                      onClick={()=>{
-                        const activeP=t.players.filter(p=>p.status==='active');
-                        const bagged=(t.baggedPlayers||[]);
-                        const allForward=[...activeP.map(p=>({name:p.name,chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0})),...bagged];
-                        setInheritFrom({id:s.id,entries,busted,inheritedPrizePool,name:s.name,activePlayers:allForward,stack:t.stack||0});
-                      }}
-                    >
-                      <div style={{fontSize:12,color:sel?'#3dba6f':'#b2d4ba',fontWeight:500}}>{s.name}</div>
-                      <div style={{fontSize:10,color:'#3a5a42',marginTop:1}}>{entries} entries · {busted} busted · {entries-busted} bagged · {fmt.currency(inheritedPrizePool)} prize pool</div>
-                    </div>
-                  );
+                {d2Flights.map(f=>{
+                  const on=parentIds.includes(f.id);
+                  return(<div key={f.id} style={{cursor:'pointer',background:on?'#112016':'#0b1610',border:`1px solid ${on?'#3dba6f40':'#152018'}`,borderRadius:6,padding:'7px 11px'}}
+                    onClick={()=>setParentIds(p=>p.includes(f.id)?p.filter(x=>x!==f.id):[...p,f.id])}>
+                    <div style={{fontSize:12,color:on?'#3dba6f':'#b2d4ba',fontWeight:500}}>{on?'\u2611 ':'\u2610 '}{f.name}</div>
+                    <div style={{fontSize:10,color:'#3a5a42',marginTop:1}}>{f.t.players.length+(f.t.inheritedEntries||0)} entries · {f.t.players.filter(p=>p.status==='active').length+(f.t.baggedPlayers||[]).length} survivors{f.t.inheritedEntries>0||(f.t.baggedPlayers||[]).length>0?' · CHAINED (older save)':''}</div>
+                  </div>);
                 })}
               </div>
-              {inheritFrom&&<div style={{marginTop:8,fontSize:11,color:'#3dba6f',background:'#09140b',border:'1px solid #1a2e22',borderRadius:5,padding:'6px 10px'}}>
-                ✓ Carrying {inheritFrom.entries} entries + {inheritFrom.busted} busted from {inheritFrom.name}
-              </div>}
+              {derived&&(<div style={{marginTop:10,background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,padding:'9px 11px',fontSize:11,color:'#b2d4ba'}}>
+                <div style={{color:'#3dba6f',fontWeight:700,marginBottom:4}}>Preview</div>
+                <div>{derived.entries} entries · {derived.busted} busted · {derived.players.length} bags from {derived.parents.length} flight{derived.parents.length>1?'s':''}</div>
+                <div>{derived.unique} players on Day 2 · {derived.extraBags} extra bag{derived.extraBags===1?'':'s'} ({fmt.currency(derived.extraBags*1500)})</div>
+                <div>Prize pool {fmt.currency(derived.prizePool)}{derived.guarantee>0&&derived.rawPool<derived.guarantee?' (guarantee applies)':''} · chips {derived.chips.toLocaleString()}</div>
+                {derived.duplicates.length>0&&<div style={{marginTop:6,color:'#c8973a'}}>Bagged in more than one flight: {derived.duplicates.map(d=>d.name+' x'+d.count).join(', ')}</div>}
+                {derived.chained.length>0&&<div style={{marginTop:6,color:'#e07a5f'}}>Warning: {derived.chained.join(', ')} carried players from an earlier flight (older chained save). Those players may be counted twice if you also tick the earlier flight.</div>}
+                {derived.flags.map((fl,i)=>(<div key={i} style={{marginTop:6,color:'#e07a5f'}}>Possibly the same player: {fl.names.join(' / ')}
+                  <button type="button" style={{marginLeft:8,fontSize:10,padding:'2px 8px',cursor:'pointer'}} onClick={()=>setAliases(a=>{const n={...a};fl.keys.forEach(k=>{n[k]=fl.names[0];});return n;})}>Same player</button></div>))}
+              </div>)}
+              {parentIds.length===0&&<div style={{marginTop:6,fontSize:11,color:'#c8973a'}}>Tick at least one flight to carry survivors forward.</div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:inheritFrom?inheritFrom.entries:0,inheritedBusted:inheritFrom?inheritFrom.busted:0,inheritedPrizePool:inheritFrom?inheritFrom.inheritedPrizePool:0,inheritedPlayers:inheritFrom?inheritFrom.activePlayers:[],inheritedStack:inheritFrom?inheritFrom.stack:0,lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}if(isD2&&!derived&&!confirm('No flights are ticked, so Day 2 will start with no players. Continue?'))return;onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:derived?derived.entries:0,inheritedBusted:derived?derived.busted:0,inheritedPrizePool:derived?derived.prizePool:0,inheritedPlayers:derived?derived.players:[],inheritedStack:0,parents:derived?parentIds:[],parentAliases:aliases,lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>
