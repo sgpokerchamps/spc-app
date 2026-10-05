@@ -137,8 +137,11 @@ function seatDay2(inheritedPlayers, tableNums, spt, makeId){
   return {seated,deduped,extraBagWinners,totalExtraBags,chips:deduped.reduce((a,p)=>a+(p.chipCount||0),0)};
 }
 /* parents: loaded flight tournaments. aliases: {normalisedVariant: canonicalName} chosen in the preview. */
-function deriveInheritance(parents, aliases){
-  aliases=aliases||{};
+/* Short flight label for names like "Daniel Tan (1A)": ME 1A -> 1A. */
+function flightLabel(t){ const c=(typeof EVENT_CONFIGS!=='undefined'&&EVENT_CONFIGS[t.eventType])||null; return (c&&c.short?c.short.replace(/^ME\s*/i,''):'')||t.name||t.id||'flight'; }
+/* splits: {normalisedName: true} = the TD says these same-name survivors are DIFFERENT people (kept as separate seats, no extra bag). */
+function deriveInheritance(parents, aliases, splits){
+  aliases=aliases||{}; splits=splits||{};
   const canon=n=>{ const a=aliases[normName(n)]; return a!=null?a:n; };
   let entries=0, busted=0, rawPool=0, guar=0;
   const players=[], info=[], chained=[];
@@ -150,22 +153,34 @@ function deriveInheritance(parents, aliases){
     const ppe=(t.prizePerEntry>0)?t.prizePerEntry:(net-(t.bountyAmount||0));
     entries+=ent; busted+=bus; rawPool+=Math.round(ent*ppe*100)/100; guar=Math.max(guar,t.guarantee||0);
     const surv=[];
-    ps.filter(p=>p.status==='active').forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:t.eventShort||t.name||''}));
-    (t.baggedPlayers||[]).forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:'earlier flight'}));
+    ps.filter(p=>p.status==='active').forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:flightLabel(t),srcId:t.id}));
+    (t.baggedPlayers||[]).forEach(p=>surv.push({name:canon(p.name),chipCount:p.chipCount||0,inheritedChipCount:p.inheritedChipCount||0,country:p.country||undefined,src:'earlier flight',srcId:'earlier:'+t.id}));
     if((t.inheritedEntries||0)>0||(t.baggedPlayers||[]).length>0) chained.push(t.name||t.id);
     surv.forEach(p=>players.push(p));
     info.push({id:t.id,name:t.name,entries:ent,busted:bus,survivors:surv.length});
   });
-  const groups={};
-  players.forEach(p=>{ const k=normName(p.name); (groups[k]=groups[k]||[]).push(p); });
-  const duplicates=Object.keys(groups).filter(k=>groups[k].length>1).map(k=>({name:groups[k][0].name,count:groups[k].length,srcs:groups[k].map(p=>p.src),best:Math.max.apply(null,groups[k].map(p=>p.chipCount||0))}));
+  const groupUp=()=>{ const g={}; players.forEach(p=>{ const k=normName(p.name); (g[k]=g[k]||[]).push(p); }); return g; };
+  let groups=groupUp();
+  // every same-name group, BEFORE any split, so the preview can always show the choice
+  const duplicates=Object.keys(groups).filter(k=>groups[k].length>1).map(k=>{
+    const ids=groups[k].map(p=>p.srcId);
+    const sameFlight=ids.some((x,i)=>ids.indexOf(x)!==i);
+    return {key:k,name:groups[k][0].name,count:groups[k].length,srcs:groups[k].map(p=>p.src),chips:groups[k].map(p=>({src:p.src,chip:p.chipCount||0})),
+      best:Math.max.apply(null,groups[k].map(p=>p.chipCount||0)),sameFlight:sameFlight,split:!!splits[k]&&!sameFlight};
+  });
+  const splitNames=[];
+  duplicates.filter(d=>d.split).forEach(d=>{
+    groups[d.key].forEach(p=>{ p.name=p.name+' ('+p.src+')'; });
+    splitNames.push({name:d.name,srcs:d.srcs});
+  });
+  if(splitNames.length) groups=groupUp();
   const byTok={};
   Object.keys(groups).forEach(k=>{ const tk=nameTokenKey(k); (byTok[tk]=byTok[tk]||[]).push(k); });
   const flags=Object.keys(byTok).filter(tk=>byTok[tk].length>1).map(tk=>({names:byTok[tk].map(k=>groups[k][0].name),keys:byTok[tk]}));
   const extraBags=Object.keys(groups).reduce((a,k)=>a+Math.max(0,groups[k].length-1),0);
   const poolRaw=Math.round(rawPool*100)/100;
   return {entries,busted,prizePool:Math.max(poolRaw,guar),rawPool:poolRaw,guarantee:guar,players,parents:info,chained,
-    unique:Object.keys(groups).length,duplicates,flags,extraBags,chips:Object.keys(groups).reduce((a,k)=>a+Math.max.apply(null,groups[k].map(p=>p.chipCount||0)),0)};
+    unique:Object.keys(groups).length,duplicates,splitNames,flags,extraBags,chips:Object.keys(groups).reduce((a,k)=>a+Math.max.apply(null,groups[k].map(p=>p.chipCount||0)),0)};
 }
 /* ---- Staff password for the SPC members server. NEVER put the value in this repo (it is public).
    Asked once per Mac, kept in localStorage. window.prompt() does not exist in Electron, so this draws its own dialog. ---- */

@@ -34,8 +34,9 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
   const isD2=eventType==='me_d2';
   const [parentIds,setParentIds]=useState([]);
   const [aliases,setAliases]=useState({});
+  const [splits,setSplits]=useState({});
   const d2Flights=isD2?getIndex().filter(x=>x.eventType&&x.eventType.startsWith('me_')&&x.eventType!=='me_d2').map(x=>({id:x.id,name:x.name,t:loadT(x.id)})).filter(f=>f.t):[];
-  const derived=isD2&&parentIds.length?deriveInheritance(d2Flights.filter(f=>parentIds.includes(f.id)).map(f=>f.t),aliases):null;
+  const derived=isD2&&parentIds.length?deriveInheritance(d2Flights.filter(f=>parentIds.includes(f.id)).map(f=>f.t),aliases,splits):null;
 
   function updRow(idx,field,val){setStructure(s=>s.map((r,i)=>i===idx?{...r,[field]:field==='isBreak'?val:Number(val)}:r));}
   function addLevel(){
@@ -169,7 +170,13 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
                 <div>{derived.entries} entries · {derived.busted} busted · {derived.players.length} bags from {derived.parents.length} flight{derived.parents.length>1?'s':''}</div>
                 <div>{derived.unique} players on Day 2 · {derived.extraBags} extra bag{derived.extraBags===1?'':'s'} ({fmt.currency(derived.extraBags*1500)})</div>
                 <div>Prize pool {fmt.currency(derived.prizePool)}{derived.guarantee>0&&derived.rawPool<derived.guarantee?' (guarantee applies)':''} · chips {derived.chips.toLocaleString()}</div>
-                {derived.duplicates.length>0&&<div style={{marginTop:6,color:'#c8973a'}}>Bagged in more than one flight: {derived.duplicates.map(d=>d.name+' x'+d.count).join(', ')}</div>}
+                {derived.duplicates.length>0&&<div style={{marginTop:6,color:'#c8973a'}}>Same name bagged in more than one flight. Choose for each:</div>}
+                {derived.duplicates.map(d=>(<div key={d.key} style={{marginTop:4,paddingLeft:8,borderLeft:'2px solid #3a2a10'}}>
+                  <div style={{color:'#e8d8a0'}}>{d.name}: {d.chips.map(c=>c.src+' ('+c.chip.toLocaleString()+')').join(' / ')}</div>
+                  <button type="button" style={{fontSize:10,padding:'2px 8px',cursor:'pointer',marginRight:6,fontWeight:d.split?400:700,background:d.split?'none':'#1a3a22',color:d.split?'#7aaa82':'#3dba6f',border:'1px solid #2a4a35',borderRadius:4}} onClick={()=>setSplits(x=>{const n={...x};delete n[d.key];return n;})}>Same person (one seat, best stack, {d.count-1} extra bag{d.count-1===1?'':'s'})</button>
+                  <button type="button" disabled={d.sameFlight} style={{fontSize:10,padding:'2px 8px',cursor:d.sameFlight?'not-allowed':'pointer',opacity:d.sameFlight?0.45:1,fontWeight:d.split?700:400,background:d.split?'#3a2a10':'none',color:d.split?'#e8d8a0':'#7aaa82',border:'1px solid #2a4a35',borderRadius:4}} onClick={()=>setSplits(x=>({...x,[d.key]:true}))}>Different people ({d.count} seats, no extra bag)</button>
+                  {d.sameFlight&&<span style={{marginLeft:6,color:'#e07a5f',fontSize:10}}>Two survivors from the same flight cannot be told apart by flight, so they cannot be split here.</span>}
+                </div>))}
                 {derived.chained.length>0&&<div style={{marginTop:6,color:'#e07a5f'}}>Warning: {derived.chained.join(', ')} carried players from an earlier flight (older chained save). Those players may be counted twice if you also tick the earlier flight.</div>}
                 {derived.flags.map((fl,i)=>(<div key={i} style={{marginTop:6,color:'#e07a5f'}}>Possibly the same player: {fl.names.join(' / ')}
                   <button type="button" style={{marginLeft:8,fontSize:10,padding:'2px 8px',cursor:'pointer'}} onClick={()=>setAliases(a=>{const n={...a};fl.keys.forEach(k=>{n[k]=fl.names[0];});return n;})}>Same player</button></div>))}
@@ -177,7 +184,7 @@ function SetupScreen({eventType,onBack,onStart,takenTables}) {
               {parentIds.length===0&&<div style={{marginTop:6,fontSize:11,color:'#c8973a'}}>Tick at least one flight to carry survivors forward.</div>}
             </div>
           )}
-          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}if(isD2&&!derived&&!confirm('No flights are ticked, so Day 2 will start with no players. Continue?'))return;onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:derived?derived.entries:0,inheritedBusted:derived?derived.busted:0,inheritedPrizePool:derived?derived.prizePool:0,inheritedPlayers:derived?derived.players:[],inheritedStack:0,parents:derived?parentIds:[],parentAliases:aliases,lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
+          <button className="start-btn" onClick={()=>{if(!selectedTables.length){alert('Pick at least one table.');return;}if(isD2&&!derived&&!confirm('No flights are ticked, so Day 2 will start with no players. Continue?'))return;onStart({name,spcSeries,buyin,prizeComponent:prizeComp,adminFeePercent:adminFee,guarantee,itmPercent:itmPct,stack,maxTables:selectedTables.length,startTable:selectedTables[0],tableNumbers:selectedTables,seatsPerTable:seats,eventType,structure,inheritedEntries:derived?derived.entries:0,inheritedBusted:derived?derived.busted:0,inheritedPrizePool:derived?derived.prizePool:0,inheritedPlayers:derived?derived.players:[],inheritedStack:0,parents:derived?parentIds:[],parentAliases:aliases,parentSplits:splits,splitNames:derived?derived.splitNames:[],lateRegLevel:lateReg===''?null:+lateReg,bountyAmount:isMB?bountyAmt:0,...(isSat?{seatValue,guaranteedSeats}:{})});}}>Start tournament →</button>
         </div>
         <div className="setup-right">
           <div className="section-title">Blind structure <span style={{fontWeight:400,color:'#2a4a35',fontSize:9}}>— editable</span></div>

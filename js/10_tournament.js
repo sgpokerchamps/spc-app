@@ -566,7 +566,8 @@ function App() {
       reg:{...defaultReg(config.eventType,'notOpen'),...(config.lateRegLevel!==undefined?{lateRegLevel:config.lateRegLevel}:{})},
       status:'paused',prizePool:Math.max(calcInitPrize,guarantee),payoutTable:null,seatingMode:'auto',regLog:[],seatLocks:{},
       baggedPlayers:_baggedPlayers,
-      ...(isDay2&&config.parents&&config.parents.length?{parents:config.parents,parentAliases:config.parentAliases||{}}:{}),
+      ...(isDay2&&config.splitNames&&config.splitNames.length?{activityLog:config.splitNames.map(x=>({ts:Date.now(),type:'register',detail:'Day 2: "'+x.name+'" kept as separate players ('+x.srcs.join(', ')+'), no extra bag'}))}:{}),
+      ...(isDay2&&config.parents&&config.parents.length?{parents:config.parents,parentAliases:config.parentAliases||{},parentSplits:config.parentSplits||{}}:{}),
       extraBagWinners:_extraBagWinners,extraBagCount:_totalExtraBags>0?_totalExtraBags:(config.extraBagCount||0),
       chipsInPlay:_actualChips>0?_actualChips
         :(config.stack===0&&inheritedEntries>0&&config.inheritedStack>0
@@ -584,7 +585,7 @@ function App() {
     if(!canRebuildInheritance(t)) return;
     const ps=t.parents.map(pid=>liveRef.current[pid]||loadT(pid)).filter(Boolean);
     if(ps.length<t.parents.length&&!confirm('Some source flights are no longer saved on this Mac. Rebuild from the '+ps.length+' that are?')) return;
-    const d=deriveInheritance(ps,t.parentAliases);
+    const d=deriveInheritance(ps,t.parentAliases,t.parentSplits);
     const sd=seatDay2(d.players,getTableNumbers(t),t.seatsPerTable||9,uid);
     if(!confirm('Rebuild Day 2 from '+ps.length+' flight(s)?\n'+sd.deduped.length+' players, '+sd.totalExtraBags+' extra bags, prize pool '+fmt.currency(Math.max(d.prizePool,t.guarantee||0))+'.\nThis replaces the current seating.')) return;
     updateEvent(id,cur=>({...cur,players:[...cur.players.filter(p=>!p.inherited),...sd.seated],
