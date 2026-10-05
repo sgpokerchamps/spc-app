@@ -370,7 +370,7 @@ ipcMain.handle('main-screen-close', () => { mainScreenSuppressed = true; closeMa
 // (The older 'check-for-updates' below writes each file as soon as it is downloaded and is kept only for app packages
 // whose renderer still calls it.)
 const UPDATE_FILES = ['app.html', 'server.js', 'styles.css'].concat([
-  '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
+  '00_qrcode.js', '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
   '06_sidebar.js', '07_views.js', '08_payouts.js', '09_potyview.js', '10_tournament.js'].map(function(n) { return 'js/' + n; }));
 const STAGE_MAX_AGE_MS = 10 * 60 * 1000;
 let stagedUpdate = null;
@@ -539,7 +539,7 @@ ipcMain.handle('check-for-updates', async () => {
     var updateJsDir = path.join(updateDir, 'js');
     if (!fs.existsSync(updateJsDir)) fs.mkdirSync(updateJsDir, { recursive: true });
     var jsFiles = [
-      '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
+      '00_qrcode.js', '01_constants.js', '02_utils.js', '03_poty.js', '04_setup.js', '05_home.js',
       '06_sidebar.js', '07_views.js', '08_payouts.js', '09_potyview.js', '10_tournament.js',
     ];
     for (var i = 0; i < jsFiles.length; i++) {

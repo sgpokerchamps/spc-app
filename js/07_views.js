@@ -7,6 +7,16 @@
    (09_potyview.js, 08_payouts.js) per the plan.
    ============================================================ */
 
+/* QR code drawn locally (js/00_qrcode.js, no internet). Shows nothing if the library is not there. */
+function QrCode({text,size}) {
+  const mod=React.useMemo(()=>{ try{ if(typeof qrcode!=='function'||!text) return null; const q=qrcode(0,'M'); q.addData(text); q.make(); return q; }catch(e){ return null; } },[text]);
+  if(!mod) return null;
+  const n=mod.getModuleCount(); let d='';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(mod.isDark(r,c)) d+='M'+c+' '+r+'h1v1h-1z';
+  const s=size||104;
+  return <svg viewBox={'0 0 '+(n+8)+' '+(n+8)} width={s} height={s} shapeRendering="crispEdges" style={{background:'#fff',borderRadius:6,flex:'none'}} aria-label={'QR code for '+text}><g transform="translate(4 4)"><path d={d} fill="#000"/></g></svg>;
+}
+
 /* ==== REGISTER VIEW ==== */
 function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverInfo, onRegAction}) {
   const inputRef = useRef(null);
@@ -179,15 +189,21 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
       {/* Staff connection URLs */}
       {serverInfo&&(
         <div style={{display:'flex',gap:10,marginBottom:16}}>
-          <div style={{flex:1,background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,padding:'10px 14px'}}>
+          <div style={{flex:1,background:'#0f0c04',border:'1px solid #2a1c06',borderRadius:8,padding:'10px 14px',display:'flex',gap:12,alignItems:'center'}}>
+            <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#c8973a',marginBottom:5,fontWeight:700}}>Counter staff URL</div>
             <div style={{fontSize:15,color:'#e8d8a0',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}/register`}</div>
             {serverInfo.all&&serverInfo.all.length>1&&<div style={{marginTop:6,fontSize:11,color:'#7a6a3a'}}>Other networks on this laptop: {serverInfo.all.filter(a=>a.ip!==serverInfo.ip).map(a=>(<span key={a.ip} style={{marginRight:10}}>{a.label}: {`http://${a.ip}:${serverInfo.port}/register`} <button type="button" style={{fontSize:10,cursor:'pointer'}} onClick={()=>window._spcChooseIp&&window._spcChooseIp(a.ip)}>Use this</button></span>))}</div>}
           </div>
-          <div style={{flex:1,background:'#060e09',border:'1px solid #1a2e22',borderRadius:8,padding:'10px 14px'}}>
+            <QrCode text={`http://${serverInfo.ip}:${serverInfo.port}/register`}/>
+          </div>
+          <div style={{flex:1,background:'#060e09',border:'1px solid #1a2e22',borderRadius:8,padding:'10px 14px',display:'flex',gap:12,alignItems:'center'}}>
+            <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,letterSpacing:1.5,textTransform:'uppercase',color:'#7aaa82',marginBottom:5,fontWeight:700}}>Floor staff URL</div>
             <div style={{fontSize:15,color:'#3dba6f',fontWeight:700,wordBreak:'break-all'}}>{`http://${serverInfo.ip}:${serverInfo.port}`}</div>
             {serverInfo.all&&serverInfo.all.length>0&&<div style={{marginTop:6,fontSize:11,color:'#3a7a52'}}>On: {(serverInfo.all.find(a=>a.ip===serverInfo.ip)||{}).label||'this network'}{serverInfo.all.length>1?' (this laptop is on '+serverInfo.all.length+' networks)':''}{serverInfo.all.length>1&&!serverInfo.prefSet&&<span style={{color:'#e07a5f',fontWeight:700,marginLeft:8}}>Pick the venue network: tap Use this on the counter URL box.</span>}</div>}
+          </div>
+            <QrCode text={`http://${serverInfo.ip}:${serverInfo.port}`}/>
           </div>
         </div>
       )}
