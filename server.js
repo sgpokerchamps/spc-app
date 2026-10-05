@@ -933,7 +933,7 @@ module.exports = {
       if (path === '/') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getFloorHTML()); }
       else if (path === '/register') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getRegisterHTML()); }
       else if (path === '/api/net') { res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}); res.end(JSON.stringify({ addrs: lanAddrs(), serverNow: Date.now() })); }
-      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true,"v":11}'); }
+      else if (path === '/health') { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify({ ok: true, v: 12, regGuard: !!REG, shared: !!SHARED_JS })); }
       else if (path === '/display') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getDisplayHTML()); }
       else if (path === '/display/spc-logo.png' || path === '/display/n8-logo.png') {
         var logo = path === '/display/spc-logo.png' ? DISPLAY_ASSETS.spc : DISPLAY_ASSETS.n8;

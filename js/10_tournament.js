@@ -349,6 +349,19 @@ function App() {
     return()=>{alive=false;clearInterval(iv);};
   },[rawServerInfo&&rawServerInfo.port]);
   window._spcChooseIp = choosePrefIp;
+  /* The floor server reports whether its shared rules loaded (registration guard, table tools). If not, say so loudly. */
+  const [guardProblem,setGuardProblem]=useState('');
+  useEffect(()=>{
+    const port=rawServerInfo&&rawServerInfo.port; if(!port) return;
+    let alive=true;
+    const read=()=>{fetch('http://127.0.0.1:'+port+'/health',{cache:'no-store'}).then(r=>r.json()).then(j=>{
+      if(!alive||!j) return;
+      const bad=[]; if(j.regGuard===false) bad.push('registration guard'); if(j.shared===false) bad.push('table tools');
+      setGuardProblem(bad.join(' and '));
+    }).catch(()=>{});};
+    read(); const iv=setInterval(read,60000);
+    return()=>{alive=false;clearInterval(iv);};
+  },[rawServerInfo&&rawServerInfo.port]);
   const serverInfo=rawServerInfo?(()=>{
     const pick=lanAddrs.find(a=>a.ip===prefIp)||lanAddrs[0];
     return {...rawServerInfo,ip:pick?pick.ip:rawServerInfo.ip,all:lanAddrs,pref:pick?pick.ip:null,prefSet:!!lanAddrs.find(a=>a.ip===prefIp)};
@@ -1154,6 +1167,7 @@ Starting setup — you can adjust settings before launching.`);
       {regBanners.length>0&&(<div className="reg-banners">{regBanners.map(b=>(<div key={b.id+b.kind} className={'reg-banner '+b.kind}><span>{b.text}</span>{b.kind==='over'&&(<span style={{display:'flex',gap:6}}><button onClick={()=>regAction(b.id,'close')}>Close</button><button onClick={()=>regAction(b.id,'closeNow')}>Close now</button></span>)}</div>))}</div>)}
       {tableOverlaps(live).map((o,i)=>(<div key={'ovl'+i} className="reg-banner warn"><span>{'Table clash: '+o.a+' and '+o.b+' both use table'+(o.tables.length>1?'s ':' ')+formatTableRanges(o.tables)+'. Nothing was changed. Close or move one of those tables.'}</span></div>))}
       {view==='tournament'&&canRebuildInheritance(tournament)&&(<div className="reg-banner warn"><span>Day 2 has not started. If a flight changed, rebuild the survivor list.</span><button style={{marginLeft:10,cursor:'pointer'}} onClick={rebuildInheritance}>Rebuild from flights</button></div>)}
+      {guardProblem&&(<div className="save-banner">{'Registration rules failed to load on the floor server ('+guardProblem+'). Restart the app; if it persists, call Terry.'}</div>)}
       {Object.keys(backupFailures).length>0&&(<div className="save-banner">{'BACKUP FILE FAILED for '+Object.keys(backupFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. The event is still saved in the app. Export a backup now.'}</div>)}
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
