@@ -626,6 +626,25 @@ ${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;
     return html;
 }
 
+/* The exact content of Export full save (.spc). extra: optional fields added at the top (the file backup adds _backupAt). */
+function tournamentExportJson(t, extra) {
+  const payload = { _spcExport: 'tournament', _version: 1, ...(extra||{}), ...t };
+  return JSON.stringify(payload, null, 2);
+}
+/* localStorage use: Chromium counts key + value as UTF-16 (2 bytes per char) against about 10 MB per origin. */
+const LS_CAP_BYTES = 10 * 1024 * 1024;
+function storageUsage() {
+  let total = 0; const tours = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i); const v = localStorage.getItem(k) || '';
+      const bytes = (k.length + v.length) * 2; total += bytes;
+      if (k.indexOf('spc_t_') === 0) { let name = k; try { name = JSON.parse(v).name || k; } catch (e) {} tours.push({ key: k, name: name, bytes: bytes }); }
+    }
+  } catch (e) {}
+  tours.sort((a, b) => b.bytes - a.bytes);
+  return { total: total, cap: LS_CAP_BYTES, pct: total / LS_CAP_BYTES * 100, top: tours.slice(0, 5), saved: tours.length };
+}
 function exportTournament(t, templateOnly=false) {
   if(templateOnly){
     const html=generateTournamentReportHTML(t);
@@ -644,8 +663,7 @@ function exportTournament(t, templateOnly=false) {
     return;
   }
   // Full backup — .spc file
-  const payload = { _spcExport: 'tournament', _version: 1, ...t };
-  const json = JSON.stringify(payload, null, 2);
+  const json = tournamentExportJson(t);
   const safeName = (t.name||'tournament').replace(/[^a-z0-9]/gi,'_').toLowerCase();
   const backupName = `spc_backup_${safeName}.spc`;
   if(window.electronAPI&&window.electronAPI.showSaveDialog){

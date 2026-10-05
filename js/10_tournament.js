@@ -421,6 +421,57 @@ function App() {
     return()=>clearInterval(iv);
   },[]);
 
+  /* File copy of every live event (localStorage is otherwise the only copy). Two files per event, written alternately, so a crash
+     mid-write never damages both. Recovery: Import the newer file (see ARCHITECTURE.md). Resumed events are not rewritten until they change. */
+  const backupRef=useRef({});
+  const backupFailRef=useRef({});
+  const [backupFailures,setBackupFailures]=useState({});
+  function markBackup(id,ok){
+    const had=!!backupFailRef.current[id];
+    if(ok&&had){ const n={...backupFailRef.current}; delete n[id]; backupFailRef.current=n; setBackupFailures(n); }
+    else if(!ok&&!had){ const n={...backupFailRef.current,[id]:true}; backupFailRef.current=n; setBackupFailures(n); }
+  }
+  async function writeBackup(id){
+    const api=window.electronAPI; if(!api||!api.writeFile||!api.getUserDataPath||!api.readFile) return;
+    const st=backupRef.current[id]||(backupRef.current[id]={at:0,timer:null,ab:null,last:null,dir:null});
+    const t=liveRef.current[id]; if(!t) return;
+    try{
+      if(!st.dir) st.dir=await api.getUserDataPath();
+      const fileOf=ab=>st.dir+'/spc-backup-'+id+'-'+ab+'.json';
+      if(st.ab===null){
+        // first write since launch: overwrite the OLDER of the two files, never the newer one
+        const stamp=async ab=>{ try{ const r=await api.readFile(fileOf(ab)); if(r&&r.success){ const m=/"_backupAt":\s*(\d+)/.exec(r.content.slice(0,400)); return m?+m[1]:1; } }catch(e){} return 0; };
+        const sa=await stamp('a'), sb=await stamp('b');
+        st.ab=sa<=sb?'a':'b';
+      }
+      const r=await api.writeFile(fileOf(st.ab),tournamentExportJson(t,{_backupAt:Date.now()}));
+      st.at=Date.now();
+      if(r&&r.success===false) throw new Error(r.error||'write failed');
+      st.ab=st.ab==='a'?'b':'a'; st.last=t; markBackup(id,true);
+    }catch(e){ st.at=Date.now(); console.error('backup file failed for',id,e&&e.message); markBackup(id,false); }
+  }
+  function scheduleBackup(id){
+    const st=backupRef.current[id]||(backupRef.current[id]={at:0,timer:null,ab:null,last:null,dir:null});
+    if(st.timer) return;
+    const wait=Math.max(0,2000-(Date.now()-st.at));
+    st.timer=setTimeout(()=>{ st.timer=null; writeBackup(id); },wait);
+  }
+  useEffect(()=>{
+    if(!(window.electronAPI&&window.electronAPI.writeFile)) return;
+    Object.keys(live).forEach(id=>{
+      const st=backupRef.current[id];
+      if(!st){ backupRef.current[id]={at:0,timer:null,ab:null,last:live[id],dir:null}; return; } // just resumed or started: first CHANGE triggers the first write
+      if(st.last!==live[id]) scheduleBackup(id);
+    });
+    Object.keys(backupRef.current).forEach(id=>{ if(!live[id]){ const st=backupRef.current[id]; if(st.timer) clearTimeout(st.timer); delete backupRef.current[id]; } });
+    const stale=Object.keys(backupFailRef.current).filter(id=>!live[id]);
+    if(stale.length){ const n={...backupFailRef.current}; stale.forEach(id=>delete n[id]); backupFailRef.current=n; setBackupFailures(n); }
+  },[live]);
+  useEffect(()=>{
+    const iv=setInterval(()=>{ Object.keys(backupFailRef.current).forEach(id=>{ if(liveRef.current[id]) writeBackup(id); }); },10000);
+    return()=>clearInterval(iv);
+  },[]);
+
   /* One-time cleanup: the retired display mode left one spc_live_<tournament id> key per event (display cache only; the
      tournaments themselves are spc_t_<id>). Delete them all EXCEPT spc_live_ids, which auto-resume uses. */
   useEffect(()=>{
@@ -565,7 +616,7 @@ function App() {
       if (data._spcExport === 'tournament') {
         // Full save: load directly
         const t = {...data};
-        delete t._spcExport; delete t._version;
+        delete t._spcExport; delete t._version; delete t._backupAt;
         // Give it a fresh id to avoid collision
         t.id = uid();
         saveT(t); setSavedIndex(getIndex());
@@ -1092,6 +1143,7 @@ Starting setup — you can adjust settings before launching.`);
       {regBanners.length>0&&(<div className="reg-banners">{regBanners.map(b=>(<div key={b.id+b.kind} className={'reg-banner '+b.kind}><span>{b.text}</span>{b.kind==='over'&&(<span style={{display:'flex',gap:6}}><button onClick={()=>regAction(b.id,'close')}>Close</button><button onClick={()=>regAction(b.id,'closeNow')}>Close now</button></span>)}</div>))}</div>)}
       {tableOverlaps(live).map((o,i)=>(<div key={'ovl'+i} className="reg-banner warn"><span>{'Table clash: '+o.a+' and '+o.b+' both use table'+(o.tables.length>1?'s ':' ')+formatTableRanges(o.tables)+'. Nothing was changed. Close or move one of those tables.'}</span></div>))}
       {view==='tournament'&&canRebuildInheritance(tournament)&&(<div className="reg-banner warn"><span>Day 2 has not started. If a flight changed, rebuild the survivor list.</span><button style={{marginLeft:10,cursor:'pointer'}} onClick={rebuildInheritance}>Rebuild from flights</button></div>)}
+      {Object.keys(backupFailures).length>0&&(<div className="save-banner">{'BACKUP FILE FAILED for '+Object.keys(backupFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. The event is still saved in the app. Export a backup now.'}</div>)}
       {Object.keys(saveFailures).length>0&&(<div className="save-banner">{'SAVE FAILED for '+Object.keys(saveFailures).map(id=>{const t=live[id];const c=t?EVENT_CONFIGS[t.eventType]:null;return c?c.short:(t?t.name:id);}).join(', ')+'. Storage may be full. Export backups now.'}</div>)}
       {view==='home'&&<HomeScreen liveRows={liveRows} onFocusLive={resumeTournament} onSelect={t=>{setSelEvent(t);setView('setup');}} savedIndex={savedIndex} onResume={resumeTournament} onDelete={deleteTournament} onExportSave={t=>exportTournament(t,false)} onExportTemplate={t=>exportTournament(t,true)} onImport={handleImportFile}/>}
       {view==='setup'&&<SetupScreen eventType={selEvent} onBack={()=>setView('home')} onStart={startTournament} takenTables={tablesElsewhere(live,null)}/>}

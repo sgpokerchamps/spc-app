@@ -8,6 +8,17 @@
 /* Check for updates. Two steps on a current app package: (1) stage = download and check everything, change NOTHING;
    (2) only after you confirm, apply = write the changed files together, then restart. Cancel at the question changes nothing.
    An older app package only has a button that writes files the moment they download, so there we ask FIRST. */
+function StorageLine() {
+  const [u,setU]=useState(()=>storageUsage());
+  useEffect(()=>{ const iv=setInterval(()=>setU(storageUsage()),30000); return()=>clearInterval(iv); },[]);
+  const mb=b=>(b/1048576).toFixed(1);
+  const sz=b=>b<1048576?Math.max(1,Math.round(b/1024))+' KB':mb(b)+' MB';
+  const col=u.pct>80?'#e0594f':u.pct>60?'#e0a43c':'#527a5c';
+  return(<div style={{fontSize:11,color:col,textAlign:'right',maxWidth:260}}>
+    <div>{'Storage: '+sz(u.total)+' of '+mb(u.cap)+' MB ('+(u.pct<1?u.pct.toFixed(1):Math.round(u.pct))+'%)'}</div>
+    {u.pct>60&&<div style={{marginTop:3}}>Largest saved tournaments:{u.top.map(t=>(<div key={t.key}>{t.name+' '+sz(t.bytes)}</div>))}<div style={{marginTop:3}}>Delete old tournaments from the list below to free space.</div></div>}
+  </div>);
+}
 function UpdateButton() {
   const [busy,setBusy]=useState('');
   const api=typeof window.electronAPI!=='undefined'?window.electronAPI:null;
@@ -68,6 +79,7 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:10}}>
             <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
             <UpdateButton/>
+            <StorageLine/>
             <button className="home-update" onClick={changeStaffPw} title="Clears the saved staff password and asks again">Change staff password</button>
           </div>
         </div>
