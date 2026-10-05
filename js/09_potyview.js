@@ -18,10 +18,11 @@ function POTYView({tournament}) {
   const [syncStatus, setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  async function syncFromCloud(yr){
+  async function syncFromCloud(yr,interactive=true){
     setIsSyncing(true); setSyncStatus('Syncing…');
     try {
-      const res = await fetch('https://spc-members.onrender.com/api/poty/'+yr, {headers:{'X-Staff-Pw':'Cowcow808'}});
+      const res = await staffFetch('https://spc-members.onrender.com/api/poty/'+yr, {noPrompt:!interactive});
+      if(!res){ setSyncStatus(interactive?'Not synced: no staff password':'Press Sync to enter the staff password'); return; }
       if(!res.ok) throw new Error('HTTP '+res.status);
       const data = await res.json();
       // Convert cloud format → local POTY shape
@@ -46,7 +47,7 @@ function POTYView({tournament}) {
   }
 
   // Auto-sync on mount and when year changes
-  useEffect(()=>{ syncFromCloud(selectedYear); },[selectedYear]);
+  useEffect(()=>{ syncFromCloud(selectedYear,false); },[selectedYear]);
 
   const isCurrentYear = selectedYear === currentYear;
   const isCommitted = poty.committed.indexOf(tournament.id)>=0;
@@ -77,9 +78,9 @@ function POTYView({tournament}) {
     if(!confirm('Commit '+totalPts.toLocaleString()+' points from "'+evName+'" across '+pendingPoints.length+' players to the CLOUD POTY?'))return;
     setIsSyncing(true); setSyncStatus('Committing to cloud…');
     try {
-      const res = await fetch('https://spc-members.onrender.com/api/poty/commit', {
+      const res = await staffFetch('https://spc-members.onrender.com/api/poty/commit', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           year:selectedYear,
           tournament_id:tournament.id,
@@ -88,6 +89,7 @@ function POTYView({tournament}) {
           points:pendingPoints.map(p=>({name:p.potyName,points:p.points})),
         }),
       });
+      if(!res){ setSyncStatus('Not sent'); setIsSyncing(false); return; }
       const data = await res.json();
       if(!res.ok){
         if(data.already_committed){
@@ -119,11 +121,12 @@ function POTYView({tournament}) {
       // Never silently write a known-bad payload; the Payouts tab commit asks the TD first.
       if(validateCommitPayload(payload,t).some(p=>p.level==='error')){console.warn('Cloud push skipped: payload failed validation');return;}
 
-      const res=await fetch('https://spc-members.onrender.com/api/tournament',{
+      const res=await staffFetch('https://spc-members.onrender.com/api/tournament',{
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify(payload),
       });
+      if(!res) return;
       const data=await res.json();
       if(data.success){
         console.log('Tournament pushed to cloud:',data.tournament_id,data.results_count,'results');
@@ -141,11 +144,12 @@ function POTYView({tournament}) {
     if(!confirm('Undo cloud commit from "'+lc.tournamentName+'"?'))return;
     setIsSyncing(true); setSyncStatus('Undoing on cloud…');
     try {
-      const res = await fetch('https://spc-members.onrender.com/api/poty/undo', {
+      const res = await staffFetch('https://spc-members.onrender.com/api/poty/undo', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({year:selectedYear, commit_id:lc.commitId}),
       });
+      if(!res){ setSyncStatus('Not sent'); setIsSyncing(false); return; }
       const data = await res.json();
       if(!res.ok){alert('Undo failed: '+(data.error||res.statusText)); setSyncStatus('⚠ Undo failed'); setIsSyncing(false); return;}
       await syncFromCloud(selectedYear);

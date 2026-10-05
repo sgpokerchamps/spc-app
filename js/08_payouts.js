@@ -193,11 +193,12 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
     setIsCommitting(true);
     try {
       const reportHtml = generateTournamentReportHTML(tournament);
-      const res = await fetch('https://spc-members.onrender.com/api/tournament', {
+      const res = await staffFetch('https://spc-members.onrender.com/api/tournament', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({...payload, report_html:reportHtml}),
       });
+      if(!res) return;
       const data = await res.json();
       if(!res.ok||!data.success){ alert('Commit failed: '+(data.error||res.statusText)); setIsCommitting(false); return; }
       markTournamentCommitted(tournament.id);
@@ -215,11 +216,12 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
     if(!confirm(`Undo cloud commit for "${evName}"? This deletes the tournament and its results from the cloud.`)) return;
     setIsCommitting(true);
     try {
-      const res = await fetch('https://spc-members.onrender.com/api/tournament/undo', {
+      const res = await staffFetch('https://spc-members.onrender.com/api/tournament/undo', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Staff-Pw':'Cowcow808'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({tournament_id:tournament.id}),
       });
+      if(!res) return;
       const data = await res.json();
       if(!res.ok||!data.success){ alert('Undo failed: '+(data.error||res.statusText)); setIsCommitting(false); return; }
       markTournamentUncommitted(tournament.id);

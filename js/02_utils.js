@@ -167,6 +167,61 @@ function deriveInheritance(parents, aliases){
   return {entries,busted,prizePool:Math.max(poolRaw,guar),rawPool:poolRaw,guarantee:guar,players,parents:info,chained,
     unique:Object.keys(groups).length,duplicates,flags,extraBags,chips:Object.keys(groups).reduce((a,k)=>a+Math.max.apply(null,groups[k].map(p=>p.chipCount||0)),0)};
 }
+/* ---- Staff password for the SPC members server. NEVER put the value in this repo (it is public).
+   Asked once per Mac, kept in localStorage. window.prompt() does not exist in Electron, so this draws its own dialog. ---- */
+const STAFF_PW_KEY='spc_staff_pw';
+let _staffPwAsk=null;
+function askStaffPw(message){
+  if(_staffPwAsk) return _staffPwAsk;
+  _staffPwAsk=new Promise(resolve=>{
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
+    const box=document.createElement('div');
+    box.style.cssText='background:#10180f;border:1px solid #3dba6f;border-radius:10px;padding:20px 22px;width:360px;color:#d8ead9';
+    const t=document.createElement('div'); t.textContent=message; t.style.cssText='font-size:14px;margin-bottom:12px;line-height:1.4';
+    const inp=document.createElement('input'); inp.type='password'; inp.autocomplete='off'; inp.style.cssText='width:100%;box-sizing:border-box;padding:9px 10px;font-size:15px;border-radius:6px;border:1px solid #2a4a35;background:#0b1610;color:#fff';
+    const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;justify-content:flex-end;margin-top:14px';
+    const mk=(txt,primary)=>{const b=document.createElement('button'); b.textContent=txt; b.type='button'; b.style.cssText='padding:7px 16px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid '+(primary?'#3dba6f':'#2a4a35')+';background:'+(primary?'#1a3a22':'none')+';color:'+(primary?'#3dba6f':'#7aaa82'); return b;};
+    const cancel=mk('Cancel',false), ok=mk('OK',true);
+    const done=v=>{ try{document.body.removeChild(ov);}catch(e){} _staffPwAsk=null; resolve(v); };
+    cancel.onclick=()=>done(null); ok.onclick=()=>done(inp.value||null);
+    inp.onkeydown=e=>{ if(e.key==='Enter') ok.onclick(); else if(e.key==='Escape') cancel.onclick(); };
+    row.appendChild(cancel); row.appendChild(ok); box.appendChild(t); box.appendChild(inp); box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
+    setTimeout(()=>inp.focus(),30);
+  });
+  return _staffPwAsk;
+}
+function readStaffPw(){ try{ return localStorage.getItem(STAFF_PW_KEY)||''; }catch(e){ return ''; } }
+function clearStaffPw(){ try{ localStorage.removeItem(STAFF_PW_KEY); }catch(e){} }
+/* Returns the stored password, asking once if there is none. null if cancelled. */
+async function getStaffPw(){
+  const have=readStaffPw(); if(have) return have;
+  const pw=await askStaffPw('Staff password for the SPC members server (asked once on this Mac):');
+  if(!pw) return null;
+  try{ localStorage.setItem(STAFF_PW_KEY,pw); }catch(e){}
+  return pw;
+}
+async function changeStaffPw(){
+  clearStaffPw();
+  const pw=await getStaffPw();
+  alert(pw?'Staff password saved on this Mac.':'No staff password saved. You will be asked next time it is needed.');
+}
+/* fetch() to the members server with the staff header. Returns null (nothing sent) if there is no password or it was
+   rejected (401/403): the stored value is cleared and the caller just stops. Never retries. opts.noPrompt: do not ask. */
+async function staffFetch(url, opts){
+  opts=opts||{};
+  let pw=readStaffPw();
+  if(!pw){
+    if(opts.noPrompt) return null;
+    pw=await getStaffPw();
+    if(!pw){ alert('Not sent: no staff password.'); return null; }
+  }
+  const o={...opts}; delete o.noPrompt;
+  o.headers={...(opts.headers||{}),'X-Staff-Pw':pw};
+  const res=await fetch(url,o);
+  if(res.status===401||res.status===403){ clearStaffPw(); alert("Staff password was rejected. You'll be asked for it again."); return null; }
+  return res;
+}
 function evLabel(t){ const c=(typeof EVENT_CONFIGS!=='undefined'&&EVENT_CONFIGS[t.eventType])||null; return (c&&c.short)||t.eventShort||t.eventName||t.name||'another event'; }
 /* Tables claimed by OTHER live events (empty and paused ones included). Returns {tableNum: eventName}. */
 function tablesElsewhere(liveMap, exceptId) {
