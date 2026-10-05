@@ -107,7 +107,6 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
             <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
             <UpdateButton liveRows={liveRows}/>
             <StorageLine/>
-            <button className="home-update" onClick={changeStaffPw} title="Clears the saved staff password and asks again">Change staff password</button>
           </div>
         </div>
         {liveRows&&liveRows.length>0&&(

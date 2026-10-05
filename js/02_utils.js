@@ -216,11 +216,6 @@ async function getStaffPw(){
   try{ localStorage.setItem(STAFF_PW_KEY,pw); }catch(e){}
   return pw;
 }
-async function changeStaffPw(){
-  clearStaffPw();
-  const pw=await getStaffPw();
-  alert(pw?'Staff password saved on this Mac.':'No staff password saved. You will be asked next time it is needed.');
-}
 /* fetch() to the members server with the staff header. Returns null (nothing sent) if there is no password or it was
    rejected (401/403): the stored value is cleared and the caller just stops. Never retries. opts.noPrompt: do not ask. */
 async function staffFetch(url, opts){
