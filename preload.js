@@ -35,7 +35,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),   // older: writes files immediately
   stageUpdate: () => ipcRenderer.invoke('update-stage'),            // newer: download and check, change nothing
-  applyUpdate: () => ipcRenderer.invoke('update-apply'),            // then write the staged files together
+  applyUpdate: () => ipcRenderer.invoke('update-apply'),
+  rollbackInfo: () => ipcRenderer.invoke('rollback-info'),          // is there a saved previous version, and when
+  rollbackUpdate: () => ipcRenderer.invoke('rollback-update'),      // put the files of the last update back (then restartApp)            // then write the staged files together
   getUpdateInfo: () => ipcRenderer.invoke('get-update-info'),
   restartApp: () => ipcRenderer.invoke('restart-app'),
 

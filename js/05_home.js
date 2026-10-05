@@ -19,11 +19,32 @@ function StorageLine() {
     {u.pct>60&&<div style={{marginTop:3}}>Largest saved tournaments:{u.top.map(t=>(<div key={t.key}>{t.name+' '+sz(t.bytes)}</div>))}<div style={{marginTop:3}}>Delete old tournaments from the list below to free space.</div></div>}
   </div>);
 }
-function UpdateButton() {
+function UpdateButton({liveRows}) {
   const [busy,setBusy]=useState('');
+  const [rb,setRb]=useState(null);
   const api=typeof window.electronAPI!=='undefined'?window.electronAPI:null;
   const newApi=!!(api&&api.stageUpdate&&api.applyUpdate);
   const oldApi=!!(api&&api.checkForUpdates);
+  /* Updating restarts the app. If events are live they resume, but say so first. */
+  function liveWarn(){
+    const rows=liveRows||[]; if(!rows.length) return '';
+    const n=rows.length;
+    return n+(n===1?' event is':' events are')+' live ('+rows.map(r=>r.short).join(', ')+'). The app will restart and '+(n===1?'it':'they')+' will resume. Only update during an event if Terry has told you to.\n\n';
+  }
+  useEffect(()=>{ if(api&&api.rollbackInfo) api.rollbackInfo().then(setRb).catch(()=>{}); },[busy]);
+  const when=ms=>ms?new Date(ms).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'?';
+  async function rollback(){
+    if(busy||!api||!api.rollbackUpdate||!rb||!rb.exists) return;
+    const back=rb.previousUpdatedAt?when(Date.parse(rb.previousUpdatedAt)):'before the last update';
+    if(!confirm(liveWarn()+'Roll back the last update?\n\nThis puts back '+rb.count+' file(s) as they were on '+back+' (the update was applied on '+when(rb.appliedAt)+') and restarts the app.')) return;
+    setBusy('Rolling back...');
+    try{
+      const r=await api.rollbackUpdate();
+      if(!r.success){ alert('Roll back failed: '+(r.error||'Unknown error')+'\n\nNothing was changed.'); return; }
+      api.restartApp();
+    }catch(e){ alert('Roll back error: '+e.message+'\n\nNothing was changed.'); }
+    finally{ setBusy(''); }
+  }
   async function check(){
     if(busy||!(newApi||oldApi)) return;
     if(newApi){
@@ -33,7 +54,7 @@ function UpdateButton() {
         if(!r.success){ alert('Update check failed: '+(r.error||'Unknown error')+'\n\nNothing was changed.'); return; }
         if(!r.changed.length){ alert('Already up to date ('+r.ref+'). Nothing was changed.'); return; }
         const list=r.changed.slice(0,10).join(', ')+(r.changed.length>10?', ...':'');
-        if(!confirm('Update available ('+r.ref+'): '+r.changed.length+' of '+r.total+' files change:\n'+list+'\n\nNothing has been changed yet. Apply the update and restart now?')) return;
+        if(!confirm(liveWarn()+'Update available ('+r.ref+'): '+r.changed.length+' of '+r.total+' files change:\n'+list+'\n\nNothing has been changed yet. Apply the update and restart now?')) return;
         setBusy('Applying...');
         const a=await api.applyUpdate();
         if(!a.success){ alert('Update failed: '+(a.error||'Unknown error')+'\n\nThe existing files were left as they were.'); return; }
@@ -41,7 +62,7 @@ function UpdateButton() {
       }catch(e){ alert('Update error: '+e.message+'\n\nNothing was changed.'); }
       finally{ setBusy(''); }
     } else {
-      if(!confirm('This app version applies an update the moment it downloads it, and "Cancel" later does not undo it. Check for updates and apply now?')) return;
+      if(!confirm(liveWarn()+'This app version applies an update the moment it downloads it, and "Cancel" later does not undo it. Check for updates and apply now?')) return;
       setBusy('Checking...');
       try{
         const r=await api.checkForUpdates();
@@ -52,7 +73,13 @@ function UpdateButton() {
     }
   }
   if(!(newApi||oldApi)) return null;
-  return <button className="home-update" onClick={check} disabled={!!busy}>{busy||'Check for updates'}</button>;
+  return(<>
+    <button className="home-update" onClick={check} disabled={!!busy}>{busy||'Check for updates'}</button>
+    {rb&&rb.exists&&(<div style={{textAlign:'right'}}>
+      <button className="home-update" onClick={rollback} disabled={!!busy}>Roll back last update</button>
+      <div style={{fontSize:10,color:'#527a5c',marginTop:3,maxWidth:260}}>{'Back to the version of '+(rb.previousUpdatedAt?when(Date.parse(rb.previousUpdatedAt)):'before the update')+'. Replaced '+when(rb.appliedAt)+' (update '+rb.ref+').'}</div>
+    </div>)}
+  </>);
 }
 
 function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport,liveRows,onFocusLive}) {
@@ -78,7 +105,7 @@ function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExport
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:10}}>
             <img src={SPC_LOGO} alt="SPC" style={{height:90,objectFit:'contain',opacity:.85,marginTop:4}}/>
-            <UpdateButton/>
+            <UpdateButton liveRows={liveRows}/>
             <StorageLine/>
             <button className="home-update" onClick={changeStaffPw} title="Clears the saved staff password and asks again">Change staff password</button>
           </div>

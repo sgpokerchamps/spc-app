@@ -402,12 +402,65 @@ async function stageUpdateCore(download, resolveRef, updateDir) {
   });
   return { at: Date.now(), ref: ref, files: files, changed: changed };
 }
+// updates/previous/ holds the files the last update replaced (previous/files/<rel>) and previous/meta.json.
+function snapshotForRollback(staged, updateDir, now) {
+  // Built aside as previous.new; it replaces 'previous' only after the update itself has succeeded, so a failed update never
+  // costs you the older rollback point.
+  var prev = path.join(updateDir, 'previous.new');
+  fs.rmSync(prev, { recursive: true, force: true });
+  fs.mkdirSync(path.join(prev, 'files'), { recursive: true });
+  var had = [], added = [], oldAt = null;
+  staged.changed.forEach(function(rel) {
+    var src = path.join(updateDir, rel);
+    if (fs.existsSync(src)) {
+      var dst = path.join(prev, 'files', rel);
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.copyFileSync(src, dst);
+      had.push(rel);
+    } else added.push(rel);
+  });
+  var tsFile = path.join(updateDir, 'updated_at.txt');
+  if (fs.existsSync(tsFile)) { oldAt = fs.readFileSync(tsFile, 'utf8').trim(); fs.copyFileSync(tsFile, path.join(prev, 'files', 'updated_at.txt')); }
+  fs.writeFileSync(path.join(prev, 'meta.json'), JSON.stringify({ appliedAt: now, ref: String(staged.ref || ''), previousUpdatedAt: oldAt, had: had, added: added }), 'utf8');
+}
+function rollbackInfoCore(updateDir) {
+  try {
+    var m = JSON.parse(fs.readFileSync(path.join(updateDir, 'previous', 'meta.json'), 'utf8'));
+    return { exists: true, appliedAt: m.appliedAt, previousUpdatedAt: m.previousUpdatedAt, ref: String(m.ref || '').slice(0, 7), count: (m.had || []).length + (m.added || []).length };
+  } catch (e) { return { exists: false }; }
+}
+// Put the files back that the last update replaced, and remove the ones it added. All-or-nothing: every saved file is checked
+// first, each is written to a temp name, then renamed. The snapshot is removed afterwards (no flip-flopping between versions).
+function rollbackCore(updateDir) {
+  var prev = path.join(updateDir, 'previous'), m;
+  try { m = JSON.parse(fs.readFileSync(path.join(prev, 'meta.json'), 'utf8')); } catch (e) { return { success: false, error: 'There is no previous version saved.' }; }
+  var restore = (m.had || []).slice(); if (m.previousUpdatedAt !== null && m.previousUpdatedAt !== undefined) restore.push('updated_at.txt');
+  var tmps = [];
+  try {
+    restore.forEach(function(rel) { if (!fs.existsSync(path.join(prev, 'files', rel))) throw new Error('the saved copy of ' + rel + ' is missing'); });
+    restore.forEach(function(rel) {
+      var dest = path.join(updateDir, rel); fs.mkdirSync(path.dirname(dest), { recursive: true });
+      var tmp = dest + '.rollback-tmp'; fs.copyFileSync(path.join(prev, 'files', rel), tmp); tmps.push([tmp, dest]);
+    });
+    tmps.forEach(function(p) { fs.renameSync(p[0], p[1]); });
+    (m.added || []).forEach(function(rel) { try { fs.unlinkSync(path.join(updateDir, rel)); } catch (e) {} });
+    fs.rmSync(prev, { recursive: true, force: true });
+    return { success: true, restored: restore.length, removed: (m.added || []).length };
+  } catch (err) {
+    tmps.forEach(function(p) { try { fs.unlinkSync(p[0]); } catch (e) {} });
+    return { success: false, error: err.message + '. Nothing was changed.' };
+  }
+}
 // Write the changed files: each to a temp name first, then rename them all. On any failure the temp files are removed
 // and the existing files are left exactly as they were.
 function applyStagedCore(staged, updateDir, now) {
   if (!staged || (now - staged.at) > STAGE_MAX_AGE_MS) return { success: false, error: 'No fresh update is staged. Check again.' };
   var tmps = [];
   try {
+    // Save what is about to be replaced so the last update can be rolled back (only the most recent one is kept).
+    // If this fails nothing is changed.
+    try { snapshotForRollback(staged, updateDir, now); }
+    catch (e) { try { fs.rmSync(path.join(updateDir, 'previous.new'), { recursive: true, force: true }); } catch (e2) {} return { success: false, error: 'Could not save the previous version, so nothing was changed: ' + e.message }; }
     staged.changed.forEach(function(rel) {
       var dest = path.join(updateDir, rel);
       fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -417,9 +470,11 @@ function applyStagedCore(staged, updateDir, now) {
     });
     tmps.forEach(function(p) { fs.renameSync(p[0], p[1]); });
     fs.writeFileSync(path.join(updateDir, 'updated_at.txt'), new Date().toISOString(), 'utf8');
+    try { fs.rmSync(path.join(updateDir, 'previous'), { recursive: true, force: true }); fs.renameSync(path.join(updateDir, 'previous.new'), path.join(updateDir, 'previous')); } catch (e) { /* update is applied; just no rollback point */ }
     return { success: true, files: staged.changed.slice() };
   } catch (err) {
     tmps.forEach(function(p) { try { fs.unlinkSync(p[0]); } catch (e) {} });
+    try { fs.rmSync(path.join(updateDir, 'previous.new'), { recursive: true, force: true }); } catch (e) {}
     return { success: false, error: err.message };
   }
 }
@@ -442,6 +497,8 @@ ipcMain.handle('update-stage', async () => {
     return { success: false, error: err.message };
   }
 });
+ipcMain.handle('rollback-info', () => rollbackInfoCore(getUpdateDir()));
+ipcMain.handle('rollback-update', () => rollbackCore(getUpdateDir()));
 ipcMain.handle('update-apply', async () => {
   var r = applyStagedCore(stagedUpdate, getUpdateDir(), Date.now());
   if (r.success) { stagedUpdate = null; try { ensureUpdateAssets(); } catch (e) {} }
