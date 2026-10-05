@@ -25,6 +25,14 @@ let serverPort = (function() {
 let localIP = null;
 // The second instance of the dual-instance fallback (--port=NNNN or SPC_PORT) must not grab the HDMI output as well.
 const isSecondaryInstance = process.argv.some(function(a) { return a.indexOf('--port=') === 0; }) || !!process.env.SPC_PORT;
+// The primary copy's data folder holds the shared hot-update files. A second copy gets its OWN data folder, otherwise Chromium
+// gives it an empty, never-saved storage (the first copy holds the lock) and everything it holds is lost on quit or crash.
+const primaryUserData = app.getPath('userData');
+if (isSecondaryInstance) {
+  const secondaryData = path.join(app.getPath('appData'), path.basename(primaryUserData) + '-port' + serverPort);
+  try { fs.mkdirSync(secondaryData, { recursive: true }); app.setPath('userData', secondaryData); app.setPath('sessionData', secondaryData); }
+  catch (e) { console.error('Could not set a separate data folder for the second copy: ' + e.message); }
+}
 let mainScreenWindow = null;      // the venue's main screen: full screen on the HDMI output, shows /display?screen=main
 let mainScreenSuppressed = false; // set when the TD closes it from the desk; cleared by Reopen
 let mainScreenSyncTimer = null;
@@ -36,7 +44,7 @@ const UPDATE_REPO = 'sgpokerchamps/spc-app';
 const UPDATE_BRANCH = 'main';
 
 function getUpdateDir() {
-  var p = path.join(app.getPath('userData'), 'updates');
+  var p = path.join(primaryUserData, 'updates'); // both copies run the same hot-updated files
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
   return p;
 }
