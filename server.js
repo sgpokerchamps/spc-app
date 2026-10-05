@@ -902,11 +902,21 @@ function getDisplayHTML() {
 module.exports = {
   start: function(port, callback) {
     httpServer = http.createServer(function(req, res) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
       var path = url.parse(req.url).pathname;
+      // Cross-origin access is allowed ONLY for the two read-only endpoints the desk window itself needs (/api/net, /health).
+      // Everything else is same-origin only: no CORS headers, and no preflight answer, so a web page on another origin cannot POST.
+      var corsOpen = (path === '/api/net' || path === '/health');
+      if (corsOpen) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Cache-Control,Pragma');
+      }
+      if (req.method === 'OPTIONS') { res.writeHead(corsOpen ? 204 : 404); res.end(); return; }
+      // A simple cross-origin POST (text/plain, no-cors) skips preflight and would still run, so refuse any POST whose Origin is not this server.
+      if (req.method === 'POST') {
+        var orig = req.headers.origin;
+        if (orig && orig !== 'http://' + req.headers.host && orig !== 'https://' + req.headers.host) { res.writeHead(403, {'Content-Type': 'application/json'}); res.end('{"ok":false,"error":"cross_origin","message":"Cross-origin requests are not allowed."}'); return; }
+      }
       if (path === '/') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getFloorHTML()); }
       else if (path === '/register') { res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}); res.end(getRegisterHTML()); }
       else if (path === '/api/net') { res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}); res.end(JSON.stringify({ addrs: lanAddrs(), serverNow: Date.now() })); }
