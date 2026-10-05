@@ -35,6 +35,7 @@ function RegisterView({tournament, onRegister, onSetMode, onAssignSeat, serverIn
         });
         localStorage.setItem('spc_members_cache', JSON.stringify(cache));
         localStorage.setItem('spc_members_synced_at', data.syncedAt);
+        if(window._spcSendMembers) window._spcSendMembers();
         setSyncStatus(`${data.members.length} members · synced ${new Date(data.syncedAt).toLocaleString()}`);
       }
     } catch(e) {

@@ -79,7 +79,6 @@ function buildTournamentPayload(tournament) {
         satellite:satelliteBroadcast(tournament),
         dealMade:tournament.dealMade||false,
         regLog:(tournament.regLog||[]).slice(0,1000).map(r=>{const lv=tournament.players.find(p=>p.name===r.name&&p.status==='active');return{...r,tableNum:lv&&lv.tableNum?lv.tableNum:r.tableNum,seatNum:lv&&lv.seatNum?lv.seatNum:r.seatNum};}),
-        members:(()=>{try{const c=JSON.parse(localStorage.getItem('spc_members_cache')||'{}');return Object.entries(c).map(([id,v])=>({member_id:id,name:typeof v==='string'?v:v.name,country:typeof v==='object'?v.country:null}));}catch(e){return[];}})(),
   });
 }
 
@@ -213,6 +212,17 @@ function App() {
       }
     });
   },[live,tickSecond]);
+
+  /* Member list for the counter: sent on its own at startup, again once the server reports ready, and whenever the member
+     cache changes (Sync Members). It is no longer part of every event payload. */
+  useEffect(()=>{
+    if(typeof window.electronAPI==='undefined') return;
+    window._spcSendMembers = sendMembersToServer;
+    sendMembersToServer();
+    const t1=setTimeout(sendMembersToServer,4000);
+    window.addEventListener('spc-server-ready',sendMembersToServer);
+    return()=>{ clearTimeout(t1); window.removeEventListener('spc-server-ready',sendMembersToServer); };
+  },[]);
 
   /* Tournament state sync - heavy payload, only for events whose object changed since last sent */
   useEffect(()=>{

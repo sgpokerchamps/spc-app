@@ -641,6 +641,17 @@ ${standings.map(p=>{const po=payoutMap[p.bustPosition];const amt=po?po.amount:0;
     return html;
 }
 
+/* The member list as the floor server wants it (for the counter's /api/members). Read from the sync cache in localStorage. */
+function membersForServer() {
+  try {
+    const c = JSON.parse(localStorage.getItem('spc_members_cache') || '{}');
+    return Object.entries(c).map(([id, v]) => ({ member_id: id, name: typeof v === 'string' ? v : v.name, country: typeof v === 'object' ? v.country : null }));
+  } catch (e) { return []; }
+}
+/* Send the member list to the floor server on its own (never inside the per-event payload). */
+function sendMembersToServer() {
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.sendTournamentState) window.electronAPI.sendTournamentState({ _membersOnly: true, members: membersForServer() });
+}
 /* The exact content of Export full save (.spc). extra: optional fields added at the top (the file backup adds _backupAt). */
 function tournamentExportJson(t, extra) {
   const payload = { _spcExport: 'tournament', _version: 1, ...(extra||{}), ...t };

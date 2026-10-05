@@ -973,11 +973,9 @@ module.exports = {
         else if (!hasEvent(evId)) sendJson(res, 404, { ok: false, error: 'unknown_event', message: 'That event is no longer live on the desk.' });
         else {
           var slot = liveEvents[evId];
-          if (url.parse(req.url, true).query.lite) {
-            // The counter polls several events every 2s: leave the (large) members list out; it has its own route.
-            var lt = slot.tournament ? Object.assign({}, slot.tournament) : slot.tournament; if (lt) delete lt.members;
-            sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: lt, tablesElsewhere: tablesElsewhere(evId) });
-          } else sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: slot.tournament, members: membersList, tablesElsewhere: tablesElsewhere(evId) });
+          // The member list is never part of this response (it is large and polled every 1-2 s): it has its own route, /api/members.
+          // ?lite=1 is still accepted and now means the same thing as no parameter.
+          sendJson(res, 200, { eventId: evId, clock: slot.clock, tournament: slot.tournament, tablesElsewhere: tablesElsewhere(evId) });
         }
       }
       else if (path === '/api/action' && req.method === 'POST') {
@@ -1045,8 +1043,9 @@ module.exports = {
       return;
     }
     if (!s || !s.eventId) { console.warn('broadcastTournamentState: payload has no eventId, ignored'); return; }
+    // An older desk build may still send members inside the event payload: keep the list, never store it with the event.
+    if (s.members) { membersList = s.members; s = Object.assign({}, s); delete s.members; }
     eventSlot(s.eventId).tournament = s;
-    if (s.members) membersList = s.members;
   },
   broadcastMembers: function(m) { membersList = m; },
   onFloorAction: function(cb) { floorActionCallback = cb; },
