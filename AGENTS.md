@@ -1,3 +1,5 @@
+**Never put credentials in this repo. It is public.**
+
 <!-- BEGIN:spc-app-project-context -->
 # SPC Tournament Director (TD) App — Project Context
 
@@ -26,6 +28,7 @@ Electron desktop app used to run live poker tournaments on the M/V Aegean Paradi
 - Devices: MacBook Pro (primary/source of truth), MacBook Neo (event runner), Lenovo Windows (counter URL duties)
 - HDMI connects to whichever machine is running the visible event
 - Dual-instance support: `open -n "/Applications/SPC Tournament Director.app" --args --port=3457`
+  - WARNING: on a build without the Oct 2026 `main.js` data-folder change, the second copy's data is never saved (tested 5 Oct 2026). Do not use it; see spc-docs ARCHITECTURE.md "Running a second instance".
 
 ## Data model
 - localStorage for tournament state persistence
