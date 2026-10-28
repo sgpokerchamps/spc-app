@@ -20,6 +20,7 @@ const EVENT_CONFIGS = {
   miniRoller:    { name:'Mini Roller',    short:'Mini Roller',    group:'Mini Roller',    subtitle:'',         isMainEvent:false, bgDeep:'#0a3018', buyin:1000, prizeComponent:883, adminFeePercent:4, itmPercent:15, guarantee:30000,  stack:30000, color:'#3dba6f', suit:'♥', levelMins:40, lateRegLevel:8 },
   mysteryBounty: { name:'Mystery Bounty', short:'Mystery Bounty', group:'Mystery Bounty', subtitle:'',         isMainEvent:false, bgDeep:'#2a1c4a', buyin:400,  prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0,      stack:15000, color:'#9b7bce', suit:'◆', levelMins:20, bountyAmount:90, lateRegLevel:8 },
   satellite:     { name:'Satellite',      short:'Satellite',      group:'Satellite',      subtitle:'',         isMainEvent:false, bgDeep:'#0a2240', buyin:60,   prizeComponent:60,  adminFeePercent:0, itmPercent:0,  guarantee:0,      seatValue:600, guaranteedSeats:10, stack:2000,  color:'#4fa8d4', suit:'♣', levelMins:10, lateRegLevel:6 },
+  miniMain:      { name:'Mini Main Event', short:'Mini Main', group:'Mini Main Event', subtitle:'', isMainEvent:false, bgDeep:'#2a0a18', buyin:400, prizeComponent:350, adminFeePercent:4, itmPercent:15, guarantee:0, stack:15000, color:'#e0609a', suit:'★', levelMins:20, reentryUntilLevel:8, maxReentries:Infinity, lateRegLevel:8 },
 };
 
 const EVENT_THEMES = {
@@ -31,6 +32,7 @@ const EVENT_THEMES = {
   miniRoller:   { accent:'#3dba6f', sidebarBg:'#04120a', activeBg:'#0b2014', activeNav:'#112016' },
   mysteryBounty:{ accent:'#9b7bce', sidebarBg:'#0c0814', activeBg:'#221a32', activeNav:'#1e1430' },
   satellite:    { accent:'#4fa8d4', sidebarBg:'#04101a', activeBg:'#0f2438', activeNav:'#112030' },
+  miniMain:     { accent:'#e0609a', sidebarBg:'#16060e', activeBg:'#2e0f1e', activeNav:'#2a0e1a' },
 };
 function getTheme(et){ return EVENT_THEMES[et]||EVENT_THEMES.miniRoller; }
 
@@ -41,6 +43,7 @@ const EVENT_TYPE_LABELS = {
   miniRoller: 'Mini Roller',
   mysteryBounty: 'Mystery Bounty',
   satellite: 'Satellite',
+  miniMain: 'Mini Main Event',
 };
 function getEventType(eventKey){ return EVENT_TYPE_LABELS[eventKey] || (EVENT_CONFIGS[eventKey]||{}).name || eventKey; }
 function canCommitTournament(eventKey){ return !['me_1a','me_1b','me_1c','me_1d','satellite'].includes(eventKey); }
@@ -195,6 +198,35 @@ const STRUCTURES = {
     {level:10, sb:3000, bb:6000,  ante:0, mins:10},
     {level:11, sb:4000, bb:8000,  ante:0, mins:10},
     {level:12, sb:5000, bb:10000, ante:0, mins:10},
+  ],
+  miniMain: [
+    {level:1, sb:100, bb:100, ante:100, mins:20},
+    {level:2, sb:100, bb:200, ante:200, mins:20},
+    {level:3, sb:200, bb:300, ante:300, mins:20},
+    {level:4, sb:200, bb:400, ante:400, mins:20},
+    {level:5, sb:300, bb:600, ante:600, mins:20},
+    {level:6, sb:400, bb:800, ante:800, mins:20},
+    {isBreak:true, mins:10, note:''},
+    {level:7, sb:600, bb:1200, ante:1200, mins:20},
+    {level:8, sb:800, bb:1600, ante:1600, mins:20},
+    {level:9, sb:1200, bb:2400, ante:2400, mins:20},
+    {level:10, sb:1600, bb:3200, ante:3200, mins:20},
+    {level:11, sb:2000, bb:4000, ante:4000, mins:20},
+    {level:12, sb:3000, bb:6000, ante:6000, mins:20},
+    {isBreak:true, mins:10, note:''},
+    {level:13, sb:4000, bb:8000, ante:8000, mins:20},
+    {level:14, sb:6000, bb:12000, ante:12000, mins:20},
+    {level:15, sb:8000, bb:16000, ante:16000, mins:20},
+    {level:16, sb:12000, bb:24000, ante:24000, mins:20},
+    {level:17, sb:16000, bb:32000, ante:32000, mins:20},
+    {level:18, sb:20000, bb:40000, ante:40000, mins:20},
+    {isBreak:true, mins:10, note:''},
+    {level:19, sb:25000, bb:50000, ante:50000, mins:20},
+    {level:20, sb:30000, bb:60000, ante:60000, mins:20},
+    {level:21, sb:40000, bb:80000, ante:80000, mins:20},
+    {level:22, sb:50000, bb:100000, ante:100000, mins:20},
+    {level:23, sb:60000, bb:120000, ante:120000, mins:20},
+    {level:24, sb:80000, bb:160000, ante:160000, mins:20},
   ],
 };
 

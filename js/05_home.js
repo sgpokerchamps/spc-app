@@ -85,6 +85,7 @@ function UpdateButton({liveRows}) {
 function HomeScreen({onSelect,savedIndex,onResume,onDelete,onExportSave,onExportTemplate,onImport,liveRows,onFocusLive}) {
   const others=[
     {key:'miniRoller',    suit:'♥',color:'#3dba6f',sub:'40-min levels · 27 levels'},
+    {key:'miniMain',      suit:'★',color:'#e0609a',sub:'20-min levels · 24 levels'},
     {key:'mysteryBounty', suit:'◆',color:'#9b7bce',sub:'20-min levels · 18 levels'},
     {key:'satellite',     suit:'♣',color:'#4fa8d4',sub:'10-min levels · 12 levels · No antes'},
   ];
