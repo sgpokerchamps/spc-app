@@ -555,6 +555,23 @@ const SPC_PAYOUT_TABLE = [
   {minP:766,maxP:837,paid:108,pcts:[17.8,12.75,7.85,6.092,5.075,4.12,3.2,2.325,1.455,1.05,1.05,1.05,0.925,0.925,0.925,0.82,0.82,0.82,0.72,0.72,0.72,0.63,0.63,0.63,0.55,0.55,0.55,0.475,0.475,0.475,0.42,0.42,0.42,0.42,0.42,0.42,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.385,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.355,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.327,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.275,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.255,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.24,0.23,0.23,0.23,0.23,0.23,0.23,0.23,0.23,0.23]},
 ];
 
+// One place that turns percentages into payout amounts, so generate, import and pool changes all round
+// and balance the same way. Floors each amount to `multiple` (50 on Mystery Bounty, else 100), then the
+// house tops up 1st by the shortfall (rounded up to `multiple`).
+function payoutAmountsFromPcts(pcts, pool, multiple=100) {
+  const rows = pcts.map((pct, i) => {
+    const raw = pct / 100 * pool;
+    const amount = pool > 0 ? Math.floor(raw / multiple) * multiple : 0;
+    return {position: i+1, pct: Math.round(pct*100)/100, amount};
+  });
+  if (rows.length && pool > 0) {
+    const allocated = rows.reduce((s,r) => s+r.amount, 0);
+    const diff = pool - allocated;
+    if (diff > 0) rows[0].amount += Math.ceil(diff / multiple) * multiple;
+  }
+  return rows;
+}
+
 function generatePayoutRows(entries, prizePool, roundToFifty=false, placesOverride=null) {
   if (entries <= 0 || prizePool <= 0) return [];
   // Find the matching bracket
@@ -572,17 +589,90 @@ function generatePayoutRows(entries, prizePool, roundToFifty=false, placesOverri
       if (sum > 0) bracket = {...bracket, pcts: bracket.pcts.map(p=>p/sum*100)};
     }
   }
-  const multiple = roundToFifty ? 50 : 100;
-  let rows = bracket.pcts.map((pct, i) => {
-    const raw = pct / 100 * prizePool;
-    const amount = Math.floor(raw / multiple) * multiple;
-    return {position: i+1, pct: Math.round(pct*100)/100, amount};
-  });
-  // House tops up: sum all amounts, difference goes to 1st place
-  const allocated = rows.reduce((s,r) => s+r.amount, 0);
-  const diff = prizePool - allocated;
-  if (diff > 0) rows[0].amount += Math.ceil(diff / multiple) * multiple;
-  return rows;
+  return payoutAmountsFromPcts(bracket.pcts, prizePool, roundToFifty ? 50 : 100);
+}
+
+// Parses a pasted payout structure (percentages only; see ARCHITECTURE.md). Pure: no state, no DOM.
+//   SPC PAYOUTS            <- required first line (case-insensitive); '#' notes and ``` fences are ignored
+//   1: 24                  <- place: percent
+//   10-12: 2.1             <- from-to: percent (every place in the range gets that percent)
+// opts (optional): {entries, itmPercent} enable the warnings that depend on the field size.
+// Returns {rows:[{position,pct}], errors:[string], warnings:[string], total, canScale}. Apply is only allowed when
+// errors is empty. canScale is true when the only blocker is a total that is not 100 (offer Scale to 100%).
+function parsePayoutStructure(text, opts) {
+  const o = opts || {};
+  const errors = [], warnings = [];
+  const rows = [];
+  const lines = String(text == null ? '' : text).replace(/^\uFEFF/, '').split(/\r\n|\r|\n/);
+  let headerSeen = false, nextPlace = 1, otherErrors = false;
+  const err = (n, msg) => { errors.push('Line ' + n + ': ' + msg); otherErrors = true; };
+  for (let i = 0; i < lines.length; i++) {
+    const n = i + 1;
+    const raw = lines[i].trim();
+    if (!raw || raw.charAt(0) === '#' || raw.indexOf('```') === 0) continue;
+    if (!headerSeen) {
+      if (/^SPC\s+PAYOUTS$/i.test(raw)) { headerSeen = true; continue; }
+      errors.push('Line ' + n + ': the first line must be "SPC PAYOUTS" (this does not look like a payout structure)');
+      otherErrors = true;
+      return {rows: [], errors, warnings, total: 0, canScale: false};
+    }
+    const line = raw.replace(/[\u2013\u2014\u2212]/g, '-').replace(/%/g, '');
+    const m = line.match(/^(\d+)\s*(?:-\s*(\d+))?\s*:\s*(.+)$/);
+    if (!m) { err(n, 'cannot read "' + raw + '" (expected "place: percent" or "from-to: percent")'); continue; }
+    const from = parseInt(m[1], 10), to = m[2] != null ? parseInt(m[2], 10) : from;
+    const pctText = m[3].trim();
+    // A bad percent still claims its places, so the lines after it are not also reported as gaps.
+    const claim = () => { if (from >= 1 && to >= from && to <= 1000 && from === nextPlace) nextPlace = to + 1; };
+    if (/\d,\d/.test(pctText)) { err(n, 'use a point for decimals, not a comma ("' + pctText + '")'); claim(); continue; }
+    if (!/^-?\d+(\.\d+)?$/.test(pctText)) { err(n, 'cannot read the percent "' + pctText + '"'); claim(); continue; }
+    const pct = parseFloat(pctText);
+    if (!(pct > 0)) { err(n, 'percent must be greater than zero (got ' + pctText + ')'); claim(); continue; }
+    if (from < 1) { err(n, 'places start at 1 (got ' + from + ')'); continue; }
+    if (to < from) { err(n, 'range ' + from + '-' + to + ' runs backwards'); continue; }
+    if (to > 1000) { err(n, 'place ' + to + ' is beyond the 1000 place limit'); continue; }
+    if (from < nextPlace) { err(n, 'place ' + from + (to > from ? ' (range ' + from + '-' + to + ')' : '') + ' overlaps or is out of order (places so far run to ' + (nextPlace - 1) + ')'); continue; }
+    if (from > nextPlace && nextPlace === 1) { err(n, 'places must start at 1 (this starts at ' + from + ')'); }
+    else if (from > nextPlace) { err(n, 'gap: place ' + nextPlace + (from - 1 > nextPlace ? ' to ' + (from - 1) : '') + ' is missing before place ' + from); }
+    for (let p = from; p <= to; p++) rows.push({position: p, pct});
+    nextPlace = to + 1;
+  }
+  if (!headerSeen) {
+    errors.push('The first line must be "SPC PAYOUTS" (nothing to read)');
+    return {rows: [], errors, warnings, total: 0, canScale: false};
+  }
+  if (!rows.length && !errors.length) errors.push('No places found after the "SPC PAYOUTS" line');
+  // Re-number by position in case a gap error left holes; the structure is blocked anyway.
+  const total = Math.round(rows.reduce((s, r) => s + r.pct, 0) * 10000) / 10000;
+  let canScale = false;
+  // The total is only meaningful (and only scalable) when every line was readable and the places are contiguous.
+  if (rows.length && !otherErrors && Math.abs(total - 100) > 0.01) {
+    errors.push('Percentages total ' + total + '%, not 100%');
+    canScale = total > 0;
+  }
+  if (!errors.length) {
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i].pct > rows[i - 1].pct) warnings.push('Place ' + rows[i].position + ' (' + rows[i].pct + '%) pays more than place ' + rows[i - 1].position + ' (' + rows[i - 1].pct + '%)');
+    }
+    const paid = rows.length, entries = o.entries || 0, itm = o.itmPercent || 0;
+    if (entries > 0 && paid > entries) warnings.push(paid + ' paid places but only ' + entries + ' entries so far');
+    if (entries > 0 && itm > 0) {
+      const suggested = Math.max(1, Math.round(entries * itm / 100));
+      if (paid < suggested * 0.8) warnings.push(paid + ' paid places is fewer than the ' + itm + '% ITM suggests (about ' + suggested + ' of ' + entries + ' entries)');
+      else if (paid > suggested * 2) warnings.push(paid + ' paid places is more than double the ' + itm + '% ITM suggests (about ' + suggested + ' of ' + entries + ' entries)');
+    }
+  }
+  return {rows, errors, warnings, total, canScale};
+}
+
+// Scales every percent proportionally so the total is exactly 100 (3 decimals; 1st carries the rounding).
+// Only called from the explicit Scale to 100% button, never silently.
+function scalePayoutPcts(rows) {
+  const total = rows.reduce((s, r) => s + r.pct, 0);
+  if (!(total > 0)) return rows.map(r => ({...r}));
+  const out = rows.map(r => ({...r, pct: Math.round(r.pct / total * 100 * 1000) / 1000}));
+  const drift = Math.round((100 - out.reduce((s, r) => s + r.pct, 0)) * 1000) / 1000;
+  if (out.length) out[0].pct = Math.round((out[0].pct + drift) * 1000) / 1000;
+  return out;
 }
 
 

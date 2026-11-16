@@ -5,6 +5,81 @@
    for Hendon Mob reporting), publish/unpublish controls.
    ============================================================ */
 
+const DEAL_BLOCK_MSG = 'A deal is active. Undo the deal before importing a structure.';
+/* ==== IMPORT PAYOUT STRUCTURE (percentages only; amounts come from the current payout pool) ==== */
+function ImportPayoutPanel({tournament, entries, prizePool, payoutPrizePool, extraBags, extraBagDeduction, isMainEvent, payoutMultiple, onApply, onClose}) {
+  const [text,setText] = useState('');
+  const [res,setRes] = useState(null);
+  const fileRef = useRef(null);
+  const itm = tournament.itmPercent||15;
+  function preview(t){ setRes(parsePayoutStructure(t!=null?t:text,{entries,itmPercent:itm})); }
+  function scaleTo100(){
+    const scaled = scalePayoutPcts(res.rows);
+    const t = 'SPC PAYOUTS\n'+scaled.map(r=>r.position+': '+r.pct).join('\n');
+    setText(t); preview(t);
+  }
+  function loadFile(e){
+    const f = e.target.files&&e.target.files[0];
+    if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{ setText(String(rd.result||'')); setRes(null); };
+    rd.readAsText(f);
+    e.target.value = '';
+  }
+  const valid = !!res && res.errors.length===0 && res.rows.length>0;
+  const amounts = valid && payoutPrizePool>0 ? payoutAmountsFromPcts(res.rows.map(r=>r.pct),payoutPrizePool,payoutMultiple) : null;
+  const totalPaid = amounts ? amounts.reduce((s,r)=>s+r.amount,0) : 0;
+  const canApply = !!amounts && !tournament.dealMade;
+  const poolLine = isMainEvent&&extraBagDeduction>0 ? 'Prize pool '+fmt.currency(prizePool)+' - '+extraBags+' extra bag'+(extraBags===1?'':'s')+' '+fmt.currency(extraBagDeduction)+' = '+fmt.currency(payoutPrizePool)+' to pay' : 'Prize pool '+fmt.currency(payoutPrizePool)+' to pay';
+  const posLabel = n => n===1?'1st':n===2?'2nd':n===3?'3rd':n+'th';
+  return(
+    <div style={{background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,padding:'12px 14px',marginBottom:14}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+        <div style={{fontSize:13,fontWeight:700,color:'#b2d4ba',letterSpacing:1}}>IMPORT PAYOUT STRUCTURE</div>
+        <button className="btn-sec" onClick={onClose}>Close</button>
+      </div>
+      <div style={{fontSize:11,color:'#527a5c',marginBottom:6}}>Paste a structure (first line SPC PAYOUTS, then place: percent). Percentages are applied to the payout pool.</div>
+      <textarea value={text} onChange={e=>{setText(e.target.value);setRes(null);}} placeholder={'SPC PAYOUTS\n1: 60\n2: 40'} spellCheck={false} style={{width:'100%',minHeight:140,boxSizing:'border-box',padding:8,background:'#060e09',border:'1px solid #1a2e22',borderRadius:4,color:'#e4f0e8',fontSize:12,fontFamily:'monospace',outline:'none'}}/>
+      <div style={{display:'flex',gap:8,margin:'8px 0',alignItems:'center'}}>
+        <button className="btn-primary" style={{padding:'6px 16px',fontSize:12}} onClick={()=>preview()}>Preview</button>
+        <button className="btn-sec" onClick={()=>fileRef.current&&fileRef.current.click()}>Load file...</button>
+        <input ref={fileRef} type="file" accept=".txt,text/plain" style={{display:'none'}} onChange={loadFile}/>
+      </div>
+      {res&&(
+        <div>
+          <div style={{fontSize:12,color:'#b2d4ba',marginBottom:6}}>{poolLine}</div>
+          {res.errors.length>0&&(
+            <div style={{background:'#1a0808',border:'1px solid #4a1a1a',borderRadius:4,padding:'8px 10px',marginBottom:8}}>
+              {res.errors.map((m,i)=><div key={i} style={{fontSize:12,color:'#e05a5a'}}>{m}</div>)}
+              {res.canScale&&<button className="btn-sec" style={{marginTop:6}} onClick={scaleTo100}>Scale to 100%</button>}
+            </div>
+          )}
+          {res.warnings.length>0&&(
+            <div style={{background:'#18140a',border:'1px solid #4a3a1a',borderRadius:4,padding:'8px 10px',marginBottom:8}}>
+              {res.warnings.map((m,i)=><div key={i} style={{fontSize:12,color:'#c8973a'}}>Warning: {m}</div>)}
+            </div>
+          )}
+          {valid&&payoutPrizePool<=0&&<div style={{fontSize:12,color:'#e05a5a',marginBottom:8}}>There is no prize pool yet. Register players before importing a structure.</div>}
+          {amounts&&(
+            <div>
+              <div style={{maxHeight:260,overflowY:'auto',border:'1px solid #1a2e22',borderRadius:4,marginBottom:8}}>
+                <table className="payout-table" style={{width:'100%'}}>
+                  <thead><tr><th>Place</th><th>%</th><th>Amount (S$)</th></tr></thead>
+                  <tbody>{amounts.map(r=><tr key={r.position}><td>{posLabel(r.position)}</td><td>{res.rows[r.position-1].pct}</td><td>{r.amount.toLocaleString()}</td></tr>)}</tbody>
+                </table>
+              </div>
+              <div style={{fontSize:12,color:Math.abs(payoutPrizePool-totalPaid)<100?'#3dba6f':'#e05a5a',marginBottom:4}}>Total paid {fmt.currency(totalPaid)} of {fmt.currency(payoutPrizePool)}{Math.abs(payoutPrizePool-totalPaid)<100?' - balanced':''}</div>
+              <div style={{fontSize:12,color:'#7aaa82',marginBottom:8}}>{res.rows.length} places paid{entries>0?' ('+(Math.round(res.rows.length/entries*1000)/10)+'% of '+entries+' entries)':''}</div>
+            </div>
+          )}
+          {tournament.dealMade&&<div style={{fontSize:12,color:'#e05a5a',marginBottom:8}}>{DEAL_BLOCK_MSG}</div>}
+          <button className="btn-primary" style={{padding:'6px 18px',fontSize:12,opacity:canApply?1:0.4,cursor:canApply?'pointer':'not-allowed'}} disabled={!canApply} onClick={()=>onApply(res.rows)}>Apply</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ==== PAYOUTS ==== */
 function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublish}) {
   const entries = tournament.players.length+(tournament.inheritedEntries||0);
@@ -61,20 +136,56 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   }
   const extraBagDeduction = isMainEvent ? extraBags * EXTRA_BAG_RATE : 0;
   const payoutPrizePool = prizePool - extraBagDeduction;  // what's left for payouts
+  const payoutMultiple = tournament.eventType==='mysteryBounty' ? 50 : 100;
+  const [showImport,setShowImport] = useState(false);
+  const isImported = tournament.payoutSource==='imported';
+  // Recalc / add row / remove row regenerate from the standard SPC table, which would overwrite an imported structure.
+  const srcReset = isImported ? {payoutSource:'standard'} : {};
+  function guardImported(){ return !isImported || window.confirm('This replaces the imported structure with the standard SPC table. Continue?'); }
+  function openImport(){
+    if (tournament.dealMade) { alert(DEAL_BLOCK_MSG); return; }
+    setShowImport(true);
+  }
+  function applyImport(parsedRows){
+    if (tournament.dealMade) { alert(DEAL_BLOCK_MSG); return; }
+    if (!(payoutPrizePool>0)) { alert('There is no prize pool yet. Register players before importing a structure.'); return; }
+    if (tournament.payoutsPublished && !window.confirm('Payouts are published. This changes what players and the screens see. Apply?')) return;
+    const newRows = payoutAmountsFromPcts(parsedRows.map(r=>r.pct), payoutPrizePool, payoutMultiple);
+    setRows(newRows);
+    onUpdate({payoutTable:newRows,payoutPoolBasis:payoutPrizePool,payoutSource:'imported',payoutImportedAt:Date.now(),activityLog:[...(tournament.activityLog||[]),{ts:Date.now(),type:'payout',detail:'Payout structure imported: '+newRows.length+' places, 1st '+newRows[0].pct+'%'}]});
+    setShowImport(false);
+  }
+  function recalcFromItm(){
+    if (!guardImported()) return;
+    const pct=itmInput; const p=Math.max(1,Math.round(entries*pct/100));
+    setPlacesInput(p); onUpdate({itmPercent:pct}); regen(p);
+  }
   const [itmInput,setItmInput] = useState(tournament.itmPercent||15);
   const [placesInput,setPlacesInput] = useState(()=>Math.max(1,Math.floor((entries||1)*(tournament.itmPercent||15)/100)));
   const [rows,setRows] = useState(()=>{
     if (tournament.payoutTable && tournament.payoutTable.length) return tournament.payoutTable;
-    const _initPool = prizePool - (isMainEvent?(tournament.extraBagCount||0)*1500:0);
+    const _initPool = prizePool - (isMainEvent?(tournament.extraBagCount||0)*EXTRA_BAG_RATE:0);
     const _pool = _initPool>0 ? _initPool : (guarantee>0 ? guarantee : 0);
     // Use actual entries, or estimate from guarantee, or minimum 50 for structure
     const _entries = entries>0 ? entries : guarantee>0 ? Math.max(50,Math.ceil(guarantee/Math.max(tournament.prizeComponent||500,1))) : 50;
     return generatePayoutRows(_entries, _pool>0?_pool:0, tournament.eventType==='mysteryBounty');
   });
 
-  // When prize pool changes, keep % but recalculate amounts
+  // When the payout pool changes, keep the percentages and recalculate the amounts (shared rounding, 1st topped up).
+  // A saved table is also written back, so the floor, the screens and the commit never carry amounts from an older
+  // pool. payoutPoolBasis is the pool the saved amounts were last computed for: without it a re-visit would
+  // overwrite figures a TD typed by hand. dealAmount and other per-row fields are left untouched.
   useEffect(()=>{
-    if (payoutPrizePool>0) setRows(rs=>rs.map(r=>({...r,amount:Math.floor(r.pct/100*payoutPrizePool/100)*100})));
+    if (!(payoutPrizePool>0)) return;
+    const saved = !!(tournament.payoutTable && tournament.payoutTable.length);
+    if (saved) {
+      if (tournament.payoutPoolBasis===payoutPrizePool) return;
+      if (tournament.payoutPoolBasis==null) { onUpdate({payoutPoolBasis:payoutPrizePool}); return; }
+    }
+    const fresh = payoutAmountsFromPcts(rows.map(r=>r.pct), payoutPrizePool, payoutMultiple);
+    const next = rows.map((r,i)=>({...r,amount:fresh[i].amount}));
+    setRows(next);
+    if (saved) onUpdate({payoutTable:next,payoutPoolBasis:payoutPrizePool});
   },[payoutPrizePool]);
 
   const isMBEvent = tournament.eventType==='mysteryBounty';
@@ -87,7 +198,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
     const places = p || Math.max(1, Math.round(entries * itmInput / 100));
     const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, places);
     setRows(newRows);
-    onUpdate({payoutTable:newRows});
+    onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:newRows,...srcReset});
   }
 
   function updateRow(i, field, raw) {
@@ -96,14 +207,14 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
         if (j!==i) return r;
         if (field==='pct') {
           const pct=Math.round(parseFloat(raw)*10)/10||0;
-          return {...r, pct, amount:Math.floor(pct/100*payoutPrizePool/100)*100};
+          return {...r, pct, amount:Math.floor(pct/100*payoutPrizePool/payoutMultiple)*payoutMultiple};
         } else {
           const v=parseFloat(raw);
-          const amount=isNaN(v)?r.amount:Math.round(v/100)*100;
+          const amount=isNaN(v)?r.amount:Math.round(v/payoutMultiple)*payoutMultiple;
           return {...r, amount, pct:payoutPrizePool>0?Math.round(amount/payoutPrizePool*10000)/100:0};
         }
       });
-      onUpdate({payoutTable:updated});
+      onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:updated});
       return updated;
     });
   }
@@ -127,35 +238,37 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
   }
 
   function addRow() {
+    if (!guardImported()) return;
     const newPlaces = rows.length + 1;
     const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, newPlaces);
     if (newRows.length === newPlaces) {
-      setRows(newRows); onUpdate({payoutTable:newRows});
+      setRows(newRows); onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:newRows,...srcReset});
     } else {
       // Fallback: just append a blank row and redistribute
       setRows(rs=>{
         const r=[...rs,{position:rs.length+1,pct:0,amount:0}];
-        onUpdate({payoutTable:r}); return r;
+        onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:r,...srcReset}); return r;
       });
     }
   }
 
   function removeRow(i) {
+    if (!guardImported()) return;
     const newPlaces = rows.length - 1;
     if (newPlaces < 1) return;
     const newRows = generatePayoutRows(entries, payoutPrizePool, isMBEvent, newPlaces);
     if (newRows.length === newPlaces) {
-      setRows(newRows); onUpdate({payoutTable:newRows});
+      setRows(newRows); onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:newRows,...srcReset});
     } else {
       setRows(rs=>{
         const r=rs.filter((_,j)=>j!==i).map((x,j)=>({...x,position:j+1}));
-        onUpdate({payoutTable:r}); return r;
+        onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:r,...srcReset}); return r;
       });
     }
   }
 
   const totalPaid = rows.reduce((s,r)=>s+(r.amount||0),0);
-  const diff = prizePool - totalPaid;
+  const diff = payoutPrizePool - totalPaid;
   const posLabel = i => i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}th`;
   const posColor = i => i===0?'#f0c040':i===1?'#c8d0d8':i===2?'#c87a3a':'#b2d4ba';
   // Which player finished in each place. 1st never has a bustPosition (the winner doesn't bust) -
@@ -299,10 +412,11 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
               <input type="number" className="form-input" style={{width:58,padding:'4px 8px',fontSize:15}}
                 value={itmInput}
                 onChange={e=>setItmInput(+e.target.value)}
-                onKeyDown={e=>{if(e.key==='Enter'){const pct=itmInput;const p=Math.max(1,Math.round(entries*pct/100));setPlacesInput(p);onUpdate({itmPercent:pct});regen(p);}}}/>
+                onKeyDown={e=>{if(e.key==='Enter'){recalcFromItm();}}}/>
               <span style={{fontSize:12,color:'#3a5a42'}}>%</span>
               <button style={{padding:'4px 10px',background:'#0d1a0f',border:'1px solid #1a2e22',borderRadius:4,color:'#3dba6f',fontSize:11,fontWeight:600,cursor:'pointer'}}
-                onClick={()=>{const pct=itmInput;const p=Math.max(1,Math.round(entries*pct/100));setPlacesInput(p);onUpdate({itmPercent:pct});regen(p);}}>↻ Recalc</button>
+                onClick={recalcFromItm}>↻ Recalc</button>
+              <button style={{padding:'4px 10px',background:'#0d1a0f',border:'1px solid #1a2e22',borderRadius:4,color:'#c8973a',fontSize:11,fontWeight:600,cursor:'pointer'}} onClick={openImport}>Import structure</button>
             </div>
             <div style={{fontSize:10,color:'#2a4a35',marginTop:3}}>{Math.round(entries*itmInput/100)} places from {entries} entries</div>
           </div>
@@ -388,6 +502,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             </div>
           </div>
         )}
+        {showImport&&<ImportPayoutPanel tournament={tournament} entries={entries} prizePool={prizePool} payoutPrizePool={payoutPrizePool} extraBags={extraBags} extraBagDeduction={extraBagDeduction} isMainEvent={isMainEvent} payoutMultiple={payoutMultiple} onApply={applyImport} onClose={()=>setShowImport(false)}/>}
         {/* Deal mode toggle */}
         <div style={{display:'flex',alignItems:'center',gap:12,padding:'8px 14px',background:tournament.dealMade?'#1a1004':'#09140b',border:'1px solid '+(tournament.dealMade?'#2a1c06':'#1a2e22'),borderRadius:6,marginBottom:14}}>
           <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:12,color:tournament.dealMade?'#c8973a':'#7aaa82',fontWeight:600,userSelect:'none'}}>
@@ -411,7 +526,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
         <div style={{display:'flex',gap:16,padding:'8px 14px',background:'#09140b',border:'1px solid #1a2e22',borderRadius:6,fontSize:12,color:'#527a5c',marginBottom:14,flexWrap:'wrap'}}>
           <span>{isMainEvent&&extraBagDeduction>0?'Payout pool':'Prize pool'} <strong style={{color:'#c8973a'}}>{fmt.currency(payoutPrizePool)}</strong></span>
           <span>·</span>
-          <span>Allocated <strong style={{color:totalPaid>prizePool?'#e05a5a':'#b2d4ba'}}>{fmt.currency(totalPaid)}</strong></span>
+          <span>Allocated <strong style={{color:totalPaid>payoutPrizePool?'#e05a5a':'#b2d4ba'}}>{fmt.currency(totalPaid)}</strong></span>
           <span>·</span>
           <span style={{color:Math.abs(diff)<100?'#3dba6f':diff>0?'#c8973a':'#e05a5a',fontWeight:600}}>
             {Math.abs(diff)<100?'✓ Balanced':diff>0?`${fmt.currency(diff)} unallocated`:`${fmt.currency(-diff)} over budget`}
@@ -477,7 +592,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
                             if(raw!==undefined&&raw!==''){
                               const v=parseFloat(raw);
                               const dealAmount=isNaN(v)?rows[i].dealAmount:Math.round(v/100)*100;
-                              setRows(rs=>{const upd=rs.map((r2,j)=>j!==i?r2:{...r2,dealAmount,dealAmount_raw:undefined});onUpdate({payoutTable:upd});return upd;});
+                              setRows(rs=>{const upd=rs.map((r2,j)=>j!==i?r2:{...r2,dealAmount,dealAmount_raw:undefined});onUpdate({payoutPoolBasis:payoutPrizePool,payoutTable:upd});return upd;});
                             } else {
                               setRows(rs=>rs.map((r2,j)=>j!==i?r2:{...r2,dealAmount_raw:undefined}));
                             }
@@ -495,6 +610,7 @@ function PayoutsView({tournament, activePlayers, onUpdate, onPublish, onUnpublis
             <button className="add-row-btn" style={{marginTop:8,width:'fit-content',padding:'6px 18px'}} onClick={addRow}>
               + Add position
             </button>
+            {isImported&&<div style={{marginTop:8,fontSize:11,color:'#c8973a'}}>Imported structure ({rows.length} places)</div>}
           </>
             )}
         {hasBounty&&showBounties&&<BountyPanel tournament={tournament} bountyPool={bountyPool} onUpdate={onUpdate}/>}

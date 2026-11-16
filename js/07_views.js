@@ -1539,7 +1539,7 @@ function TablesView({takenElsewhere,tournament,activePlayers,onBalance,onOpen,on
 /* ==== ACTIVITY LOG ==== */
 function LogView({activityLog}) {
   const [filter,setFilter]=useState('all');
-  const types={all:'All',bust:'Busts',move:'Moves',clock:'Clock',table:'Tables',register:'Register'};
+  const types={all:'All',bust:'Busts',move:'Moves',clock:'Clock',table:'Tables',register:'Register',payout:'Payouts'};
   const filtered=filter==='all'?activityLog:activityLog.filter(e=>e.type===filter);
   const sorted=[...filtered].reverse();
   return(

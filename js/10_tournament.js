@@ -630,6 +630,7 @@ function App() {
       prizePool: t.guarantee || 0,
       bountyPool: 0,
       payoutTable: null,
+      payoutSource: null, payoutPoolBasis: null, payoutImportedAt: null,
     }));
   }
   function exportCurrentSave() { if(tournament) exportTournament(tournament, false); }
